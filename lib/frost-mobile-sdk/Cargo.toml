@@ -1,0 +1,25 @@
+[package]
+name = "frost-mobile-sdk"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[lib]
+crate-type = ["lib", "cdylib"]
+name = "frost_mobile_sdk"
+
+[dependencies]
+uniffi = { workspace = true }
+thiserror = { workspace = true }
+frost-ed25519 = { workspace = true }
+reddsa = { workspace = true }
+serde_json = { workspace = true }
+
+[features]
+redpallas = []
+default = []
+
+[build-dependencies]
+uniffi = { workspace = true, features = ["build"] }
