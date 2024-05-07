@@ -1,7 +1,14 @@
-use std::collections::HashMap;
-use thiserror::Error;
+#[cfg(not(feature = "redpallas"))]
+use frost_ed25519 as frost;
+#[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
+
+pub mod trusted_dealer;
+use crate::frost::Error;
+use std::collections::HashMap;
+
 use uniffi;
+use frost::keys::SecretShare;
 use frost::keys::PublicKeyPackage;
 uniffi::setup_scaffolding!();
 
@@ -15,22 +22,57 @@ pub struct Header {
     pub suite: Ciphersuite, 
 }
 #[derive(uniffi::Record)]
-pub struct FrostKeyShare {
-    pub header: Header,
+pub struct FrostSecretKeyShare {
     pub identifier: String,
     pub signing_share: String,
-    pub commitment: Vec<String>,
+    pub commitment: Vec<String>
 }
 
 #[derive(uniffi::Record)]
 pub struct FrostPublicKeyPackage {
-    pub header: Header,
     pub verifying_shares: HashMap<String, String>,
     pub verifying_key: String
 }
 
+impl FrostSecretKeyShare {
+    fn from_secret_share(secret_share: SecretShare) -> FrostSecretKeyShare {
+        let identifier = secret_share.identifier();
+        let signing_share = secret_share.signing_share();
+        let commitment = secret_share.commitment()
+        .coefficients()
+        .iter()
+        .map(|c| hex::encode(c.serialize()))
+        .collect();
+
+
+        FrostSecretKeyShare {
+            identifier: hex::encode(identifier.serialize()),
+            signing_share: hex::encode(signing_share.serialize()),
+            commitment: commitment,
+        }
+    }
+}
+
 impl FrostPublicKeyPackage {
-   
+    fn from_public_key_package(key_package: PublicKeyPackage) -> Result<FrostPublicKeyPackage, Error> {
+
+        let verifying_shares = key_package.verifying_shares();
+        let verifying_key = key_package.verifying_key();
+
+        let mut shares = HashMap::new();
+
+        for (k, v) in verifying_shares {
+            shares.insert(
+                hex::encode(k.serialize()), 
+                hex::encode(v.serialize())
+            );
+        }
+
+        Ok(Self {
+            verifying_shares: shares,
+            verifying_key: hex::encode(verifying_key.serialize())
+        })
+    }
 }
 
 #[derive(uniffi::Record)]
