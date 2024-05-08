@@ -41,6 +41,8 @@ impl FrostSecretKeyShare {
             .into_iter()
             .map(|c| hex::encode(c))
             .collect();
+
+        
         FrostSecretKeyShare {
             identifier: hex::encode(identifier.serialize()),
             signing_share: hex::encode(signing_share.serialize()),
@@ -68,20 +70,20 @@ impl FrostSecretKeyShare {
                 SigningShare::deserialize(v)
                     .map_err(|_| frost::Error::DeserializationError)?
                 )?;
+        
+        let mut hex_commitments: Vec<Vec<u8>> = Vec::new();
 
         for s in self.commitment {
             let hex_commitment = hex::decode(s)
                     .map_err(|_| frost::Error::SerializationError)?;
+                    
+            hex_commitments.push(hex_commitment);
         }
-        let v = self.commitment
-            .into_iter()
-            .map(|s| 
-                
-            )
-            .collect();
+
+        let commitment = VerifiableSecretSharingCommitment::deserialize(hex_commitments)?;
 
     
-        let secret_share = SecretShare::new(identifier, signing_share, commitments);
+        let secret_share = SecretShare::new(identifier, signing_share, commitment);
 
         Ok(secret_share)
     }
