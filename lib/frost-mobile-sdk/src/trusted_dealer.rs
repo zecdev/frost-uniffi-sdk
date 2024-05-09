@@ -33,7 +33,7 @@ fn trusted_dealer_keygen_from_configuration(
     for (k,v) in shares {
         hash_map.insert(
             hex::encode(k.serialize()),
-            FrostSecretKeyShare::from_secret_share(v)
+            FrostSecretKeyShare::from_secret_share(v)?
         );
     }
     

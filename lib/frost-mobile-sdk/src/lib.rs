@@ -1,15 +1,15 @@
+use frost::keys::KeyPackage;
 use frost::keys::SigningShare;
 use frost::Ciphersuite;
 use frost::Identifier;
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
-use reddsa::frost::redpallas::frost::keys::CoefficientCommitment;
-use reddsa::frost::redpallas::frost::keys::VerifiableSecretSharingCommitment;
-use reddsa::frost::redpallas::frost::Identifier;
+use hex::ToHex;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
 pub mod trusted_dealer;
+mod utils;
 use crate::frost::Error;
 use std::collections::HashMap;
 
@@ -22,8 +22,7 @@ uniffi::setup_scaffolding!();
 #[derive(uniffi::Record)]
 pub struct FrostSecretKeyShare {
     pub identifier: String,
-    pub signing_share: String,
-    pub commitment: Vec<String>
+    pub data: Vec<u8>
 }
 
 #[derive(uniffi::Record)]
@@ -33,25 +32,21 @@ pub struct FrostPublicKeyPackage {
 }
 
 impl FrostSecretKeyShare {
-    fn from_secret_share(secret_share: SecretShare) -> FrostSecretKeyShare {
-        let identifier = secret_share.identifier();
-        let signing_share = secret_share.signing_share();
-        let commitment = secret_share.commitment()
-            .serialize()
-            .into_iter()
-            .map(|c| hex::encode(c))
-            .collect();
+    fn from_secret_share(secret_share: SecretShare) -> Result<FrostSecretKeyShare, frost::Error> {
+        let identifier = hex::encode(secret_share.identifier().serialize());
+        let serialized_share = secret_share.serialize()
+        .map_err(|_| frost::Error::SerializationError)?;
 
-        
-        FrostSecretKeyShare {
-            identifier: hex::encode(identifier.serialize()),
-            signing_share: hex::encode(signing_share.serialize()),
-            commitment: commitment,
-        }
+        Ok(
+            FrostSecretKeyShare {
+                identifier: identifier,
+                data: serialized_share
+            }
+        )
     }
 
     fn to_secret_share(&self) -> Result<SecretShare, Error> {
-        let hex_identifier = hex::decode(&mut self.identifier)
+        let hex_identifier = hex::decode(self.identifier.clone())
             .map_err(|_| frost::Error::DeserializationError)?;
         
         let slice_identifier = hex_identifier[0..32]
@@ -59,33 +54,15 @@ impl FrostSecretKeyShare {
             .map_err(|_| frost::Error::DeserializationError)?;
 
         let identifier = Identifier::deserialize(slice_identifier)?;
-
-        let hex_signing_share = hex::decode(self.signing_share)
-        .map_err(|_| frost::Error::DeserializationError)?;
-
-        let signing_share = hex_signing_share[0..32]
-            .try_into()
-            .map_err(|_| frost::Error::DeserializationError)
-            .map(|v| 
-                SigningShare::deserialize(v)
-                    .map_err(|_| frost::Error::DeserializationError)?
-                )?;
-        
-        let mut hex_commitments: Vec<Vec<u8>> = Vec::new();
-
-        for s in self.commitment {
-            let hex_commitment = hex::decode(s)
-                    .map_err(|_| frost::Error::SerializationError)?;
-                    
-            hex_commitments.push(hex_commitment);
-        }
-
-        let commitment = VerifiableSecretSharingCommitment::deserialize(hex_commitments)?;
-
     
-        let secret_share = SecretShare::new(identifier, signing_share, commitment);
+        let secret_share = SecretShare::deserialize(&self.data)
+            .map_err(|_| frost::Error::SerializationError)?;
 
-        Ok(secret_share)
+        if identifier != *secret_share.identifier() {
+            Err(frost::Error::UnknownIdentifier)
+        } else {
+            Ok(secret_share)
+        }
     }
 }
 
@@ -124,8 +101,6 @@ pub enum ConfigurationError {
     InvalidMaxSigners,
     #[error("Number of minimum signers in invalid.")]
     InvalidMinSigners,
-    #[error("The Secret can't be empty")]
-    InvalidEmptySecret,
 }
 
 #[uniffi::export]
@@ -141,22 +116,33 @@ fn validate_config(config: &Configuration) -> Result<(), ConfigurationError> {
     if config.min_signers > config.max_signers {
         return Err(ConfigurationError::InvalidMinSigners);
     }
-
-    if config.secret.is_empty() {
-        return Err(ConfigurationError::InvalidEmptySecret)
-    }
     
     Ok(())
 }
 
-#[derive(uniffi::Object)]
-pub struct Test {
-    pub value: i64
+pub struct FrostKeyPackage {
+    pub identifier: String,
+    pub data: Vec<u8>
 }
 
-#[uniffi::export]
-impl Test { 
-    fn do_something(&self) {
-        print!("hello");
+impl FrostKeyPackage {
+    fn from_key_package(key_package: &KeyPackage) -> Result<Self, Error> {
+        let serialized_package = utils::json_bytes(key_package);
+        let identifier = key_package.identifier();
+        Ok(
+            FrostKeyPackage {
+                identifier: identifier.serialize().encode_hex(),
+                data: serialized_package
+            }
+        )
     }
+}
+fn verify_and_get_key_package_from(secret_share: FrostSecretKeyShare) -> Result<FrostKeyPackage, Error> {
+    
+    let secret_share = secret_share.to_secret_share()
+        .map_err(|_| frost::Error::InvalidSecretShare)?;
+    
+    frost::keys::KeyPackage::try_from(secret_share)
+        .map_err(|_| frost::Error::IncorrectPackage)
+        .map(|p| FrostKeyPackage::from_key_package(&p))?
 }
