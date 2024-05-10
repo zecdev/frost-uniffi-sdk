@@ -4,7 +4,7 @@ use frost_ed25519 as frost;
 use reddsa::frost::redpallas as frost;
 
 use std::collections::HashMap;
-use crate::{Configuration, FrostPublicKeyPackage, FrostSecretKeyShare};
+use crate::{Configuration, FrostPublicKeyPackage, FrostSecretKeyShare, ParticipantIdentifier};
 use rand::thread_rng;
 
 
@@ -13,9 +13,9 @@ use frost::{Error, Identifier, SigningKey};
 use rand::rngs::ThreadRng;
 use std::collections::BTreeMap;
 
-fn trusted_dealer_keygen_from_configuration(
+pub (crate) fn trusted_dealer_keygen_from_configuration(
     config: Configuration
-) -> Result<(FrostPublicKeyPackage, HashMap<String, FrostSecretKeyShare>), Error> {
+) -> Result<(FrostPublicKeyPackage, HashMap<ParticipantIdentifier, FrostSecretKeyShare>), Error> {
     let mut rng = thread_rng();
 
     let keygen = if config.secret.is_empty() {
@@ -28,11 +28,11 @@ fn trusted_dealer_keygen_from_configuration(
 
     let pubkey = FrostPublicKeyPackage::from_public_key_package(pubkeys)?;
 
-    let mut hash_map: HashMap<String, FrostSecretKeyShare> = HashMap::new();
+    let mut hash_map: HashMap<ParticipantIdentifier, FrostSecretKeyShare> = HashMap::new();
 
     for (k,v) in shares {
         hash_map.insert(
-            hex::encode(k.serialize()),
+            ParticipantIdentifier::from_identifier(k)?,
             FrostSecretKeyShare::from_secret_share(v)?
         );
     }
@@ -40,7 +40,7 @@ fn trusted_dealer_keygen_from_configuration(
     Ok((pubkey, hash_map))
 } 
 
-fn trusted_dealer_keygen(
+pub(crate) fn trusted_dealer_keygen(
     config: &Configuration,
     identifiers: IdentifierList,
     rng: &mut ThreadRng,
