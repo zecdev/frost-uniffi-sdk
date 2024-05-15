@@ -92,7 +92,7 @@ impl FrostSecretKeyShare {
     }
 
     fn into_key_package(&self) -> Result<FrostKeyPackage, FrostError> {
-        let secret_share = self.clone()
+        let secret_share = self
             .to_secret_share()
             .map_err(|_| FrostError::InvalidSecretKey)?;
 

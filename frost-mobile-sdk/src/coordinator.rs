@@ -1,15 +1,14 @@
 use std::collections::BTreeMap;
 
-use frost::{round1::SigningCommitments, Error, Identifier, SigningPackage};
+use frost::{round1::SigningCommitments, round2::SignatureShare, Error, Identifier, Signature, SigningPackage};
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
 use uniffi;
-use rand::thread_rng;
 
-use crate::participant::FrostSigningCommitments;
+use crate::{participant::{FrostSignatureShare, FrostSigningCommitments, Round2Error}, FrostError, FrostPublicKeyPackage};
 
 #[derive(uniffi::Record)]
 pub struct FrostSigningPackage {
@@ -27,6 +26,20 @@ pub struct Message {
     data: Vec<u8>
 }
 
+#[derive(uniffi::Record)]
+pub struct FrostSignature {
+    data: Vec<u8>
+}
+
+impl FrostSignature {
+     fn to_signature(&self) -> Result<Signature, Error> {
+        Signature::deserialize(
+        self.data[0..64].try_into()
+                .map_err(|_| Error::DeserializationError)?
+        )
+     }
+}
+
 #[derive(Debug, uniffi::Error, thiserror::Error)]
 pub enum CoordinationError {
     #[error("Signing Package creation failed")]
@@ -35,8 +48,16 @@ pub enum CoordinationError {
     InvalidSigningCommitment,
     #[error("Participant Identifier could not be deserialized.")]
     IdentifierDeserializationError,
-    #[error("Signing Package could not be serialized")]
+    #[error("Signing Package could not be deserialized")]
     SigningPackageSerializationError,
+    #[error("Signature Share could not be deserialized")]
+    SignatureShareDeserializationError,
+    #[error("Public Key Package could not be deserialized")]
+    PublicKeyPackageDeserializationError,
+    #[error("Signatures shares failed to be aggregated with error {message:?}")]
+    SignatureShareAggregationFailed {
+        message: String
+    },
 }
 
 #[uniffi::export]
@@ -59,4 +80,53 @@ pub fn new_signing_package(message: Message, commitments: Vec<FrostSigningCommit
     Ok(
         FrostSigningPackage { data: serialized_package }
     )
+}
+
+#[uniffi::export]
+pub fn aggregate(signing_package: FrostSigningPackage, signature_shares: Vec<FrostSignatureShare>, pubkey_package: FrostPublicKeyPackage) -> Result<FrostSignature, CoordinationError> {
+    let signing_package = signing_package.to_signing_package()
+        .map_err(|_| CoordinationError::FailedToCreateSigningPackage)?;
+
+    let mut shares: BTreeMap<Identifier,SignatureShare> = BTreeMap::new();
+
+    for share in signature_shares {
+        shares.insert(
+            share.identifier.into_identifier()
+                .map_err(|_| CoordinationError::IdentifierDeserializationError)?,
+            share.to_signature_share()
+                .map_err(|_| CoordinationError::SignatureShareDeserializationError)?
+        );
+    }
+
+    let public_key_package = pubkey_package.into_public_key_package()
+    .map_err(|_| CoordinationError::PublicKeyPackageDeserializationError)?;
+
+    frost::aggregate(&signing_package, &shares, &public_key_package)
+        .map_err(|e| CoordinationError::SignatureShareAggregationFailed { message: e.to_string() })
+        .map(|signature| {
+            FrostSignature { data: signature.serialize().to_vec() }
+        })
+}
+
+#[derive(Debug, uniffi::Error, thiserror::Error)]
+pub enum FrostSignatureVerificationError {
+    #[error("Public Key Package is invalid")]
+    InvalidPublicKeyPackage,
+    #[error("FROST signature is invalid. Reason: {reason:?}")]
+    ValidationFailed {
+        reason: String
+    }
+}
+
+#[uniffi::export]
+pub fn verify_signature(message: Message, signature: FrostSignature, pubkey: FrostPublicKeyPackage) -> Result<(), FrostSignatureVerificationError> {
+    let signature = signature.to_signature()
+        .map_err(|e| FrostSignatureVerificationError::ValidationFailed { reason: e.to_string() })?;
+    
+    let pubkey = pubkey.into_public_key_package()
+        .map_err(|_| FrostSignatureVerificationError::InvalidPublicKeyPackage)?;
+
+    pubkey.verifying_key()
+        .verify(&message.data, &signature)
+        .map_err(|e| FrostSignatureVerificationError::ValidationFailed { reason: e.to_string() })
 }

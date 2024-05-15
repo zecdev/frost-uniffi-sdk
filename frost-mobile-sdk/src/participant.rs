@@ -1,4 +1,4 @@
-use frost::{round1::{SigningCommitments, SigningNonces}, Error};
+use frost::{round1::{SigningCommitments, SigningNonces}, round2::SignatureShare, Error};
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
@@ -96,7 +96,17 @@ pub fn generate_nonces_and_commitments(secret_share: FrostSecretKeyShare) -> Res
 
 #[derive(uniffi::Record)]
 pub struct FrostSignatureShare {
-    data: Vec<u8>
+    pub identifier: ParticipantIdentifier,
+    pub data: Vec<u8>
+}
+
+impl FrostSignatureShare {
+    pub(crate) fn to_signature_share(&self) -> Result<SignatureShare, Error> {
+        let bytes = self.data[0..32].try_into()
+            .map_err(|_| Error::DeserializationError)?;
+        
+        SignatureShare::deserialize(bytes)
+    }
 }
 
 #[uniffi::export]
@@ -110,11 +120,19 @@ pub fn sign(signing_package: FrostSigningPackage, nonces: FrostSigningNonces, ke
     let key_package = key_package.into_key_package()
         .map_err(|_| Round2Error::InvalidKeyPackage)?;
 
+    let identifier = ParticipantIdentifier::from_identifier(*key_package.identifier())
+        .map_err(|_| Round2Error::InvalidKeyPackage)?;
+
     frost::round2::sign(&signing_package, &nonces, &key_package)
         .map_err(|e|
             Round2Error::SigningFailed{
                 message: e.to_string()
             }
         )
-        .map(|share| FrostSignatureShare { data: share.serialize().to_vec() } )
+        .map(|share| {
+            FrostSignatureShare { 
+                identifier: identifier,
+                data: share.serialize().to_vec() 
+            }
+        })
 }
