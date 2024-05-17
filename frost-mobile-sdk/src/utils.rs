@@ -1,5 +1,6 @@
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
+
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 use serde_json;
