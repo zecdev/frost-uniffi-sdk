@@ -9,6 +9,7 @@ pub mod trusted_dealer;
 pub mod participant;
 pub mod coordinator;
 mod utils;
+mod helpers;
 use rand::thread_rng;
 use hex::ToHex;
 use frost::{keys::{IdentifierList, VerifyingShare}, Identifier, VerifyingKey};
@@ -58,7 +59,7 @@ pub struct FrostSecretKeyShare {
     pub data: Vec<u8>
 }
 
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Clone)]
 pub struct FrostPublicKeyPackage {
     pub verifying_shares: HashMap<ParticipantIdentifier, String>,
     pub verifying_key: String
@@ -207,7 +208,7 @@ fn validate_config(config: &Configuration) -> Result<(), ConfigurationError> {
     Ok(())
 }
 
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Clone)]
 pub struct FrostKeyPackage {
     pub identifier: String,
     pub data: Vec<u8>
@@ -215,7 +216,7 @@ pub struct FrostKeyPackage {
 
 impl FrostKeyPackage {
     fn from_key_package(key_package: &KeyPackage) -> Result<Self, Error> {
-        let serialized_package = utils::json_bytes(key_package);
+        let serialized_package = key_package.serialize()?;
         let identifier = key_package.identifier();
         Ok(
             FrostKeyPackage {
@@ -238,7 +239,7 @@ fn verify_and_get_key_package_from(secret_share: FrostSecretKeyShare) -> Result<
 
 #[uniffi::export]
 fn trusted_dealer_keygen_from(configuration: Configuration) -> Result<TrustedKeyGeneration, ConfigurationError> {
-    let (pubkey, secret_shares) = trusted_dealer_keygen_from_configuration(configuration)
+    let (pubkey, secret_shares) = trusted_dealer_keygen_from_configuration(&configuration)
         .map_err(|e| match e {
             Error::InvalidMaxSigners => ConfigurationError::InvalidMaxSigners,
             Error::InvalidMinSigners => ConfigurationError::InvalidMinSigners,

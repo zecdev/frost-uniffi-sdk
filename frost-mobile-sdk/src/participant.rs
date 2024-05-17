@@ -1,4 +1,4 @@
-use frost::{round1::{SigningCommitments, SigningNonces}, round2::SignatureShare, Error};
+use frost::{round1::{SigningCommitments, SigningNonces}, round2::SignatureShare, Error, Identifier};
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
@@ -8,7 +8,7 @@ use uniffi;
 use rand::thread_rng;
 
 use crate::{coordinator::FrostSigningPackage, FrostKeyPackage, FrostSecretKeyShare, ParticipantIdentifier};
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Clone)]
 pub struct FrostSigningNonces {
     pub data: Vec<u8>
 }
@@ -16,6 +16,11 @@ pub struct FrostSigningNonces {
 impl FrostSigningNonces {
     pub(crate) fn to_signing_nonces(&self) -> Result<SigningNonces, Error> {
         SigningNonces::deserialize(&self.data)
+    }
+
+    pub (crate) fn from_nonces(nonces: SigningNonces) -> Result<FrostSigningNonces, Error> {
+        let data = nonces.serialize()?;
+        Ok(FrostSigningNonces { data: data })
     }
 }
 
@@ -29,7 +34,20 @@ impl FrostSigningCommitments {
     pub (crate) fn to_commitments(&self) -> Result<SigningCommitments, Error> {
         SigningCommitments::deserialize(&self.data)
     }
+
+    pub (crate) fn with_identifier_and_commitments(
+        identifier: Identifier,
+        commitments: SigningCommitments,
+    ) -> Result<FrostSigningCommitments, Error> {
+        Ok(
+            FrostSigningCommitments {
+                identifier: ParticipantIdentifier::from_identifier(identifier)?,
+                data: commitments.serialize()?
+            }
+        )
+    }
 }
+
 #[derive(Debug, uniffi::Error, thiserror::Error)]
 pub enum Round1Error {
     #[error("Provided Key Package is invalid.")]
@@ -79,16 +97,13 @@ pub fn generate_nonces_and_commitments(secret_share: FrostSecretKeyShare) -> Res
 
     Ok(
         FirstRoundCommitment {
-            nonces: FrostSigningNonces {
-                data: nonces.serialize()
-                    .map_err(|_| Round1Error::NonceSerializationError)?
-            },
-            commitments: FrostSigningCommitments {
-                identifier: ParticipantIdentifier::from_identifier(*secret_share.identifier())
-                    .map_err(|_| Round1Error::InvalidKeyPackage)?,
-                data: commitments.serialize()
-                    .map_err(|_| Round1Error::CommitmentSerializationError)?
-            }
+            nonces: FrostSigningNonces::from_nonces(nonces)
+                .map_err(|_| Round1Error::NonceSerializationError)?,
+            commitments: FrostSigningCommitments::with_identifier_and_commitments(
+                *secret_share.identifier(), 
+                commitments
+            )
+            .map_err(|_| Round1Error::CommitmentSerializationError)?
         }
     )
 }

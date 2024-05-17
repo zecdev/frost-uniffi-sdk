@@ -10,7 +10,7 @@ use uniffi;
 
 use crate::{participant::{FrostSignatureShare, FrostSigningCommitments, Round2Error}, FrostError, FrostPublicKeyPackage};
 
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Clone)]
 pub struct FrostSigningPackage {
     data: Vec<u8>
 }
@@ -21,9 +21,9 @@ impl FrostSigningPackage {
     }
 }
 
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Clone)]
 pub struct Message {
-    data: Vec<u8>
+    pub data: Vec<u8>
 }
 
 #[derive(uniffi::Record)]
