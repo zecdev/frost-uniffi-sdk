@@ -7,7 +7,15 @@ use reddsa::frost::redpallas as frost;
 use uniffi;
 use rand::thread_rng;
 
-use crate::{coordinator::FrostSigningPackage, FrostKeyPackage, FrostSecretKeyShare, ParticipantIdentifier};
+#[cfg(feature = "redpallas")]
+use crate::randomizer::{self, FrostRandomizer};
+use crate::{
+    coordinator::FrostSigningPackage, 
+    FrostKeyPackage, 
+    FrostSecretKeyShare, 
+    ParticipantIdentifier,
+};
+
 #[derive(uniffi::Record, Clone)]
 pub struct FrostSigningNonces {
     pub data: Vec<u8>
@@ -71,7 +79,10 @@ pub enum Round2Error {
     #[error("Failed to sign message with error: {message:?}")]
     SigningFailed {
         message: String
-    }
+    },
+    #[cfg(feature = "redpallas")]
+    #[error("Invalid Randomizer.")]
+    InvalidRandomizer,
 }
 
 #[derive(uniffi::Record)]
@@ -125,7 +136,13 @@ impl FrostSignatureShare {
 }
 
 #[uniffi::export]
-pub fn sign(signing_package: FrostSigningPackage, nonces: FrostSigningNonces, key_package: FrostKeyPackage) -> Result<FrostSignatureShare, Round2Error> {
+pub fn sign(
+    signing_package: FrostSigningPackage, 
+    nonces: FrostSigningNonces, 
+    key_package: FrostKeyPackage,
+    #[cfg(feature = "redpallas")]
+    randomizer: &FrostRandomizer,
+) -> Result<FrostSignatureShare, Round2Error> {
     let signing_package = signing_package.to_signing_package()
         .map_err(|_| Round2Error::SigningPackageDeserializationError)?;
 
@@ -138,7 +155,17 @@ pub fn sign(signing_package: FrostSigningPackage, nonces: FrostSigningNonces, ke
     let identifier = ParticipantIdentifier::from_identifier(*key_package.identifier())
         .map_err(|_| Round2Error::InvalidKeyPackage)?;
 
-    frost::round2::sign(&signing_package, &nonces, &key_package)
+    #[cfg(feature = "redpallas")]
+    let randomizer = randomizer.into_randomizer()
+        .map_err(|_| Round2Error::InvalidRandomizer)?;
+
+    frost::round2::sign(
+        &signing_package,
+        &nonces,
+        &key_package,
+        #[cfg(feature = "redpallas")]
+        randomizer,
+    )
         .map_err(|e|
             Round2Error::SigningFailed{
                 message: e.to_string()

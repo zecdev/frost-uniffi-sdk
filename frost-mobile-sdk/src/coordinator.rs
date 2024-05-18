@@ -1,14 +1,27 @@
-use std::collections::BTreeMap;
-
-use frost::{round1::SigningCommitments, round2::SignatureShare, Error, Identifier, Signature, SigningPackage};
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
+use rand::thread_rng;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
+use std::collections::BTreeMap;
+use frost::{
+    round1::SigningCommitments,
+    round2::SignatureShare,
+    Error,
+    Identifier,
+    Signature,
+    SigningPackage
+};
 use uniffi;
-
-use crate::{participant::{FrostSignatureShare, FrostSigningCommitments, Round2Error}, FrostError, FrostPublicKeyPackage};
+#[cfg(feature = "redpallas")]
+use crate::randomizer::FrostRandomizer;
+use crate::{
+    participant::{
+        FrostSignatureShare, 
+        FrostSigningCommitments
+    }, randomizer, FrostPublicKeyPackage
+};
 
 #[derive(uniffi::Record, Clone)]
 pub struct FrostSigningPackage {
@@ -32,12 +45,16 @@ pub struct FrostSignature {
 }
 
 impl FrostSignature {
-     fn to_signature(&self) -> Result<Signature, Error> {
+    fn to_signature(&self) -> Result<Signature, Error> {
         Signature::deserialize(
         self.data[0..64].try_into()
                 .map_err(|_| Error::DeserializationError)?
         )
-     }
+    }
+
+    fn from_signature(signature: Signature) -> FrostSignature {
+        FrostSignature { data: signature.serialize().to_vec() }
+    }
 }
 
 #[derive(Debug, uniffi::Error, thiserror::Error)]
@@ -58,6 +75,9 @@ pub enum CoordinationError {
     SignatureShareAggregationFailed {
         message: String
     },
+    #[cfg(feature = "redpallas")]
+    #[error("An invalid Randomizer was provided.")]
+    InvalidRandomizer,
 }
 
 #[uniffi::export]
@@ -83,7 +103,13 @@ pub fn new_signing_package(message: Message, commitments: Vec<FrostSigningCommit
 }
 
 #[uniffi::export]
-pub fn aggregate(signing_package: FrostSigningPackage, signature_shares: Vec<FrostSignatureShare>, pubkey_package: FrostPublicKeyPackage) -> Result<FrostSignature, CoordinationError> {
+pub fn aggregate(
+    signing_package: FrostSigningPackage, 
+    signature_shares: Vec<FrostSignatureShare>,
+    pubkey_package: FrostPublicKeyPackage,
+    #[cfg(feature = "redpallas")]
+    randomizer: FrostRandomizer,
+) -> Result<FrostSignature, CoordinationError> {
     let signing_package = signing_package.to_signing_package()
         .map_err(|_| CoordinationError::FailedToCreateSigningPackage)?;
 
@@ -100,11 +126,22 @@ pub fn aggregate(signing_package: FrostSigningPackage, signature_shares: Vec<Fro
 
     let public_key_package = pubkey_package.into_public_key_package()
     .map_err(|_| CoordinationError::PublicKeyPackageDeserializationError)?;
+   
+    
+    #[cfg(feature = "redpallas")]
+    let randomizer = randomizer.into_randomizer()
+        .map_err(|_| CoordinationError::InvalidRandomizer)?;
 
-    frost::aggregate(&signing_package, &shares, &public_key_package)
+    frost::aggregate(
+        &signing_package,
+        &shares,
+        &public_key_package,
+        #[cfg(feature = "redpallas")]
+        &FrostRandomizer::randomizer_params(randomizer, &public_key_package),
+    )
         .map_err(|e| CoordinationError::SignatureShareAggregationFailed { message: e.to_string() })
         .map(|signature| {
-            FrostSignature { data: signature.serialize().to_vec() }
+            FrostSignature::from_signature(signature)
         })
 }
 
