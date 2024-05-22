@@ -21,7 +21,7 @@ hex = { workspace = true }
 
 [features]
 redpallas = []
-default = []
+default = ["redpallas"]
 
 [build-dependencies]
 uniffi = { workspace = true, features = ["build"] }
