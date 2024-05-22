@@ -22,19 +22,6 @@ pub struct FrostSigningPackage {
     data: Vec<u8>,
 }
 
-impl FrostSigningPackage {
-    pub fn to_signing_package(&self) -> Result<SigningPackage, Error> {
-        SigningPackage::deserialize(&self.data)
-    }
-
-    pub fn from_signing_package(
-        signing_package: SigningPackage,
-    ) -> Result<FrostSigningPackage, Error> {
-        let data = signing_package.serialize()?;
-        Ok(FrostSigningPackage { data: data })
-    }
-}
-
 #[derive(uniffi::Record, Clone)]
 pub struct Message {
     pub data: Vec<u8>,
@@ -43,22 +30,6 @@ pub struct Message {
 #[derive(uniffi::Record)]
 pub struct FrostSignature {
     data: Vec<u8>,
-}
-
-impl FrostSignature {
-    pub fn to_signature(&self) -> Result<Signature, Error> {
-        Signature::deserialize(
-            self.data[0..64]
-                .try_into()
-                .map_err(|_| Error::DeserializationError)?,
-        )
-    }
-
-    fn from_signature(signature: Signature) -> FrostSignature {
-        FrostSignature {
-            data: signature.serialize().to_vec(),
-        }
-    }
 }
 
 #[derive(Debug, uniffi::Error, thiserror::Error)]
@@ -185,4 +156,33 @@ pub fn verify_signature(
         .map_err(|e| FrostSignatureVerificationError::ValidationFailed {
             reason: e.to_string(),
         })
+}
+
+impl FrostSignature {
+    pub fn to_signature(&self) -> Result<Signature, Error> {
+        Signature::deserialize(
+            self.data[0..64]
+                .try_into()
+                .map_err(|_| Error::DeserializationError)?,
+        )
+    }
+
+    fn from_signature(signature: Signature) -> FrostSignature {
+        FrostSignature {
+            data: signature.serialize().to_vec(),
+        }
+    }
+}
+
+impl FrostSigningPackage {
+    pub fn to_signing_package(&self) -> Result<SigningPackage, Error> {
+        SigningPackage::deserialize(&self.data)
+    }
+
+    pub fn from_signing_package(
+        signing_package: SigningPackage,
+    ) -> Result<FrostSigningPackage, Error> {
+        let data = signing_package.serialize()?;
+        Ok(FrostSigningPackage { data: data })
+    }
 }

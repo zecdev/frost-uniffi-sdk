@@ -11,6 +11,21 @@ pub struct FrostRandomizer {
     data: Vec<u8>,
 }
 
+#[uniffi::export]
+pub fn from_hex_string(hex_string: String) -> Result<FrostRandomizer, FrostError> {
+    let randomizer_hex_bytes =
+        hex::decode(hex_string.trim()).map_err(|_| FrostError::DeserializationError)?;
+
+    let randomizer = frost::round2::Randomizer::deserialize(
+        &randomizer_hex_bytes
+            .try_into()
+            .map_err(|_| FrostError::UnknownIdentifier)?,
+    )
+    .map_err(|_| FrostError::DeserializationError)?;
+
+    FrostRandomizer::from_randomizer(randomizer).map_err(|_| FrostError::DeserializationError)
+}
+
 impl FrostRandomizer {
     pub fn into_randomizer(&self) -> Result<Randomizer, Error> {
         let raw_randomizer = &self.data[0..32]
@@ -32,19 +47,4 @@ impl FrostRandomizer {
     ) -> RandomizedParams {
         RandomizedParams::from_randomizer(public_key_package.verifying_key(), randomizer)
     }
-}
-
-#[uniffi::export]
-pub fn from_hex_string(hex_string: String) -> Result<FrostRandomizer, FrostError> {
-    let randomizer_hex_bytes =
-        hex::decode(hex_string.trim()).map_err(|_| FrostError::DeserializationError)?;
-
-    let randomizer = frost::round2::Randomizer::deserialize(
-        &randomizer_hex_bytes
-            .try_into()
-            .map_err(|_| FrostError::UnknownIdentifier)?,
-    )
-    .map_err(|_| FrostError::DeserializationError)?;
-
-    FrostRandomizer::from_randomizer(randomizer).map_err(|_| FrostError::DeserializationError)
 }

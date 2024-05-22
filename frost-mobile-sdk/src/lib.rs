@@ -42,6 +42,164 @@ pub struct TrustedKeyGeneration {
     pub public_key_package: FrostPublicKeyPackage,
 }
 
+#[derive(uniffi::Record)]
+pub struct FrostSecretKeyShare {
+    pub identifier: ParticipantIdentifier,
+    pub data: Vec<u8>,
+}
+
+#[derive(uniffi::Record, Clone)]
+pub struct FrostPublicKeyPackage {
+    pub verifying_shares: HashMap<ParticipantIdentifier, String>,
+    pub verifying_key: String,
+}
+
+#[derive(uniffi::Record, Clone)]
+pub struct Configuration {
+    pub min_signers: u16,
+    pub max_signers: u16,
+    pub secret: Vec<u8>,
+}
+
+#[derive(Debug, uniffi::Error, thiserror::Error)]
+pub enum ConfigurationError {
+    #[error("Number of maximum signers in invalid.")]
+    InvalidMaxSigners,
+    #[error("Number of minimum signers in invalid.")]
+    InvalidMinSigners,
+    #[error("One or more of the custom Identifiers provided are invalid.")]
+    InvalidIdentifier,
+    #[error("There's a problem with this configuration.")]
+    UnknownError,
+}
+
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum FrostError {
+    #[error("Value could not be serialized.")]
+    SerializationError,
+    #[error("Value could not be deserialized.")]
+    DeserializationError,
+    #[error("Key Package is invalid")]
+    InvalidKeyPackage,
+    #[error("Secret Key couldn't be verified")]
+    InvalidSecretKey,
+    #[error("Unknown Identifier")]
+    UnknownIdentifier,
+}
+#[uniffi::export]
+pub fn validate_config(config: &Configuration) -> Result<(), ConfigurationError> {
+    if config.min_signers < 2 {
+        return Err(ConfigurationError::InvalidMinSigners);
+    }
+
+    if config.max_signers < 2 {
+        return Err(ConfigurationError::InvalidMaxSigners);
+    }
+
+    if config.min_signers > config.max_signers {
+        return Err(ConfigurationError::InvalidMinSigners);
+    }
+
+    Ok(())
+}
+
+#[derive(uniffi::Record, Clone)]
+pub struct FrostKeyPackage {
+    pub identifier: String,
+    pub data: Vec<u8>,
+}
+
+#[uniffi::export]
+pub fn verify_and_get_key_package_from(
+    secret_share: FrostSecretKeyShare,
+) -> Result<FrostKeyPackage, FrostError> {
+    secret_share
+        .into_key_package()
+        .map_err(|_| FrostError::InvalidSecretKey)
+}
+
+#[uniffi::export]
+pub fn trusted_dealer_keygen_from(
+    configuration: Configuration,
+) -> Result<TrustedKeyGeneration, ConfigurationError> {
+    let (pubkey, secret_shares) = trusted_dealer_keygen_from_configuration(&configuration)
+        .map_err(|e| match e {
+            Error::InvalidMaxSigners => ConfigurationError::InvalidMaxSigners,
+            Error::InvalidMinSigners => ConfigurationError::InvalidMinSigners,
+            _ => ConfigurationError::UnknownError,
+        })?;
+
+    Ok(TrustedKeyGeneration {
+        public_key_package: pubkey,
+        secret_shares: secret_shares,
+    })
+}
+
+#[uniffi::export]
+pub fn trusted_dealer_keygen_with_identifiers(
+    configuration: Configuration,
+    participants: ParticipantList,
+) -> Result<TrustedKeyGeneration, ConfigurationError> {
+    if configuration.max_signers as usize != participants.identifiers.len() {
+        return Err(ConfigurationError::InvalidMaxSigners);
+    }
+
+    let mut custom_identifiers: Vec<Identifier> =
+        Vec::with_capacity(participants.identifiers.capacity());
+
+    for identifier in participants.identifiers.clone().into_iter() {
+        let identifier = identifier
+            .into_identifier()
+            .map_err(|_| ConfigurationError::InvalidIdentifier)?;
+        custom_identifiers.push(identifier);
+    }
+
+    let list = IdentifierList::Custom(&custom_identifiers);
+
+    let mut rng = thread_rng();
+
+    let (shares, pubkey) =
+        trusted_dealer_keygen(&configuration, list, &mut rng).map_err(|e| match e {
+            Error::InvalidMaxSigners => ConfigurationError::InvalidMaxSigners,
+            Error::InvalidMinSigners => ConfigurationError::InvalidMinSigners,
+            _ => ConfigurationError::UnknownError,
+        })?;
+
+    let pubkey = FrostPublicKeyPackage::from_public_key_package(pubkey)
+        .map_err(|_| ConfigurationError::UnknownError)?;
+
+    let mut hash_map: HashMap<ParticipantIdentifier, FrostSecretKeyShare> = HashMap::new();
+
+    for (k, v) in shares {
+        hash_map.insert(
+            ParticipantIdentifier::from_identifier(k)
+                .map_err(|_| ConfigurationError::InvalidIdentifier)?,
+            FrostSecretKeyShare::from_secret_share(v)
+                .map_err(|_| ConfigurationError::UnknownError)?,
+        );
+    }
+
+    Ok(TrustedKeyGeneration {
+        public_key_package: pubkey,
+        secret_shares: hash_map,
+    })
+}
+
+impl FrostKeyPackage {
+    pub fn from_key_package(key_package: &KeyPackage) -> Result<Self, Error> {
+        let serialized_package = key_package.serialize()?;
+        let identifier = key_package.identifier();
+        Ok(FrostKeyPackage {
+            identifier: identifier.serialize().encode_hex(),
+            data: serialized_package,
+        })
+    }
+
+    pub fn into_key_package(&self) -> Result<KeyPackage, Error> {
+        KeyPackage::deserialize(&self.data)
+    }
+}
+
 impl ParticipantIdentifier {
     pub fn from_identifier(identifier: Identifier) -> Result<ParticipantIdentifier, Error> {
         Ok(ParticipantIdentifier {
@@ -56,18 +214,6 @@ impl ParticipantIdentifier {
 
         Identifier::deserialize(&raw_bytes)
     }
-}
-
-#[derive(uniffi::Record)]
-pub struct FrostSecretKeyShare {
-    pub identifier: ParticipantIdentifier,
-    pub data: Vec<u8>,
-}
-
-#[derive(uniffi::Record, Clone)]
-pub struct FrostPublicKeyPackage {
-    pub verifying_shares: HashMap<ParticipantIdentifier, String>,
-    pub verifying_key: String,
 }
 
 impl FrostSecretKeyShare {
@@ -160,150 +306,4 @@ impl FrostPublicKeyPackage {
 
         Ok(PublicKeyPackage::new(btree_map, verifying_key))
     }
-}
-
-#[derive(uniffi::Record, Clone)]
-pub struct Configuration {
-    pub min_signers: u16,
-    pub max_signers: u16,
-    pub secret: Vec<u8>,
-}
-
-#[derive(Debug, uniffi::Error, thiserror::Error)]
-pub enum ConfigurationError {
-    #[error("Number of maximum signers in invalid.")]
-    InvalidMaxSigners,
-    #[error("Number of minimum signers in invalid.")]
-    InvalidMinSigners,
-    #[error("One or more of the custom Identifiers provided are invalid.")]
-    InvalidIdentifier,
-    #[error("There's a problem with this configuration.")]
-    UnknownError,
-}
-
-#[derive(Debug, thiserror::Error, uniffi::Error)]
-pub enum FrostError {
-    #[error("Value could not be serialized.")]
-    SerializationError,
-    #[error("Value could not be deserialized.")]
-    DeserializationError,
-    #[error("Key Package is invalid")]
-    InvalidKeyPackage,
-    #[error("Secret Key couldn't be verified")]
-    InvalidSecretKey,
-    #[error("Unknown Identifier")]
-    UnknownIdentifier,
-}
-#[uniffi::export]
-pub fn validate_config(config: &Configuration) -> Result<(), ConfigurationError> {
-    if config.min_signers < 2 {
-        return Err(ConfigurationError::InvalidMinSigners);
-    }
-
-    if config.max_signers < 2 {
-        return Err(ConfigurationError::InvalidMaxSigners);
-    }
-
-    if config.min_signers > config.max_signers {
-        return Err(ConfigurationError::InvalidMinSigners);
-    }
-
-    Ok(())
-}
-
-#[derive(uniffi::Record, Clone)]
-pub struct FrostKeyPackage {
-    pub identifier: String,
-    pub data: Vec<u8>,
-}
-
-impl FrostKeyPackage {
-    pub fn from_key_package(key_package: &KeyPackage) -> Result<Self, Error> {
-        let serialized_package = key_package.serialize()?;
-        let identifier = key_package.identifier();
-        Ok(FrostKeyPackage {
-            identifier: identifier.serialize().encode_hex(),
-            data: serialized_package,
-        })
-    }
-
-    pub fn into_key_package(&self) -> Result<KeyPackage, Error> {
-        KeyPackage::deserialize(&self.data)
-    }
-}
-
-#[uniffi::export]
-pub fn verify_and_get_key_package_from(
-    secret_share: FrostSecretKeyShare,
-) -> Result<FrostKeyPackage, FrostError> {
-    secret_share
-        .into_key_package()
-        .map_err(|_| FrostError::InvalidSecretKey)
-}
-
-#[uniffi::export]
-pub fn trusted_dealer_keygen_from(
-    configuration: Configuration,
-) -> Result<TrustedKeyGeneration, ConfigurationError> {
-    let (pubkey, secret_shares) = trusted_dealer_keygen_from_configuration(&configuration)
-        .map_err(|e| match e {
-            Error::InvalidMaxSigners => ConfigurationError::InvalidMaxSigners,
-            Error::InvalidMinSigners => ConfigurationError::InvalidMinSigners,
-            _ => ConfigurationError::UnknownError,
-        })?;
-
-    Ok(TrustedKeyGeneration {
-        public_key_package: pubkey,
-        secret_shares: secret_shares,
-    })
-}
-
-#[uniffi::export]
-pub fn trusted_dealer_keygen_with_identifiers(
-    configuration: Configuration,
-    participants: ParticipantList,
-) -> Result<TrustedKeyGeneration, ConfigurationError> {
-    if configuration.max_signers as usize != participants.identifiers.len() {
-        return Err(ConfigurationError::InvalidMaxSigners);
-    }
-
-    let mut custom_identifiers: Vec<Identifier> =
-        Vec::with_capacity(participants.identifiers.capacity());
-
-    for identifier in participants.identifiers.clone().into_iter() {
-        let identifier = identifier
-            .into_identifier()
-            .map_err(|_| ConfigurationError::InvalidIdentifier)?;
-        custom_identifiers.push(identifier);
-    }
-
-    let list = IdentifierList::Custom(&custom_identifiers);
-
-    let mut rng = thread_rng();
-
-    let (shares, pubkey) =
-        trusted_dealer_keygen(&configuration, list, &mut rng).map_err(|e| match e {
-            Error::InvalidMaxSigners => ConfigurationError::InvalidMaxSigners,
-            Error::InvalidMinSigners => ConfigurationError::InvalidMinSigners,
-            _ => ConfigurationError::UnknownError,
-        })?;
-
-    let pubkey = FrostPublicKeyPackage::from_public_key_package(pubkey)
-        .map_err(|_| ConfigurationError::UnknownError)?;
-
-    let mut hash_map: HashMap<ParticipantIdentifier, FrostSecretKeyShare> = HashMap::new();
-
-    for (k, v) in shares {
-        hash_map.insert(
-            ParticipantIdentifier::from_identifier(k)
-                .map_err(|_| ConfigurationError::InvalidIdentifier)?,
-            FrostSecretKeyShare::from_secret_share(v)
-                .map_err(|_| ConfigurationError::UnknownError)?,
-        );
-    }
-
-    Ok(TrustedKeyGeneration {
-        public_key_package: pubkey,
-        secret_shares: hash_map,
-    })
 }
