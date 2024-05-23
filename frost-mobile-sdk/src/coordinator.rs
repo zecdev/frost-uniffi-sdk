@@ -5,10 +5,10 @@ use frost_ed25519 as frost;
 use reddsa::frost::redpallas as frost;
 
 #[cfg(feature = "redpallas")]
-use crate::randomizer::FrostRandomizer;
+use crate::randomized::randomizer::FrostRandomizer;
+
 use crate::{
-    participant::{FrostSignatureShare, FrostSigningCommitments},
-    FrostPublicKeyPackage,
+    participant::{FrostSignatureShare, FrostSigningCommitments}, FrostPublicKeyPackage
 };
 use frost::{
     round1::SigningCommitments, round2::SignatureShare, Error, Identifier, Signature,

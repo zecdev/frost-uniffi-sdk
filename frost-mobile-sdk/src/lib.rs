@@ -5,7 +5,7 @@ use frost_ed25519 as frost;
 use reddsa::frost::redpallas as frost;
 
 #[cfg(feature = "redpallas")]
-pub mod randomizer;
+pub mod randomized;
 use uniffi;
 pub mod coordinator;
 pub mod participant;

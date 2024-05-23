@@ -1,4 +1,5 @@
 mod helpers;
+
 use frost_mobile_sdk::{
     coordinator::{aggregate, verify_signature, Message},
     trusted_dealer::trusted_dealer_keygen_from_configuration,
