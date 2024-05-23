@@ -24,9 +24,9 @@ pub fn trusted_dealer_keygen_from_configuration(
     let mut rng = thread_rng();
 
     let keygen = if config.secret.is_empty() {
-        trusted_dealer_keygen(&config, IdentifierList::Default, &mut rng)
+        trusted_dealer_keygen(config, IdentifierList::Default, &mut rng)
     } else {
-        split_secret(&config, IdentifierList::Default, &mut rng)
+        split_secret(config, IdentifierList::Default, &mut rng)
     };
 
     let (shares, pubkeys) = keygen?;

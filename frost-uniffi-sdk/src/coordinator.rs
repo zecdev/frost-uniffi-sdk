@@ -4,14 +4,18 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
-#[cfg(feature = "redpallas")]
-use crate::randomized::randomizer::FrostRandomizer;
+#[cfg(not(feature = "redpallas"))]
+use crate::participant::FrostSignatureShare;
+
+#[cfg(not(feature = "redpallas"))]
+use frost::round2::SignatureShare;
 
 use crate::{
-    participant::{FrostSignatureShare, FrostSigningCommitments}, FrostPublicKeyPackage
+    participant::FrostSigningCommitments, FrostPublicKeyPackage
 };
+
 use frost::{
-    round1::SigningCommitments, round2::SignatureShare, Error, Identifier, Signature,
+    round1::SigningCommitments, Error, Identifier, Signature,
     SigningPackage,
 };
 use std::collections::BTreeMap;
@@ -116,7 +120,7 @@ pub fn aggregate(
     .map_err(|e| CoordinationError::SignatureShareAggregationFailed {
         message: e.to_string(),
     })
-    .map(|signature| FrostSignature::from_signature(signature))
+    .map(FrostSignature::from_signature)
 }
 
 #[derive(Debug, uniffi::Error, thiserror::Error)]
@@ -176,6 +180,6 @@ impl FrostSigningPackage {
         signing_package: SigningPackage,
     ) -> Result<FrostSigningPackage, Error> {
         let data = signing_package.serialize()?;
-        Ok(FrostSigningPackage { data: data })
+        Ok(FrostSigningPackage { data })
     }
 }
