@@ -4,7 +4,7 @@ use frost_ed25519 as frost;
 use reddsa::frost::redpallas as frost;
 
 
-use frost_mobile_sdk::{
+use frost_uniffi_sdk::{
     coordinator::{new_signing_package, FrostSigningPackage, Message},
     participant::{sign, FrostSignatureShare, FrostSigningCommitments, FrostSigningNonces},
     FrostKeyPackage, FrostSecretKeyShare, ParticipantIdentifier,

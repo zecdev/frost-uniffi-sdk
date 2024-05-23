@@ -1,6 +1,6 @@
 mod helpers;
 
-use frost_mobile_sdk::{
+use frost_uniffi_sdk::{
     coordinator::{aggregate, verify_signature, Message},
     trusted_dealer::trusted_dealer_keygen_from_configuration,
     Configuration,
@@ -11,7 +11,7 @@ use rand::thread_rng;
 #[cfg(not(feature = "redpallas"))]
 use helpers::round_2 as round_2;
 #[cfg(feature = "redpallas")]
-use frost_mobile_sdk::randomized::tests::helpers::round_2 as round_2;
+use frost_uniffi_sdk::randomized::tests::helpers::round_2 as round_2;
 
 #[test]
 fn test_trusted_from_configuration_with_secret() {
