@@ -1,5 +1,5 @@
 [package]
-name = "frost-mobile-sdk"
+name = "frost-uniffi-sdk"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ edition = "2021"
 
 [lib]
 crate-type = ["lib", "cdylib"]
-name = "frost_mobile_sdk"
+name = "frost_uniffi_sdk"
 
 [dependencies]
 uniffi = { workspace = true }

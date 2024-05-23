@@ -1,4 +1,4 @@
-# frost-mobile-sdk
+# frost-uniffi-sdk
 Proof-of-Concept of a FROST SDK using Uniffi
 
 FROST is a thresold signature scheme created by Zcash Foundation. 
@@ -41,7 +41,7 @@ and Chelsea Komlo from @ZcashFoundation.
 `aarch64-apple-darwin`
 
 **Building the mobile SDK**
-to build the mobile SDK use the following command on the `frost-mobile-sdk`
+to build the mobile SDK use the following command on the `frost-uniffi-sdk`
 folder.
 
 ```
