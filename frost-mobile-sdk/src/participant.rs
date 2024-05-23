@@ -12,7 +12,8 @@ use rand::thread_rng;
 use uniffi;
 
 #[cfg(feature = "redpallas")]
-use crate::randomizer::FrostRandomizer;
+use crate::randomized::randomizer::FrostRandomizer;
+
 use crate::{
     coordinator::FrostSigningPackage, FrostKeyPackage, FrostSecretKeyShare, ParticipantIdentifier,
 };
