@@ -1,6 +1,12 @@
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
+use crate::{
+    coordinator::FrostSigningPackage,
+    participant::{FrostSignatureShare, FrostSigningNonces, Round2Error},
+    randomized::randomizer::FrostRandomizer,
+    FrostKeyPackage,
+};
 
 #[cfg(feature = "redpallas")]
 #[uniffi::export]
@@ -28,15 +34,12 @@ pub fn sign(
         .into_randomizer()
         .map_err(|_| Round2Error::InvalidRandomizer)?;
 
-    let share = frost::round2::sign(
-        &signing_package,
-        &nonces,
-        &key_package,
-        randomizer,
-    )
-    .map_err(|e| Round2Error::SigningFailed {
-        message: e.to_string(),
-    })?;
+    let share =
+        frost::round2::sign(&signing_package, &nonces, &key_package, randomizer).map_err(|e| {
+            Round2Error::SigningFailed {
+                message: e.to_string(),
+            }
+        })?;
 
     FrostSignatureShare::from_signature_share(identifier, share).map_err(|e| {
         Round2Error::SigningFailed {

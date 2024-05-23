@@ -11,15 +11,10 @@ use frost::{
 use rand::thread_rng;
 use uniffi;
 
-
-use crate::{ 
-    FrostSecretKeyShare, ParticipantIdentifier,
-};
+use crate::{FrostSecretKeyShare, ParticipantIdentifier};
 
 #[cfg(not(feature = "redpallas"))]
-use crate::{
-    coordinator::FrostSigningPackage, FrostKeyPackage
-};
+use crate::{coordinator::FrostSigningPackage, FrostKeyPackage};
 
 #[derive(uniffi::Record, Clone)]
 pub struct FrostSigningNonces {
@@ -127,7 +122,7 @@ pub struct FrostSignatureShare {
 }
 
 impl FrostSignatureShare {
-    pub(crate) fn to_signature_share(&self) -> Result<SignatureShare, Error> {
+    pub fn to_signature_share(&self) -> Result<SignatureShare, Error> {
         let bytes = self.data[0..32]
             .try_into()
             .map_err(|_| Error::DeserializationError)?;
@@ -135,7 +130,7 @@ impl FrostSignatureShare {
         SignatureShare::deserialize(bytes)
     }
 
-    fn from_signature_share(
+    pub fn from_signature_share(
         identifier: Identifier,
         share: SignatureShare,
     ) -> Result<FrostSignatureShare, Error> {
@@ -167,13 +162,10 @@ pub fn sign(
 
     let identifier = *key_package.identifier();
 
-    let share = frost::round2::sign(
-        &signing_package,
-        &nonces,
-        &key_package,
-    )
-    .map_err(|e| Round2Error::SigningFailed {
-        message: e.to_string(),
+    let share = frost::round2::sign(&signing_package, &nonces, &key_package).map_err(|e| {
+        Round2Error::SigningFailed {
+            message: e.to_string(),
+        }
     })?;
 
     FrostSignatureShare::from_signature_share(identifier, share).map_err(|e| {
