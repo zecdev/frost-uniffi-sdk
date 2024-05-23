@@ -12,8 +12,13 @@ use rand::thread_rng;
 use uniffi;
 
 
+use crate::{ 
+    FrostSecretKeyShare, ParticipantIdentifier,
+};
+
+#[cfg(not(feature = "redpallas"))]
 use crate::{
-    coordinator::FrostSigningPackage, FrostKeyPackage, FrostSecretKeyShare, ParticipantIdentifier,
+    coordinator::FrostSigningPackage, FrostKeyPackage
 };
 
 #[derive(uniffi::Record, Clone)]
@@ -28,7 +33,7 @@ impl FrostSigningNonces {
 
     pub fn from_nonces(nonces: SigningNonces) -> Result<FrostSigningNonces, Error> {
         let data = nonces.serialize()?;
-        Ok(FrostSigningNonces { data: data })
+        Ok(FrostSigningNonces { data })
     }
 }
 

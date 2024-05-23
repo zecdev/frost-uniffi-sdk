@@ -6,7 +6,7 @@ use reddsa::frost::redpallas as frost;
 
 #[cfg(feature = "redpallas")]
 pub mod randomized;
-use uniffi;
+
 pub mod coordinator;
 pub mod participant;
 pub mod trusted_dealer;
@@ -131,7 +131,7 @@ pub fn trusted_dealer_keygen_from(
 
     Ok(TrustedKeyGeneration {
         public_key_package: pubkey,
-        secret_shares: secret_shares,
+        secret_shares,
     })
 }
 
@@ -226,7 +226,7 @@ impl FrostSecretKeyShare {
             .map_err(|_| frost::Error::SerializationError)?;
 
         Ok(FrostSecretKeyShare {
-            identifier: identifier,
+            identifier,
             data: serialized_share,
         })
     }
