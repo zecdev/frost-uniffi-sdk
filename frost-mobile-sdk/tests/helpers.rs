@@ -4,7 +4,7 @@ use frost_ed25519 as frost;
 use reddsa::frost::redpallas as frost;
 
 #[cfg(feature = "redpallas")]
-use frost_mobile_sdk::randomizer::FrostRandomizer;
+use frost_mobile_sdk::randomized::randomizer::FrostRandomizer;
 
 use frost_mobile_sdk::{
     coordinator::{new_signing_package, FrostSigningPackage, Message},
