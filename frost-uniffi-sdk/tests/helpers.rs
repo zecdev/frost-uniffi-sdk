@@ -3,7 +3,6 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
-
 use frost_uniffi_sdk::{
     coordinator::{new_signing_package, FrostSigningPackage, Message},
     participant::{sign, FrostSignatureShare, FrostSigningCommitments, FrostSigningNonces},
@@ -73,18 +72,12 @@ pub fn round_2(
     let signing_package = new_signing_package(message, commitments).unwrap();
     let mut signature_shares = HashMap::new();
 
-
     for participant_identifier in nonces_map.keys() {
         let key_package = key_packages[participant_identifier].clone();
 
         let nonces = nonces_map[participant_identifier].clone();
 
-        let signature_share = sign(
-            signing_package.clone(),
-            nonces,
-            key_package,
-        )
-        .unwrap();
+        let signature_share = sign(signing_package.clone(), nonces, key_package).unwrap();
 
         signature_shares.insert(participant_identifier.clone(), signature_share);
     }

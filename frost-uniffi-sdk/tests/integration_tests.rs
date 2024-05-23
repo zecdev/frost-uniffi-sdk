@@ -8,10 +8,10 @@ use frost_uniffi_sdk::{
 use helpers::{key_package, round_1};
 use rand::thread_rng;
 
-#[cfg(not(feature = "redpallas"))]
-use helpers::round_2 as round_2;
 #[cfg(feature = "redpallas")]
-use frost_uniffi_sdk::randomized::tests::helpers::round_2 as round_2;
+use frost_uniffi_sdk::randomized::tests::helpers::round_2;
+#[cfg(not(feature = "redpallas"))]
+use helpers::round_2;
 
 #[test]
 fn test_trusted_from_configuration_with_secret() {
@@ -44,12 +44,8 @@ fn test_trusted_from_configuration_with_secret() {
     );
 
     #[cfg(not(feature = "redpallas"))]
-    let (signing_package, signature_shares) = round_2(
-        &nonces,
-        &key_packages,
-        commitments,
-        message.clone()
-    );
+    let (signing_package, signature_shares) =
+        round_2(&nonces, &key_packages, commitments, message.clone());
 
     let group_signature = aggregate(
         signing_package,
@@ -96,17 +92,12 @@ fn check_keygen_with_dealer_with_secret_with_large_num_of_signers() {
         &key_packages,
         commitments,
         message.clone(),
-
         None,
     );
 
     #[cfg(not(feature = "redpallas"))]
-    let (signing_package, signature_shares) = round_2(
-        &nonces,
-        &key_packages,
-        commitments,
-        message.clone()
-    );
+    let (signing_package, signature_shares) =
+        round_2(&nonces, &key_packages, commitments, message.clone());
 
     #[cfg(feature = "redpallas")]
     let frost_randomizer = randomizer.unwrap();
@@ -117,13 +108,8 @@ fn check_keygen_with_dealer_with_secret_with_large_num_of_signers() {
         pubkeys.clone(),
         #[cfg(feature = "redpallas")]
         frost_randomizer,
-    ).unwrap();
-
-    assert!(verify_signature(
-        message,
-        group_signature,
-        pubkeys
     )
-    .is_ok())
+    .unwrap();
 
+    assert!(verify_signature(message, group_signature, pubkeys).is_ok())
 }

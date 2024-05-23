@@ -10,14 +10,9 @@ use crate::participant::FrostSignatureShare;
 #[cfg(not(feature = "redpallas"))]
 use frost::round2::SignatureShare;
 
-use crate::{
-    participant::FrostSigningCommitments, FrostPublicKeyPackage
-};
+use crate::{participant::FrostSigningCommitments, FrostPublicKeyPackage};
 
-use frost::{
-    round1::SigningCommitments, Error, Identifier, Signature,
-    SigningPackage,
-};
+use frost::{round1::SigningCommitments, Error, Identifier, Signature, SigningPackage};
 use std::collections::BTreeMap;
 use uniffi;
 
@@ -112,15 +107,11 @@ pub fn aggregate(
         .into_public_key_package()
         .map_err(|_| CoordinationError::PublicKeyPackageDeserializationError)?;
 
-    frost::aggregate(
-        &signing_package,
-        &shares,
-        &public_key_package,
-    )
-    .map_err(|e| CoordinationError::SignatureShareAggregationFailed {
-        message: e.to_string(),
-    })
-    .map(FrostSignature::from_signature)
+    frost::aggregate(&signing_package, &shares, &public_key_package)
+        .map_err(|e| CoordinationError::SignatureShareAggregationFailed {
+            message: e.to_string(),
+        })
+        .map(FrostSignature::from_signature)
 }
 
 #[derive(Debug, uniffi::Error, thiserror::Error)]
@@ -164,7 +155,7 @@ impl FrostSignature {
         )
     }
 
-    fn from_signature(signature: Signature) -> FrostSignature {
+    pub fn from_signature(signature: Signature) -> FrostSignature {
         FrostSignature {
             data: signature.serialize().to_vec(),
         }
