@@ -79,12 +79,12 @@ pub fn new_signing_package(
     Ok(serialized_package)
 }
 
+#[cfg(not(feature = "redpallas"))]
 #[uniffi::export]
 pub fn aggregate(
     signing_package: FrostSigningPackage,
     signature_shares: Vec<FrostSignatureShare>,
     pubkey_package: FrostPublicKeyPackage,
-    #[cfg(feature = "redpallas")] randomizer: FrostRandomizer,
 ) -> Result<FrostSignature, CoordinationError> {
     let signing_package = signing_package
         .to_signing_package()
@@ -108,17 +108,10 @@ pub fn aggregate(
         .into_public_key_package()
         .map_err(|_| CoordinationError::PublicKeyPackageDeserializationError)?;
 
-    #[cfg(feature = "redpallas")]
-    let randomizer = randomizer
-        .into_randomizer()
-        .map_err(|_| CoordinationError::InvalidRandomizer)?;
-
     frost::aggregate(
         &signing_package,
         &shares,
         &public_key_package,
-        #[cfg(feature = "redpallas")]
-        &FrostRandomizer::randomizer_params(randomizer, &public_key_package),
     )
     .map_err(|e| CoordinationError::SignatureShareAggregationFailed {
         message: e.to_string(),

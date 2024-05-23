@@ -5,8 +5,13 @@ use frost_mobile_sdk::{
     trusted_dealer::trusted_dealer_keygen_from_configuration,
     Configuration,
 };
-use helpers::{key_package, round_1, round_2};
+use helpers::{key_package, round_1};
 use rand::thread_rng;
+
+#[cfg(not(feature = "redpallas"))]
+use helpers::round_2 as round_2;
+#[cfg(feature = "redpallas")]
+use frost_mobile_sdk::randomized::tests::helpers::round_2 as round_2;
 
 #[test]
 fn test_trusted_from_configuration_with_secret() {
@@ -28,14 +33,22 @@ fn test_trusted_from_configuration_with_secret() {
         data: "i am a message".as_bytes().to_vec(),
     };
 
+    #[cfg(feature = "redpallas")]
     let (signing_package, signature_shares, randomizer) = round_2(
         &mut rng,
         &nonces,
         &key_packages,
         commitments,
         message.clone(),
-        #[cfg(feature = "redpallas")]
         None,
+    );
+
+    #[cfg(not(feature = "redpallas"))]
+    let (signing_package, signature_shares) = round_2(
+        &nonces,
+        &key_packages,
+        commitments,
+        message.clone()
     );
 
     let group_signature = aggregate(
@@ -75,42 +88,42 @@ fn check_keygen_with_dealer_with_secret_with_large_num_of_signers() {
     let message = Message {
         data: "i am a message".as_bytes().to_vec(),
     };
+
+    #[cfg(feature = "redpallas")]
     let (signing_package, signature_shares, randomizer) = round_2(
         &mut rng,
         &nonces,
         &key_packages,
         commitments,
         message.clone(),
-        #[cfg(feature = "redpallas")]
+
         None,
+    );
+
+    #[cfg(not(feature = "redpallas"))]
+    let (signing_package, signature_shares) = round_2(
+        &nonces,
+        &key_packages,
+        commitments,
+        message.clone()
     );
 
     #[cfg(feature = "redpallas")]
     let frost_randomizer = randomizer.unwrap();
+
     let group_signature = aggregate(
         signing_package,
         signature_shares.into_iter().map(|s| s.1).collect(),
         pubkeys.clone(),
         #[cfg(feature = "redpallas")]
         frost_randomizer,
-    );
+    ).unwrap();
 
-    match group_signature {
-        Ok(s) => {
-            let group = s.to_signature().unwrap();
+    assert!(verify_signature(
+        message,
+        group_signature,
+        pubkeys
+    )
+    .is_ok())
 
-            let is_signature_valid = pubkeys
-                .into_public_key_package()
-                .unwrap()
-                .verifying_key()
-                .verify("test".as_bytes(), &group)
-                .is_ok();
-            assert!(is_signature_valid);
-
-            let verify_signature = verify_signature(message, s, pubkeys);
-
-            assert!(verify_signature.is_ok());
-        }
-        Err(e) => assert!(false, "verify  signature failed with error {e}"),
-    }
 }

@@ -3,8 +3,6 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
-#[cfg(feature = "redpallas")]
-use frost_mobile_sdk::randomized::randomizer::FrostRandomizer;
 
 use frost_mobile_sdk::{
     coordinator::{new_signing_package, FrostSigningPackage, Message},
@@ -61,36 +59,20 @@ pub fn round_1(
     (nonces_map, commitments_map)
 }
 
+#[cfg(not(feature = "redpallas"))]
 pub fn round_2(
-    rng: &mut ThreadRng,
     nonces_map: &HashMap<ParticipantIdentifier, FrostSigningNonces>,
     key_packages: &HashMap<ParticipantIdentifier, FrostKeyPackage>,
     commitments_map: HashMap<ParticipantIdentifier, FrostSigningCommitments>,
     message: Message,
-    #[cfg(feature = "redpallas")] randomizer: Option<FrostRandomizer>,
 ) -> (
     FrostSigningPackage,
     HashMap<ParticipantIdentifier, FrostSignatureShare>,
-    Option<FrostRandomizer>,
 ) {
     let commitments = commitments_map.into_iter().map(|c| c.1).collect();
     let signing_package = new_signing_package(message, commitments).unwrap();
     let mut signature_shares = HashMap::new();
 
-    #[cfg(feature = "redpallas")]
-    let randomizer = match randomizer {
-        Some(r) => r,
-        None => {
-            let randomizer =
-                frost::round2::Randomizer::new(rng, &signing_package.to_signing_package().unwrap())
-                    .unwrap();
-
-            FrostRandomizer::from_randomizer(randomizer).unwrap()
-        }
-    };
-
-    #[cfg(not(feature = "redpallas"))]
-    let randomizer: Option<FrostRandomizer> = None;
 
     for participant_identifier in nonces_map.keys() {
         let key_package = key_packages[participant_identifier].clone();
@@ -101,13 +83,11 @@ pub fn round_2(
             signing_package.clone(),
             nonces,
             key_package,
-            #[cfg(feature = "redpallas")]
-            &randomizer,
         )
         .unwrap();
 
         signature_shares.insert(participant_identifier.clone(), signature_share);
     }
 
-    (signing_package, signature_shares, Some(randomizer))
+    (signing_package, signature_shares)
 }
