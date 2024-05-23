@@ -1,18 +1,16 @@
-use frost::{
-    round1::{SigningCommitments, SigningNonces},
-    round2::SignatureShare,
-    Error, Identifier,
-};
 #[cfg(not(feature = "redpallas"))]
 use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
+use frost::{
+    round1::{SigningCommitments, SigningNonces},
+    round2::SignatureShare,
+    Error, Identifier,
+};
 use rand::thread_rng;
 use uniffi;
 
-#[cfg(feature = "redpallas")]
-use crate::randomized::randomizer::FrostRandomizer;
 
 use crate::{
     coordinator::FrostSigningPackage, FrostKeyPackage, FrostSecretKeyShare, ParticipantIdentifier,
@@ -143,12 +141,12 @@ impl FrostSignatureShare {
     }
 }
 
+#[cfg(not(feature = "redpallas"))]
 #[uniffi::export]
 pub fn sign(
     signing_package: FrostSigningPackage,
     nonces: FrostSigningNonces,
     key_package: FrostKeyPackage,
-    #[cfg(feature = "redpallas")] randomizer: &FrostRandomizer,
 ) -> Result<FrostSignatureShare, Round2Error> {
     let signing_package = signing_package
         .to_signing_package()
@@ -164,17 +162,10 @@ pub fn sign(
 
     let identifier = *key_package.identifier();
 
-    #[cfg(feature = "redpallas")]
-    let randomizer = randomizer
-        .into_randomizer()
-        .map_err(|_| Round2Error::InvalidRandomizer)?;
-
     let share = frost::round2::sign(
         &signing_package,
         &nonces,
         &key_package,
-        #[cfg(feature = "redpallas")]
-        randomizer,
     )
     .map_err(|e| Round2Error::SigningFailed {
         message: e.to_string(),
