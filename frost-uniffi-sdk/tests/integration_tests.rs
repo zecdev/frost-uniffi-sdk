@@ -1,7 +1,7 @@
 mod helpers;
 
 use frost_uniffi_sdk::{
-    coordinator::{aggregate, verify_signature, Message},
+    coordinator::{verify_signature, Message},
     trusted_dealer::trusted_dealer_keygen_from_configuration,
     Configuration,
 };
@@ -9,17 +9,31 @@ use helpers::{key_package, round_1};
 use rand::thread_rng;
 
 #[cfg(feature = "redpallas")]
-use frost_uniffi_sdk::randomized::tests::helpers::round_2;
+use frost_uniffi_sdk::{
+    randomized::tests::helpers::round_2,
+    randomized::coordinator::aggregate
+};
+#[cfg(not(feature = "redpallas"))]
+use frost_uniffi_sdk::coordinator::aggregate;
 #[cfg(not(feature = "redpallas"))]
 use helpers::round_2;
 
-#[test]
-fn test_trusted_from_configuration_with_secret() {
-    let mut rng = thread_rng();
-    let secret: Vec<u8> = vec![
+
+fn test_signing_key() -> Vec<u8> {
+    #[cfg(feature = "redpallas")]
+    return hex::decode("f500df73b2b416bec6a2b6bbb44e97164e05520b63aa27554cfc7ba82f5ba215").unwrap();
+   
+    #[cfg(not(feature = "redpallas"))]
+    return vec![
         123, 28, 51, 211, 245, 41, 29, 133, 222, 102, 72, 51, 190, 177, 173, 70, 159, 127, 182, 2,
         90, 14, 199, 139, 58, 121, 12, 110, 19, 169, 131, 4,
     ];
+}
+#[test]
+fn test_trusted_from_configuration_with_secret() {
+    let mut rng = thread_rng();
+
+    let secret: Vec<u8> = test_signing_key();
     let secret_config = Configuration {
         min_signers: 2,
         max_signers: 3,
@@ -69,10 +83,7 @@ fn test_trusted_from_configuration_with_secret() {
 #[test]
 fn check_keygen_with_dealer_with_secret_with_large_num_of_signers() {
     let mut rng = thread_rng();
-    let secret: Vec<u8> = vec![
-        123, 28, 51, 211, 245, 41, 29, 133, 222, 102, 72, 51, 190, 177, 173, 70, 159, 127, 182, 2,
-        90, 14, 199, 139, 58, 121, 12, 110, 19, 169, 131, 4,
-    ];
+    let secret: Vec<u8> = test_signing_key();
     let secret_config = Configuration {
         min_signers: 14,
         max_signers: 20,

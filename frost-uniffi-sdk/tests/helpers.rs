@@ -3,9 +3,16 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
+#[cfg(not(feature = "redpallas"))]
 use frost_uniffi_sdk::{
+    participant::sign,
     coordinator::{new_signing_package, FrostSigningPackage, Message},
-    participant::{sign, FrostSignatureShare, FrostSigningCommitments, FrostSigningNonces},
+    participant::FrostSignatureShare,
+};
+
+
+use frost_uniffi_sdk::{
+    participant::{FrostSigningCommitments, FrostSigningNonces},
     FrostKeyPackage, FrostSecretKeyShare, ParticipantIdentifier,
 };
 use rand::rngs::ThreadRng;

@@ -2,7 +2,10 @@ name: Cargo Build & Test
 
 on:
   push:
+    branches: ["main"]
   pull_request:
+      branches: ["main"]
+      branches-ignore: ["release-*.*.*"]
 
 env: 
   CARGO_TERM_COLOR: always
