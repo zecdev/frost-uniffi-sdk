@@ -1,6 +1,17 @@
+use std::collections::HashMap;
+
+use rand::rngs::ThreadRng;
 use reddsa::frost::redpallas as frost;
 
-use crate::randomizer::FrostRandomizer;
+use crate::coordinator::new_signing_package;
+use crate::randomized::participant::sign;
+use crate::randomized::randomizer::FrostRandomizer;
+use crate::{
+    ParticipantIdentifier,
+    participant::{FrostSigningNonces, FrostSigningCommitments, FrostSignatureShare},
+    FrostKeyPackage,
+    coordinator::{Message, FrostSigningPackage},
+};
 
 pub fn round_2(
     rng: &mut ThreadRng,
@@ -28,8 +39,6 @@ pub fn round_2(
             FrostRandomizer::from_randomizer(randomizer).unwrap()
         }
     };
-
-    let randomizer: Option<FrostRandomizer> = None;
 
     for participant_identifier in nonces_map.keys() {
         let key_package = key_packages[participant_identifier].clone();
