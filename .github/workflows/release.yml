@@ -13,7 +13,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
+          ref: ${{ github.event.pull_request.head.ref }}
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with: 
@@ -57,10 +58,9 @@ jobs:
         env:
           PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
-          git checkout -b ${{ github.head_ref }} || git checkout ${{ github.head_ref }}
           git add Package.swift
           git commit -m "Update Swift package for release ${{ env.SEMVER }}"
-          git push https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }} ${{ github.head_ref }} || git push --set-upstream https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }} ${{ github.head_ref }}
+          git push
   
       - name: Tag the Release
         env:
