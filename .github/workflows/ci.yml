@@ -5,7 +5,7 @@ on:
     branches: ["main"]
   pull_request:
       branches: ["main"]
-      branches-ignore: ["release-*"]
+      branches-ignore: ["release-*.*.*"]
 
 env: 
   CARGO_TERM_COLOR: always
