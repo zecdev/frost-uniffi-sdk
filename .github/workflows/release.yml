@@ -22,7 +22,7 @@ jobs:
         run: echo "SEMVER=$(echo ${{ github.head_ref }} | sed 's/^release-//')" >> $GITHUB_ENV
     
       - name: Install cargo swift 0.7
-        run: cargo install cargo-swift@0.7 -f  
+        run: cargo install cargo-swift@=0.7 -f  
     
       - name: Cargo Swift Package
         run: |
