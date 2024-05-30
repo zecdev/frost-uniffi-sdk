@@ -8,6 +8,3 @@ cd ..
 rsync -avr --exclude='*.DS_Store' frost-uniffi-sdk/FrostSwiftFFI/ FrostSwiftFFI/
 
 rm -rf frost-uniffi-sdk/FrostSwiftFFI/
-
-# move the Package file to project root 
-mv -f FrostSwiftFFI/Package.swift Package.swift
