@@ -2,7 +2,7 @@ on:
     push:
     pull_request:
       branches-ignore: 
-        - "release-*"
+        - "release-*.*.*"
 name: Clippy check
 
 # Make sure CI fails on all warnings, including Clippy lints
