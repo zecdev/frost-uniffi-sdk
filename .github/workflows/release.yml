@@ -31,9 +31,6 @@ jobs:
 
       - name: Rsync the FrostSwiftFFI file
         run: rsync -avr --exclude='*.DS_Store' frost-uniffi-sdk/FrostSwiftFFI/ FrostSwiftFFI/
-
-      - name: move the Package file to project root 
-        run: mv -f FrostSwiftFFI/Package.swift Package.swift
     
       - name: Zip the xcframework
         run: zip -r FrostSwiftFFI/RustFramework.xcframework.zip FrostSwiftFFI/RustFramework.xcframework
