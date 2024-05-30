@@ -15,7 +15,6 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with: 
@@ -56,16 +55,22 @@ jobs:
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
   
       - name: Commit and Push Changes
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
+          git checkout -b ${{ github.head_ref }} || git checkout ${{ github.head_ref }}
           git add Package.swift
           git commit -m "Update Swift package for release ${{ env.SEMVER }}"
-          git push origin ${{ github.head_ref }}
+          git push https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }} ${{ github.head_ref }} || git push --set-upstream https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }} ${{ github.head_ref }}
   
       - name: Tag the Release
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           TAG_NAME="${{ env.SEMVER }}"
           git tag $TAG_NAME
-          git push origin $TAG_NAME
+          git push https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }} $TAG_NAME
+
   
       - name: Fetch all tags
         run: git fetch --tags
@@ -82,14 +87,14 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
           tag_name: ${{ env.SEMVER }}
           release_name: Release ${{ env.SEMVER }}
           body: |
             ### Changes since last release
             ${{ env.RELEASE_NOTES }}
-  
+
             ### Checksum
             ```plaintext
             ${{ env.SHA256 }}
@@ -100,7 +105,7 @@ jobs:
       - name: Upload XCFramework to Release
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: FrostSwiftFFI/RustFramework.xcframework.zip
