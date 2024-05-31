@@ -8,3 +8,10 @@ cd ..
 rsync -avr --exclude='*.DS_Store' frost-uniffi-sdk/FrostSwiftFFI/ FrostSwiftFFI/
 
 rm -rf frost-uniffi-sdk/FrostSwiftFFI/
+
+# Zip the xcframework
+zip -r FrostSwiftFFI/RustFramework.xcframework.zip FrostSwiftFFI/RustFramework.xcframework
+
+echo "CHECKSUM:"
+shasum -a 256 FrostSwiftFFI/RustFramework.xcframework.zip
+
