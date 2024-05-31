@@ -1,6 +1,14 @@
 on:
     push:
+      paths:
+        - frost-uniffi-sdk
+        - uniffi-bindgen
+        - Cargo.toml
     pull_request:
+      paths:
+        - frost-uniffi-sdk
+        - uniffi-bindgen
+        - Cargo.toml
       branches-ignore: 
         - "release-*.*.*"
 name: Clippy check
