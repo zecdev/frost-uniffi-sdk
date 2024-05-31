@@ -47,7 +47,7 @@ jobs:
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ env.SEMVER }}/RustFramework.xcframework.zip"
           CHECKSUM="${{ env.SHA256 }}"
           
-          sed -i '' -e "s|.binaryTarget(name: \"RustFramework\", path: \"./FrostSwiftFFI/RustFramework.xcframework\")|.binaryTarget(name: \"RustFramework\", url: \"${RELEASE_URL}\", checksum: \"${CHECKSUM}\"),|g" Package.swift 
+          sed -i '' -e "s|.binaryTarget(name: \"RustFramework\", path: \"./FrostSwiftFFI/RustFramework.xcframework\"),|.binaryTarget(name: \"RustFramework\", url: \"${RELEASE_URL}\", checksum: \"${CHECKSUM}\"),|g" Package.swift 
   
       - name: Configure Git
         run: |
