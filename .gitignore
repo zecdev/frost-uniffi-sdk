@@ -19,6 +19,7 @@ Cargo.lock
 **/generated/*
 .swiftpm
 frost-uniffi-sdk/FrostSwiftFFI/*
+.build
 
 # ignore rust framework binaries both framework and zip
 RustFramework.xcframework.zip
