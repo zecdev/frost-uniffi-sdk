@@ -3,9 +3,17 @@ name: Cargo Build & Test
 on:
   push:
     branches: ["main"]
+    paths:
+      - frost-uniffi-sdk
+      - uniffi-bindgen
+      - Cargo.toml
   pull_request:
       branches: ["main"]
       branches-ignore: ["release-*.*.*"]
+      paths:
+        - frost-uniffi-sdk
+        - uniffi-bindgen
+        - Cargo.toml
 
 env: 
   CARGO_TERM_COLOR: always
