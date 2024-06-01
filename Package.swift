@@ -8,7 +8,7 @@ let package = Package(
     name: "FrostSwiftFFI",
     platforms: [
         .iOS(.v13),
-        .macOS(.v10_15)
+        .macOS(.v10_13)
     ],
     products: [
         .library(
@@ -18,7 +18,7 @@ let package = Package(
     ],
     dependencies: [ ],
     targets: [
-        .binaryTarget(name: "RustFramework", url: "https://github.com/pacu/frost-uniffi-sdk/releases/download/0.0.0/RustFramework.xcframework.zip", checksum: "249ecd6a27c69ff6b8ec408d036ad291516a791e8be5b3d3b069ec74e13f87dd"),
+        .binaryTarget(name: "RustFramework", path: "FrostSwiftFFI/RustFramework.xcframework.zip"),
         .target(
             name: "FrostSwiftFFI",
             dependencies: [
