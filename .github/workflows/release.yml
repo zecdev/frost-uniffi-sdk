@@ -29,9 +29,7 @@ jobs:
         run: cargo install cargo-swift@=0.7 -f  
     
       - name: Cargo Swift Package
-        run: |
-            cd frost-uniffi-sdk
-            sh Scripts/build_swift.sh
+        run: sh Scripts/build_swift.sh
 
       - name: Compute SHA-256 checksum
         id: checksum
