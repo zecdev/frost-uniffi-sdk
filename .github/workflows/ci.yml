@@ -9,7 +9,7 @@ on:
       - Cargo.toml
   pull_request:
       branches: ["main"]
-      branches-ignore: ["release-*.*.*"]
+      
       paths:
         - frost-uniffi-sdk
         - uniffi-bindgen
@@ -20,6 +20,7 @@ env:
 
 jobs:
   build_and_test:
+    if: ${{ ! startsWith(github.event.pull_request.head.ref, 'release-') }}
     name: Rust project - latest
     runs-on: ubuntu-latest
     strategy:
