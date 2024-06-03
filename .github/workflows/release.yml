@@ -31,17 +31,11 @@ jobs:
       - name: Cargo Swift Package
         run: |
             cd frost-uniffi-sdk
-            cargo swift package --platforms macos ios --name FrostSwiftFFI --release
-
-      - name: Rsync the FrostSwiftFFI file
-        run: rsync -avr --exclude='*.DS_Store' frost-uniffi-sdk/FrostSwiftFFI/ FrostSwiftFFI/
-    
-      - name: Zip the xcframework
-        run: zip -r FrostSwiftFFI/RustFramework.xcframework.zip FrostSwiftFFI/RustFramework.xcframework
+            sh Scripts/build_swift.sh
 
       - name: Compute SHA-256 checksum
         id: checksum
-        run: echo "SHA256=$(shasum -a 256 FrostSwiftFFI/RustFramework.xcframework.zip | cut -d ' ' -f 1)" >> $GITHUB_ENV
+        run: echo "SHA256=$(shasum -a 256 FrostSwift/RustFramework.xcframework.zip | cut -d ' ' -f 1)" >> $GITHUB_ENV
         
       - name: Update Swift Package
         run: |

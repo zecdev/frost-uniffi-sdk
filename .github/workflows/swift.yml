@@ -5,20 +5,21 @@ on:
     branches: ["main"]
     paths:
         - Package.swift
-        - FrostSwiftFFI/**
+        - FrostSwift/**
   pull_request:
     branches: ["main"]
-    branches-ignore: ["release-*.*.*"]
     paths:
         - Package.swift
-        - FrostSwiftFFI/**
+        - 'FrostSwift/**'
+        - '!FrostSwift/*.md'
 
 env: 
   CARGO_TERM_COLOR: always
 
 jobs:
     build_and_test_swift:
-        name: Rust project - latest
+        if: ${{ ! startsWith(github.event.pull_request.head.ref, 'release-') }}
+        name: Build and Test Swift Package - latest
         runs-on: macos-latest
         
         steps:

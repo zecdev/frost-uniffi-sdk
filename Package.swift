@@ -18,17 +18,28 @@ let package = Package(
     ],
     dependencies: [ ],
     targets: [
-        .binaryTarget(name: "RustFramework", path: "FrostSwiftFFI/RustFramework.xcframework.zip"),
+        .target(
+            name: "FrostSwift",
+            dependencies: [
+                .target(name: "FrostSwiftFFI")
+            ], path: "FrostSwift/Sources/FrostSwift"
+        ),
+        .binaryTarget(name: "RustFramework", url: "https://github.com/pacu/frost-uniffi-sdk/releases/download/0.0.0/RustFramework.xcframework.zip", checksum: "249ecd6a27c69ff6b8ec408d036ad291516a791e8be5b3d3b069ec74e13f87dd"),
         .target(
             name: "FrostSwiftFFI",
             dependencies: [
                 .target(name: "RustFramework")
-            ], path: "FrostSwiftFFI/Sources"
+            ], path: "FrostSwift/Sources/FrostSwiftFFI"
         ),
         .testTarget(
             name: "NotRedPallasTests",
             dependencies: ["FrostSwiftFFI"],
-            path: "FrostSwiftFFI/Tests"
+            path: "FrostSwift/Tests/FrostSwiftFFI"
+        ),
+        .testTarget(
+            name: "FrostTests",
+            dependencies: ["FrostSwift"],
+            path: "FrostSwift/Tests/FrostSwift"
         )
     ]
 )
