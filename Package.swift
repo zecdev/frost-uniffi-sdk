@@ -24,7 +24,7 @@ let package = Package(
                 .target(name: "FrostSwiftFFI")
             ], path: "FrostSwift/Sources/FrostSwift"
         ),
-        .binaryTarget(name: "RustFramework", url: "https://github.com/pacu/frost-uniffi-sdk/releases/download/0.0.0/RustFramework.xcframework.zip", checksum: "249ecd6a27c69ff6b8ec408d036ad291516a791e8be5b3d3b069ec74e13f87dd"),
+        .binaryTarget(name: "RustFramework", url: "https://github.com/pacu/frost-uniffi-sdk/releases/download/0.0.1/RustFramework.xcframework.zip", checksum: "c273d33439e052316bb6f78390d124c3dabf6a8f9b99e26525b92057d38bc2f7"),
         .target(
             name: "FrostSwiftFFI",
             dependencies: [
