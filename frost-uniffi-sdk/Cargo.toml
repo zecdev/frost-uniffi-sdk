@@ -5,8 +5,9 @@ edition = "2021"
 
 
 [lib]
-crate-type = ["lib","staticlib"]
+crate-type = ["lib","staticlib", "cdylib"]
 name = "frost_uniffi_sdk"
+
 
 [dependencies]
 uniffi = { workspace = true }

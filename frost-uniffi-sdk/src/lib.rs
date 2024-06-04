@@ -33,7 +33,7 @@ pub struct ParticipantList {
 
 #[derive(uniffi::Record, Hash, Eq, PartialEq, Clone)]
 pub struct ParticipantIdentifier {
-    pub data: Vec<u8>,
+    pub data: String,
 }
 
 #[derive(uniffi::Record)]
@@ -203,16 +203,19 @@ impl FrostKeyPackage {
 impl ParticipantIdentifier {
     pub fn from_identifier(identifier: Identifier) -> Result<ParticipantIdentifier, Error> {
         Ok(ParticipantIdentifier {
-            data: identifier.clone().serialize().to_vec(),
+            data: hex::encode(identifier.clone().serialize()),
         })
     }
 
     pub fn into_identifier(&self) -> Result<Identifier, Error> {
-        let raw_bytes = self.data[0..32]
+        let raw_bytes = hex::decode(self.data.clone())
+            .map_err(|_| Error::DeserializationError)?;
+
+        let raw_identifier = raw_bytes[0..32]
             .try_into()
             .map_err(|_| Error::DeserializationError)?;
 
-        Identifier::deserialize(&raw_bytes)
+        Identifier::deserialize(&raw_identifier)
     }
 }
 

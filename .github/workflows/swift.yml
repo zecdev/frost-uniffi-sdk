@@ -17,11 +17,27 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-    build_and_test_swift:
+    build_and_test_swift_locally:
         if: ${{ ! startsWith(github.event.pull_request.head.ref, 'release-') }}
         name: Build and Test Swift Package - latest
         runs-on: macos-latest
         
         steps:
         - uses: actions/checkout@v4
-        - run: swift test --verbose
+
+        - name: Replace line in Package.swift
+          run: |
+            sed -i '' -E 's|^[[:space:]]*\.binaryTarget\(name: "RustFramework", url: "https://github.com/pacu/frost-uniffi-sdk/releases/download/[^"]+/RustFramework.xcframework.zip", checksum: "[^"]+"\),|        .binaryTarget(name: "RustFramework", path: "FrostSwift/RustFramework.xcframework.zip"),|' Package.swift
+
+        - uses: actions-rust-lang/setup-rust-toolchain@v1
+          with: 
+            target: x86_64-apple-darwin aarch64-apple-ios x86_64-apple-ios aarch64-apple-ios-sim
+        
+        - name: Install cargo swift 0.7
+          run: cargo install cargo-swift@=0.7 -f  
+
+        - name: build swift locally
+          run: sh Scripts/build_swift.sh
+          
+        - name: test swift
+          run: swift test --verbose
