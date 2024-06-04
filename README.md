@@ -40,13 +40,9 @@ and Chelsea Komlo from @ZcashFoundation.
 - Install MacOS and iOS targets `aarch64-apple-ios`, `86_64-apple-darwin`, 
 `aarch64-apple-darwin`
 
-**Building the mobile SDK**
-to build the mobile SDK use the following command on the `frost-uniffi-sdk`
-folder.
+### Build the bindings
 
-```
-cargo swift package --name frost-swift-sdk
-```
+run `sh Scripts/build.sh`
 
 
 ## Features
@@ -84,6 +80,43 @@ To be Supported:
 - Server communication
 - Distributed Key Generation
 
+# Structure of this repo
+
+This repo is a pseudo-monorepo. The bindings need to be built all in sync.
+There is no sense in versioning bindings differently, since they are all
+based on the same originating code. 
+
+Not all programming languages use the same conventions, neither they have
+the same lifecycle. So the UniFFI approach needs to reconcile all of that.
+
+From what we've researched, a possible and feasible approach is to make
+the UniFFI repo a monorepo from which its versions will generate all the
+bindings on every version and commit. Bindings will be generated for each
+commit regardless of the language that might originate it. 
+
+````
+ROOT
+|
+-> uniffi-bindgen # crate that manages UniFFI bindings
+|
+-> Scripts # Scripts used on this repo either locally or by CI
+|
+-> frost-uniffi-sdk # Rust crate with the code that 
+|                   # generates the UniFFI bindings
+|
+-> FrostSwift # Umbrella SDK for Swift
+|      |
+|      -> Sources
+|      |  |
+|      |  -> FrostSwift # end-used Frost SDK
+|      |  |
+|      |  -> FrostSwiftFFI # module with the generated swift 
+|      |                   # bindings from UniFFI
+|      |
+|      -> Tests # Tests for the Swift SDK
+|
+-> Examples # Example applications using the generated SDKs
+````
 # Contributing
 
 Please open issues to request features. You can send PRs for the issues
