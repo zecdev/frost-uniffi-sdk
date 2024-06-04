@@ -1,0 +1,15 @@
+{
+  "originHash" : "b992748e59d7d23f8a3fbf43833b6989ef58a466ab5e6d3e62d70703033fb93e",
+  "pins" : [
+    {
+      "identity" : "frost-uniffi-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/pacu/frost-uniffi-sdk",
+      "state" : {
+        "revision" : "f76b06af4dc5d06fb83153697242a3da4f0b9eb0",
+        "version" : "0.0.1"
+      }
+    }
+  ],
+  "version" : 3
+}

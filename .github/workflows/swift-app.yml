@@ -1,0 +1,28 @@
+name: Build FROST Companion for Apple
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "Examples/FrostCompanion/**"
+  pull_request:
+    branches: ["main"]
+    paths:
+    - "Examples/FrostCompanion/**"
+ 
+env: 
+  CARGO_TERM_COLOR: always
+  
+jobs:
+  build_and_test:
+    if: ${{ ! startsWith(github.event.pull_request.head.ref, 'release-') }}
+    name: Build and Test
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+  
+    - name: Xcode Select Version
+      uses: mobiledevops/xcode-select-version-action@v1
+      with:
+        xcode-select-version: 15.4
+    - run: xcodebuild -version 
+    - run: xcodebuild build -project Examples/FrostCompanion/FrostCompanion.xcodeproj -scheme FrostCompanion -destination 'platform=macOS'
