@@ -2,3 +2,7 @@
 ## See https://mozilla.github.io/uniffi-rs/swift/configuration.html.  
 #[bindings.kotlin]
 [bindings.swift]
+
+[bindings.go]
+package_name = "frost_go_ffi"
+module_name = "frost_go_ffi"

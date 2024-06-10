@@ -69,9 +69,9 @@ Round 2:
 
 ### Platforms supported
 - Swift
+- GoLang
 
 To be Supported:
-- GoLang
 - Kotlin
 - Python
 
@@ -115,6 +115,8 @@ ROOT
 |      |
 |      -> Tests # Tests for the Swift SDK
 |
+-> frost_go_ffi # Frost Bindings module Go lang files
+-> go.mod # mod file describing the frost_go_ffi module
 -> Examples # Example applications using the generated SDKs
 ````
 # Contributing

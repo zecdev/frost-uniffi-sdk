@@ -1,0 +1,42 @@
+name: Go Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    - name: Get directory
+      run: ls
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.21'
+    
+    - name: Set up cargo
+      run: rustup update stable && rustup default stable
+    
+    - name: Install uniffi-bindgen-go
+      run: cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.2.1+v0.25.0
+      
+    - name: Build Rust library
+      run: cargo build
+
+    - name: Generate Go Bindings
+      run: uniffi-bindgen-go --library './target/debug/libfrost_uniffi_sdk.so' --out-dir .
+
+    - name: Get dependencies
+      run: |
+        go mod tidy
+
+    - name: Test Bindings
+      run: /bin/bash Scripts/test_bindings.sh
