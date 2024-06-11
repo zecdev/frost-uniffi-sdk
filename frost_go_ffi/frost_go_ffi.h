@@ -68,6 +68,26 @@ int8_t uniffiForeignExecutorCallbackfrost_go_ffi(uint64_t, uint32_t, RustTaskCal
 
 void uniffiFutureContinuationCallbackfrost_go_ffi(void*, int8_t);
 
+void uniffi_frost_uniffi_sdk_fn_free_dkgpart1result(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_free_dkgpart2result(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_free_dkground1secretpackage(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_free_dkground2secretpackage(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_aggregate(
 	RustBuffer signing_package,
 	RustBuffer signature_shares,
@@ -83,6 +103,26 @@ RustBuffer uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_new_signing_package(
 	RustBuffer message,
 	RustBuffer commitments,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_func_part_1(
+	RustBuffer participant_identifier,
+	uint16_t max_signers,
+	uint16_t min_signers,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_func_part_2(
+	void* secret_package,
+	RustBuffer round1_packages,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_part_3(
+	void* secret_package,
+	RustBuffer round1_packages,
+	RustBuffer round2_packages,
 	RustCallStatus* out_status
 );
 
@@ -429,6 +469,18 @@ uint16_t uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments(
 );
 
 uint16_t uniffi_frost_uniffi_sdk_checksum_func_new_signing_package(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_1(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_2(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_3(
 	RustCallStatus* out_status
 );
 

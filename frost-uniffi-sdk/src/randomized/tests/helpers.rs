@@ -7,10 +7,9 @@ use crate::coordinator::new_signing_package;
 use crate::randomized::participant::sign;
 use crate::randomized::randomizer::FrostRandomizer;
 use crate::{
-    ParticipantIdentifier,
-    participant::{FrostSigningNonces, FrostSigningCommitments, FrostSignatureShare},
-    FrostKeyPackage,
-    coordinator::{Message, FrostSigningPackage},
+    coordinator::{FrostSigningPackage, Message},
+    participant::{FrostSignatureShare, FrostSigningCommitments, FrostSigningNonces},
+    FrostKeyPackage, ParticipantIdentifier,
 };
 
 pub fn round_2(
@@ -45,13 +44,8 @@ pub fn round_2(
 
         let nonces = nonces_map[participant_identifier].clone();
 
-        let signature_share = sign(
-            signing_package.clone(),
-            nonces,
-            key_package,
-            &randomizer,
-        )
-        .unwrap();
+        let signature_share =
+            sign(signing_package.clone(), nonces, key_package, &randomizer).unwrap();
 
         signature_shares.insert(participant_identifier.clone(), signature_share);
     }

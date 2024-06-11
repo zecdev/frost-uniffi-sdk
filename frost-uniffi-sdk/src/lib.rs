@@ -4,11 +4,11 @@ use frost_ed25519 as frost;
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
 
+pub mod coordinator;
+pub mod dkg;
+pub mod participant;
 #[cfg(feature = "redpallas")]
 pub mod randomized;
-
-pub mod coordinator;
-pub mod participant;
 pub mod trusted_dealer;
 use crate::frost::Error;
 use crate::trusted_dealer::{trusted_dealer_keygen, trusted_dealer_keygen_from_configuration};
@@ -83,8 +83,22 @@ pub enum FrostError {
     InvalidKeyPackage,
     #[error("Secret Key couldn't be verified")]
     InvalidSecretKey,
+    #[error("DKG couldn't be started because of an invalid number of signers")]
+    InvalidConfiguration,
+    #[error("DKG part 2 couldn't be started because of an invalid number of commitments")]
+    DKGPart2IncorrectNumberOfCommitments,
+    #[error("DKG part 2 couldn't be started because of an invalid number of packages")]
+    DKGPart2IncorrectNumberOfPackages,
+    #[error("DKG part 3 couldn't be started because packages for round 1 are incorrect or corrupted.")]
+    DKGPart3IncorrectRound1Packages,
+    #[error("DKG part 3 couldn't be started because of an invalid number of packages.")]
+    DKGPart3IncorrectNumberOfPackages,
+    #[error("A sender identified from round 1 is not present within round 2 packages.")]
+    DKGPart3PackageSendersMismatch,
     #[error("Unknown Identifier")]
     UnknownIdentifier,
+    #[error("Unexpected Error")]
+    UnexpectedError,
 }
 #[uniffi::export]
 pub fn validate_config(config: &Configuration) -> Result<(), ConfigurationError> {
@@ -208,8 +222,7 @@ impl ParticipantIdentifier {
     }
 
     pub fn into_identifier(&self) -> Result<Identifier, Error> {
-        let raw_bytes = hex::decode(self.data.clone())
-            .map_err(|_| Error::DeserializationError)?;
+        let raw_bytes = hex::decode(self.data.clone()).map_err(|_| Error::DeserializationError)?;
 
         let raw_identifier = raw_bytes[0..32]
             .try_into()

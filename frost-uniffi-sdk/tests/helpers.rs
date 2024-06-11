@@ -5,11 +5,10 @@ use reddsa::frost::redpallas as frost;
 
 #[cfg(not(feature = "redpallas"))]
 use frost_uniffi_sdk::{
-    participant::sign,
     coordinator::{new_signing_package, FrostSigningPackage, Message},
+    participant::sign,
     participant::FrostSignatureShare,
 };
-
 
 use frost_uniffi_sdk::{
     participant::{FrostSigningCommitments, FrostSigningNonces},

@@ -364,6 +364,262 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
 }
 
 
+public protocol DKGPart1ResultProtocol {
+    
+}
+
+public class DkgPart1Result: DKGPart1ResultProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_dkgpart1result(pointer, $0) }
+    }
+
+    
+
+    
+    
+}
+
+public struct FfiConverterTypeDKGPart1Result: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = DkgPart1Result
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgPart1Result {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: DkgPart1Result, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgPart1Result {
+        return DkgPart1Result(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: DkgPart1Result) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeDKGPart1Result_lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgPart1Result {
+    return try FfiConverterTypeDKGPart1Result.lift(pointer)
+}
+
+public func FfiConverterTypeDKGPart1Result_lower(_ value: DkgPart1Result) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeDKGPart1Result.lower(value)
+}
+
+
+public protocol DKGPart2ResultProtocol {
+    
+}
+
+public class DkgPart2Result: DKGPart2ResultProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_dkgpart2result(pointer, $0) }
+    }
+
+    
+
+    
+    
+}
+
+public struct FfiConverterTypeDKGPart2Result: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = DkgPart2Result
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgPart2Result {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: DkgPart2Result, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgPart2Result {
+        return DkgPart2Result(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: DkgPart2Result) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeDKGPart2Result_lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgPart2Result {
+    return try FfiConverterTypeDKGPart2Result.lift(pointer)
+}
+
+public func FfiConverterTypeDKGPart2Result_lower(_ value: DkgPart2Result) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeDKGPart2Result.lower(value)
+}
+
+
+public protocol DKGRound1SecretPackageProtocol {
+    
+}
+
+public class DkgRound1SecretPackage: DKGRound1SecretPackageProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_dkground1secretpackage(pointer, $0) }
+    }
+
+    
+
+    
+    
+}
+
+public struct FfiConverterTypeDKGRound1SecretPackage: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = DkgRound1SecretPackage
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgRound1SecretPackage {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: DkgRound1SecretPackage, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgRound1SecretPackage {
+        return DkgRound1SecretPackage(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: DkgRound1SecretPackage) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeDKGRound1SecretPackage_lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgRound1SecretPackage {
+    return try FfiConverterTypeDKGRound1SecretPackage.lift(pointer)
+}
+
+public func FfiConverterTypeDKGRound1SecretPackage_lower(_ value: DkgRound1SecretPackage) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeDKGRound1SecretPackage.lower(value)
+}
+
+
+public protocol DKGRound2SecretPackageProtocol {
+    
+}
+
+public class DkgRound2SecretPackage: DKGRound2SecretPackageProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_dkground2secretpackage(pointer, $0) }
+    }
+
+    
+
+    
+    
+}
+
+public struct FfiConverterTypeDKGRound2SecretPackage: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = DkgRound2SecretPackage
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgRound2SecretPackage {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: DkgRound2SecretPackage, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgRound2SecretPackage {
+        return DkgRound2SecretPackage(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: DkgRound2SecretPackage) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeDKGRound2SecretPackage_lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgRound2SecretPackage {
+    return try FfiConverterTypeDKGRound2SecretPackage.lift(pointer)
+}
+
+public func FfiConverterTypeDKGRound2SecretPackage_lower(_ value: DkgRound2SecretPackage) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeDKGRound2SecretPackage.lower(value)
+}
+
+
 public struct Configuration {
     public var minSigners: UInt16
     public var maxSigners: UInt16
@@ -424,6 +680,171 @@ public func FfiConverterTypeConfiguration_lift(_ buf: RustBuffer) throws -> Conf
 
 public func FfiConverterTypeConfiguration_lower(_ value: Configuration) -> RustBuffer {
     return FfiConverterTypeConfiguration.lower(value)
+}
+
+
+public struct DkgPart3Result {
+    public var publicKeyPackage: FrostPublicKeyPackage
+    public var keyPackage: FrostKeyPackage
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(publicKeyPackage: FrostPublicKeyPackage, keyPackage: FrostKeyPackage) {
+        self.publicKeyPackage = publicKeyPackage
+        self.keyPackage = keyPackage
+    }
+}
+
+
+extension DkgPart3Result: Equatable, Hashable {
+    public static func ==(lhs: DkgPart3Result, rhs: DkgPart3Result) -> Bool {
+        if lhs.publicKeyPackage != rhs.publicKeyPackage {
+            return false
+        }
+        if lhs.keyPackage != rhs.keyPackage {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(publicKeyPackage)
+        hasher.combine(keyPackage)
+    }
+}
+
+
+public struct FfiConverterTypeDKGPart3Result: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgPart3Result {
+        return try DkgPart3Result(
+            publicKeyPackage: FfiConverterTypeFrostPublicKeyPackage.read(from: &buf), 
+            keyPackage: FfiConverterTypeFrostKeyPackage.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DkgPart3Result, into buf: inout [UInt8]) {
+        FfiConverterTypeFrostPublicKeyPackage.write(value.publicKeyPackage, into: &buf)
+        FfiConverterTypeFrostKeyPackage.write(value.keyPackage, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeDKGPart3Result_lift(_ buf: RustBuffer) throws -> DkgPart3Result {
+    return try FfiConverterTypeDKGPart3Result.lift(buf)
+}
+
+public func FfiConverterTypeDKGPart3Result_lower(_ value: DkgPart3Result) -> RustBuffer {
+    return FfiConverterTypeDKGPart3Result.lower(value)
+}
+
+
+public struct DkgRound1Package {
+    public var identifier: ParticipantIdentifier
+    public var data: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(identifier: ParticipantIdentifier, data: Data) {
+        self.identifier = identifier
+        self.data = data
+    }
+}
+
+
+extension DkgRound1Package: Equatable, Hashable {
+    public static func ==(lhs: DkgRound1Package, rhs: DkgRound1Package) -> Bool {
+        if lhs.identifier != rhs.identifier {
+            return false
+        }
+        if lhs.data != rhs.data {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(identifier)
+        hasher.combine(data)
+    }
+}
+
+
+public struct FfiConverterTypeDKGRound1Package: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgRound1Package {
+        return try DkgRound1Package(
+            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf), 
+            data: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DkgRound1Package, into buf: inout [UInt8]) {
+        FfiConverterTypeParticipantIdentifier.write(value.identifier, into: &buf)
+        FfiConverterData.write(value.data, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeDKGRound1Package_lift(_ buf: RustBuffer) throws -> DkgRound1Package {
+    return try FfiConverterTypeDKGRound1Package.lift(buf)
+}
+
+public func FfiConverterTypeDKGRound1Package_lower(_ value: DkgRound1Package) -> RustBuffer {
+    return FfiConverterTypeDKGRound1Package.lower(value)
+}
+
+
+public struct DkgRound2Package {
+    public var identifier: ParticipantIdentifier
+    public var data: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(identifier: ParticipantIdentifier, data: Data) {
+        self.identifier = identifier
+        self.data = data
+    }
+}
+
+
+extension DkgRound2Package: Equatable, Hashable {
+    public static func ==(lhs: DkgRound2Package, rhs: DkgRound2Package) -> Bool {
+        if lhs.identifier != rhs.identifier {
+            return false
+        }
+        if lhs.data != rhs.data {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(identifier)
+        hasher.combine(data)
+    }
+}
+
+
+public struct FfiConverterTypeDKGRound2Package: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgRound2Package {
+        return try DkgRound2Package(
+            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf), 
+            data: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: DkgRound2Package, into buf: inout [UInt8]) {
+        FfiConverterTypeParticipantIdentifier.write(value.identifier, into: &buf)
+        FfiConverterData.write(value.data, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeDKGRound2Package_lift(_ buf: RustBuffer) throws -> DkgRound2Package {
+    return try FfiConverterTypeDKGRound2Package.lift(buf)
+}
+
+public func FfiConverterTypeDKGRound2Package_lower(_ value: DkgRound2Package) -> RustBuffer {
+    return FfiConverterTypeDKGRound2Package.lower(value)
 }
 
 
@@ -1252,7 +1673,14 @@ public enum FrostError {
     case DeserializationError
     case InvalidKeyPackage
     case InvalidSecretKey
+    case InvalidConfiguration
+    case DkgPart2IncorrectNumberOfCommitments
+    case DkgPart2IncorrectNumberOfPackages
+    case DkgPart3IncorrectRound1Packages
+    case DkgPart3IncorrectNumberOfPackages
+    case DkgPart3PackageSendersMismatch
     case UnknownIdentifier
+    case UnexpectedError
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeFrostError.lift(error)
@@ -1274,7 +1702,14 @@ public struct FfiConverterTypeFrostError: FfiConverterRustBuffer {
         case 2: return .DeserializationError
         case 3: return .InvalidKeyPackage
         case 4: return .InvalidSecretKey
-        case 5: return .UnknownIdentifier
+        case 5: return .InvalidConfiguration
+        case 6: return .DkgPart2IncorrectNumberOfCommitments
+        case 7: return .DkgPart2IncorrectNumberOfPackages
+        case 8: return .DkgPart3IncorrectRound1Packages
+        case 9: return .DkgPart3IncorrectNumberOfPackages
+        case 10: return .DkgPart3PackageSendersMismatch
+        case 11: return .UnknownIdentifier
+        case 12: return .UnexpectedError
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1303,8 +1738,36 @@ public struct FfiConverterTypeFrostError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(4))
         
         
-        case .UnknownIdentifier:
+        case .InvalidConfiguration:
             writeInt(&buf, Int32(5))
+        
+        
+        case .DkgPart2IncorrectNumberOfCommitments:
+            writeInt(&buf, Int32(6))
+        
+        
+        case .DkgPart2IncorrectNumberOfPackages:
+            writeInt(&buf, Int32(7))
+        
+        
+        case .DkgPart3IncorrectRound1Packages:
+            writeInt(&buf, Int32(8))
+        
+        
+        case .DkgPart3IncorrectNumberOfPackages:
+            writeInt(&buf, Int32(9))
+        
+        
+        case .DkgPart3PackageSendersMismatch:
+            writeInt(&buf, Int32(10))
+        
+        
+        case .UnknownIdentifier:
+            writeInt(&buf, Int32(11))
+        
+        
+        case .UnexpectedError:
+            writeInt(&buf, Int32(12))
         
         }
     }
@@ -1593,6 +2056,52 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierString: FfiCon
     }
 }
 
+fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1Package: FfiConverterRustBuffer {
+    public static func write(_ value: [ParticipantIdentifier: DkgRound1Package], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterTypeParticipantIdentifier.write(key, into: &buf)
+            FfiConverterTypeDKGRound1Package.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ParticipantIdentifier: DkgRound1Package] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [ParticipantIdentifier: DkgRound1Package]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterTypeParticipantIdentifier.read(from: &buf)
+            let value = try FfiConverterTypeDKGRound1Package.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
+fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound2Package: FfiConverterRustBuffer {
+    public static func write(_ value: [ParticipantIdentifier: DkgRound2Package], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for (key, value) in value {
+            FfiConverterTypeParticipantIdentifier.write(key, into: &buf)
+            FfiConverterTypeDKGRound2Package.write(value, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ParticipantIdentifier: DkgRound2Package] {
+        let len: Int32 = try readInt(&buf)
+        var dict = [ParticipantIdentifier: DkgRound2Package]()
+        dict.reserveCapacity(Int(len))
+        for _ in 0..<len {
+            let key = try FfiConverterTypeParticipantIdentifier.read(from: &buf)
+            let value = try FfiConverterTypeDKGRound2Package.read(from: &buf)
+            dict[key] = value
+        }
+        return dict
+    }
+}
+
 fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeFrostSecretKeyShare: FfiConverterRustBuffer {
     public static func write(_ value: [ParticipantIdentifier: FrostSecretKeyShare], into buf: inout [UInt8]) {
         let len = Int32(value.count)
@@ -1642,6 +2151,38 @@ public func newSigningPackage(message: Message, commitments: [FrostSigningCommit
     uniffi_frost_uniffi_sdk_fn_func_new_signing_package(
         FfiConverterTypeMessage.lower(message),
         FfiConverterSequenceTypeFrostSigningCommitments.lower(commitments),$0)
+}
+    )
+}
+
+public func part1(participantIdentifier: ParticipantIdentifier, maxSigners: UInt16, minSigners: UInt16) throws -> DkgPart1Result {
+    return try  FfiConverterTypeDKGPart1Result.lift(
+        try rustCallWithError(FfiConverterTypeFrostError.lift) {
+    uniffi_frost_uniffi_sdk_fn_func_part_1(
+        FfiConverterTypeParticipantIdentifier.lower(participantIdentifier),
+        FfiConverterUInt16.lower(maxSigners),
+        FfiConverterUInt16.lower(minSigners),$0)
+}
+    )
+}
+
+public func part2(secretPackage: DkgRound1SecretPackage, round1Packages: [ParticipantIdentifier: DkgRound1Package]) throws -> DkgPart2Result {
+    return try  FfiConverterTypeDKGPart2Result.lift(
+        try rustCallWithError(FfiConverterTypeFrostError.lift) {
+    uniffi_frost_uniffi_sdk_fn_func_part_2(
+        FfiConverterTypeDKGRound1SecretPackage.lower(secretPackage),
+        FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1Package.lower(round1Packages),$0)
+}
+    )
+}
+
+public func part3(secretPackage: DkgRound2SecretPackage, round1Packages: [ParticipantIdentifier: DkgRound1Package], round2Packages: [ParticipantIdentifier: DkgRound2Package]) throws -> DkgPart3Result {
+    return try  FfiConverterTypeDKGPart3Result.lift(
+        try rustCallWithError(FfiConverterTypeFrostError.lift) {
+    uniffi_frost_uniffi_sdk_fn_func_part_3(
+        FfiConverterTypeDKGRound2SecretPackage.lower(secretPackage),
+        FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1Package.lower(round1Packages),
+        FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound2Package.lower(round2Packages),$0)
 }
     )
 }
@@ -1727,6 +2268,15 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_frost_uniffi_sdk_checksum_func_new_signing_package() != 50111) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_func_part_1() != 7592) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_func_part_2() != 30136) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_func_part_3() != 31134) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_frost_uniffi_sdk_checksum_func_sign() != 48101) {
