@@ -42,8 +42,13 @@ and Chelsea Komlo from @ZcashFoundation.
 
 ### Build the bindings
 
-run `sh Scripts/build.sh`
+#### Go
+run `sh Scripts/build_go.sh`
+run `sh Scripts/build_testbindings.sh`
 
+#### Swift
+run `sh Scripts/replace_remote_binary_with_local.sh`
+run `sh Scripts/build_swift.sh`
 
 ## Features
 This SDK contains all the moving parts to do 2-round FROST threshold signatures
@@ -52,6 +57,7 @@ Dealership
 ----------
 - Trusted Dealer Key Generation
 - Trusted Dealer Key Generation with existing identifiers
+- Distributed Key Generation
 
 Round 1:
 -------
