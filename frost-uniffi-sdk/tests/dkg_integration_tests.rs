@@ -1,16 +1,34 @@
-use frost_ed25519::Identifier;
+#[cfg(feature = "redpallas")]
+type E = reddsa::frost::redpallas::PallasBlake2b512;
+#[cfg(not(feature = "redpallas"))]
+type E = frost_ed25519::Ed25519Sha512;
+
+use frost_core::Identifier;
+#[cfg(not(feature = "redpallas"))]
 use frost_uniffi_sdk::coordinator::{aggregate, verify_signature};
+
+#[cfg(feature = "redpallas")]
+use frost_uniffi_sdk::{
+    coordinator::verify_signature,
+    randomized::{coordinator::aggregate, tests::helpers::round_2},
+};
+
 use rand::thread_rng;
 use std::{collections::HashMap, sync::Arc};
 
-use frost_uniffi_sdk::{coordinator::Message, FrostKeyPackage, FrostPublicKeyPackage, ParticipantIdentifier};
+use frost_uniffi_sdk::{
+    coordinator::Message, FrostKeyPackage, FrostPublicKeyPackage, ParticipantIdentifier,
+};
 
 use frost_uniffi_sdk::dkg::lib::{
     part_1, part_2, part_3, DKGRound1Package, DKGRound1SecretPackage, DKGRound2Package,
     DKGRound2SecretPackage,
 };
 mod helpers;
-use helpers::{key_package, round_1, round_2};
+use helpers::round_1;
+
+#[cfg(not(feature = "redpallas"))]
+use helpers::round_2;
 
 struct Participant {
     pub identifier: ParticipantIdentifier,
@@ -71,11 +89,16 @@ impl Participant {
 }
 
 #[test]
-fn test_dkg_from_configuration_with_secret() {
+fn test_dkg_from_3_participants() {
     let mut participants: HashMap<ParticipantIdentifier, Participant> = HashMap::new();
-    let p1_identifier = ParticipantIdentifier {
-        data: "0100000000000000000000000000000000000000000000000000000000000000".to_string(),
-    };
+
+    let p1_id: Identifier<E> = Identifier::try_from(1).unwrap();
+    let p2_id: Identifier<E> = Identifier::try_from(2).unwrap();
+    let p3_id: Identifier<E> = Identifier::try_from(3).unwrap();
+
+    let p1_identifier = ParticipantIdentifier::from_identifier(p1_id).unwrap();
+    let p2_identifier = ParticipantIdentifier::from_identifier(p2_id).unwrap();
+    let p3_identifier = ParticipantIdentifier::from_identifier(p3_id).unwrap();
 
     participants.insert(
         p1_identifier.clone(),
@@ -92,13 +115,10 @@ fn test_dkg_from_configuration_with_secret() {
         },
     );
 
-    let p2_identifier = ParticipantIdentifier {
-        data: "0200000000000000000000000000000000000000000000000000000000000000".to_string(),
-    };
     participants.insert(
         p2_identifier.clone(),
         Participant {
-            identifier: p2_identifier,
+            identifier: p2_identifier.clone(),
             min_signers: 2,
             max_signers: 3,
             secret1: None,
@@ -110,14 +130,10 @@ fn test_dkg_from_configuration_with_secret() {
         },
     );
 
-    let p3_identifier = ParticipantIdentifier {
-        data: "0300000000000000000000000000000000000000000000000000000000000000".to_string(),
-    };
-
     participants.insert(
         p3_identifier.clone(),
         Participant {
-            identifier: p3_identifier,
+            identifier: p3_identifier.clone(),
             min_signers: 2,
             max_signers: 3,
             secret1: None,
@@ -169,14 +185,14 @@ fn test_dkg_from_configuration_with_secret() {
 
     let mut key_packages: HashMap<ParticipantIdentifier, FrostKeyPackage> = HashMap::new();
     let mut pubkeys: HashMap<ParticipantIdentifier, FrostPublicKeyPackage> = HashMap::new();
-    
+
     for k in keys.into_iter() {
-        key_packages.insert(k.0.clone(), k.1.0.clone());
-        pubkeys.insert(k.0, k.1.1.clone());
+        key_packages.insert(k.0.clone(), k.1 .0.clone());
+        pubkeys.insert(k.0, k.1 .1.clone());
     }
-    
+
     let mut rng = thread_rng();
-    let (nonces, commitments) = round_1(&mut rng, &key_packages);
+    let (nonces, commitments) = round_1::<E>(&mut rng, &key_packages);
     let message = Message {
         data: "i am a message".as_bytes().to_vec(),
     };

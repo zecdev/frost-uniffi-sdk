@@ -1,21 +1,20 @@
 #[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-
+type E = frost_ed25519::Ed25519Sha512;
 #[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+type E = reddsa::frost::redpallas::PallasBlake2b512;
 
 pub mod coordinator;
 pub mod dkg;
+pub mod error;
 pub mod participant;
 #[cfg(feature = "redpallas")]
 pub mod randomized;
 pub mod trusted_dealer;
-use crate::frost::Error;
 use crate::trusted_dealer::{trusted_dealer_keygen, trusted_dealer_keygen_from_configuration};
-use frost::keys::{KeyPackage, PublicKeyPackage, SecretShare};
-use frost::{
-    keys::{IdentifierList, VerifyingShare},
-    Identifier, VerifyingKey,
+
+use frost_core::{
+    keys::{IdentifierList, KeyPackage, PublicKeyPackage, VerifyingShare},
+    Ciphersuite, Error, Identifier, VerifyingKey,
 };
 use hex::ToHex;
 use rand::thread_rng;
@@ -31,7 +30,7 @@ pub struct ParticipantList {
     pub identifiers: Vec<ParticipantIdentifier>,
 }
 
-#[derive(uniffi::Record, Hash, Eq, PartialEq, Clone)]
+#[derive(uniffi::Record, Hash, Eq, PartialEq, Clone, Debug)]
 pub struct ParticipantIdentifier {
     pub data: String,
 }
@@ -75,29 +74,124 @@ pub enum ConfigurationError {
 
 #[derive(Debug, thiserror::Error, uniffi::Error)]
 pub enum FrostError {
-    #[error("Value could not be serialized.")]
+    /// min_signers is invalid
+    #[error("min_signers must be at least 2 and not larger than max_signers")]
+    InvalidMinSigners,
+    /// max_signers is invalid
+    #[error("max_signers must be at least 2")]
+    InvalidMaxSigners,
+    /// max_signers is invalid
+    #[error("coefficients must have min_signers-1 elements")]
+    InvalidCoefficients,
+    /// This identifier is unserializable.
+    #[error("Malformed identifier is unserializable.")]
+    MalformedIdentifier,
+    /// This identifier is duplicated.
+    #[error("Duplicated identifier.")]
+    DuplicatedIdentifier,
+    /// This identifier does not belong to a participant in the signing process.
+    #[error("Unknown identifier.")]
+    UnknownIdentifier,
+    /// Incorrect number of identifiers.
+    #[error("Incorrect number of identifiers.")]
+    IncorrectNumberOfIdentifiers,
+    /// The encoding of a signing key was malformed.
+    #[error("Malformed signing key encoding.")]
+    MalformedSigningKey,
+    /// The encoding of a verifying key was malformed.
+    #[error("Malformed verifying key encoding.")]
+    MalformedVerifyingKey,
+    /// The encoding of a signature was malformed.
+    #[error("Malformed signature encoding.")]
+    MalformedSignature,
+    /// Signature verification failed.
+    #[error("Invalid signature.")]
+    InvalidSignature,
+    /// Duplicated shares provided
+    #[error("Duplicated shares provided.")]
+    DuplicatedShares,
+    /// Incorrect number of shares.
+    #[error("Incorrect number of shares.")]
+    IncorrectNumberOfShares,
+    /// Commitment equals the identity
+    #[error("Commitment equals the identity.")]
+    IdentityCommitment,
+    /// The participant's commitment is missing from the Signing Package
+    #[error("The Signing Package must contain the participant's Commitment.")]
+    MissingCommitment,
+    /// The participant's commitment is incorrect
+    #[error("The participant's commitment is incorrect.")]
+    IncorrectCommitment,
+    /// Incorrect number of commitments.
+    #[error("Incorrect number of commitments.")]
+    IncorrectNumberOfCommitments,
+
+    #[error("Invalid signature share.")]
+    InvalidSignatureShare {
+        /// The identifier of the signer whose share validation failed.
+        culprit: ParticipantIdentifier,
+    },
+    /// Secret share verification failed.
+    #[error("Invalid secret share.")]
+    InvalidSecretShare,
+    /// Round 1 package not found for Round 2 participant.
+    #[error("Round 1 package not found for Round 2 participant.")]
+    PackageNotFound,
+    /// Incorrect number of packages.
+    #[error("Incorrect number of packages.")]
+    IncorrectNumberOfPackages,
+    /// The incorrect package was specified.
+    #[error("The incorrect package was specified.")]
+    IncorrectPackage,
+    /// The ciphersuite does not support DKG.
+    #[error("The ciphersuite does not support DKG.")]
+    DKGNotSupported,
+    /// The proof of knowledge is not valid.
+    #[error("The proof of knowledge is not valid.")]
+    InvalidProofOfKnowledge {
+        /// The identifier of the signer whose share validation failed.
+        culprit: ParticipantIdentifier,
+    },
+    /// Error in scalar Field.
+    #[error("Error in scalar Field.")]
+    FieldError { message: String },
+    /// Error in elliptic curve Group.
+    #[error("Error in elliptic curve Group.")]
+    GroupError { message: String },
+    /// Error in coefficient commitment deserialization.
+    #[error("Invalid coefficient")]
+    InvalidCoefficient,
+    /// The ciphersuite does not support deriving identifiers from strings.
+    #[error("The ciphersuite does not support deriving identifiers from strings.")]
+    IdentifierDerivationNotSupported,
+    /// Error serializing value.
+    #[error("Error serializing value.")]
     SerializationError,
-    #[error("Value could not be deserialized.")]
+    /// Error deserializing value.
+    #[error("Error deserializing value.")]
     DeserializationError,
-    #[error("Key Package is invalid")]
-    InvalidKeyPackage,
-    #[error("Secret Key couldn't be verified")]
-    InvalidSecretKey,
-    #[error("DKG couldn't be started because of an invalid number of signers")]
-    InvalidConfiguration,
     #[error("DKG part 2 couldn't be started because of an invalid number of commitments")]
     DKGPart2IncorrectNumberOfCommitments,
     #[error("DKG part 2 couldn't be started because of an invalid number of packages")]
     DKGPart2IncorrectNumberOfPackages,
-    #[error("DKG part 3 couldn't be started because packages for round 1 are incorrect or corrupted.")]
+    #[error(
+        "DKG part 3 couldn't be started because packages for round 1 are incorrect or corrupted."
+    )]
     DKGPart3IncorrectRound1Packages,
     #[error("DKG part 3 couldn't be started because of an invalid number of packages.")]
     DKGPart3IncorrectNumberOfPackages,
     #[error("A sender identified from round 1 is not present within round 2 packages.")]
     DKGPart3PackageSendersMismatch,
-    #[error("Unknown Identifier")]
-    UnknownIdentifier,
-    #[error("Unexpected Error")]
+
+    #[error("Key Package is invalid.")]
+    InvalidKeyPackage,
+    #[error("Secret Key couldn't be verified.")]
+    InvalidSecretKey,
+
+    #[error("DKG couldn't be started because of an invalid number of signers.")]
+    InvalidConfiguration,
+
+    #[error("Unexpected Error.")]
     UnexpectedError,
 }
 #[uniffi::export]
@@ -128,20 +222,16 @@ pub fn verify_and_get_key_package_from(
     secret_share: FrostSecretKeyShare,
 ) -> Result<FrostKeyPackage, FrostError> {
     secret_share
-        .into_key_package()
+        .into_key_package::<E>()
         .map_err(|_| FrostError::InvalidSecretKey)
 }
 
 #[uniffi::export]
 pub fn trusted_dealer_keygen_from(
     configuration: Configuration,
-) -> Result<TrustedKeyGeneration, ConfigurationError> {
-    let (pubkey, secret_shares) = trusted_dealer_keygen_from_configuration(&configuration)
-        .map_err(|e| match e {
-            Error::InvalidMaxSigners => ConfigurationError::InvalidMaxSigners,
-            Error::InvalidMinSigners => ConfigurationError::InvalidMinSigners,
-            _ => ConfigurationError::UnknownError,
-        })?;
+) -> Result<TrustedKeyGeneration, FrostError> {
+    let (pubkey, secret_shares) = trusted_dealer_keygen_from_configuration::<E>(&configuration)
+        .map_err(FrostError::map_err)?;
 
     Ok(TrustedKeyGeneration {
         public_key_package: pubkey,
@@ -153,18 +243,18 @@ pub fn trusted_dealer_keygen_from(
 pub fn trusted_dealer_keygen_with_identifiers(
     configuration: Configuration,
     participants: ParticipantList,
-) -> Result<TrustedKeyGeneration, ConfigurationError> {
+) -> Result<TrustedKeyGeneration, FrostError> {
     if configuration.max_signers as usize != participants.identifiers.len() {
-        return Err(ConfigurationError::InvalidMaxSigners);
+        return Err(FrostError::InvalidMaxSigners);
     }
 
-    let mut custom_identifiers: Vec<Identifier> =
+    let mut custom_identifiers: Vec<Identifier<E>> =
         Vec::with_capacity(participants.identifiers.capacity());
 
     for identifier in participants.identifiers.clone().into_iter() {
         let identifier = identifier
             .into_identifier()
-            .map_err(|_| ConfigurationError::InvalidIdentifier)?;
+            .map_err(|_| FrostError::MalformedIdentifier)?;
         custom_identifiers.push(identifier);
     }
 
@@ -172,24 +262,18 @@ pub fn trusted_dealer_keygen_with_identifiers(
 
     let mut rng = thread_rng();
 
-    let (shares, pubkey) =
-        trusted_dealer_keygen(&configuration, list, &mut rng).map_err(|e| match e {
-            Error::InvalidMaxSigners => ConfigurationError::InvalidMaxSigners,
-            Error::InvalidMinSigners => ConfigurationError::InvalidMinSigners,
-            _ => ConfigurationError::UnknownError,
-        })?;
+    let trust_dealt_keys =
+        trusted_dealer_keygen(&configuration, list, &mut rng).map_err(FrostError::map_err)?;
 
-    let pubkey = FrostPublicKeyPackage::from_public_key_package(pubkey)
-        .map_err(|_| ConfigurationError::UnknownError)?;
+    let pubkey =
+        FrostPublicKeyPackage::from_public_key_package::<E>(trust_dealt_keys.public_keys).map_err(FrostError::map_err)?;
 
     let mut hash_map: HashMap<ParticipantIdentifier, FrostSecretKeyShare> = HashMap::new();
 
-    for (k, v) in shares {
+    for (k, v) in trust_dealt_keys.secret_shares {
         hash_map.insert(
-            ParticipantIdentifier::from_identifier(k)
-                .map_err(|_| ConfigurationError::InvalidIdentifier)?,
-            FrostSecretKeyShare::from_secret_share(v)
-                .map_err(|_| ConfigurationError::UnknownError)?,
+            ParticipantIdentifier::from_identifier(k).map_err(FrostError::map_err)?,
+            FrostSecretKeyShare::from_secret_share::<E>(v).map_err(FrostError::map_err)?,
         );
     }
 
@@ -200,7 +284,7 @@ pub fn trusted_dealer_keygen_with_identifiers(
 }
 
 impl FrostKeyPackage {
-    pub fn from_key_package(key_package: &KeyPackage) -> Result<Self, Error> {
+    pub fn from_key_package<C: Ciphersuite>(key_package: &KeyPackage<C>) -> Result<Self, Error<C>> {
         let serialized_package = key_package.serialize()?;
         let identifier = key_package.identifier();
         Ok(FrostKeyPackage {
@@ -209,37 +293,46 @@ impl FrostKeyPackage {
         })
     }
 
-    pub fn into_key_package(&self) -> Result<KeyPackage, Error> {
+    pub fn into_key_package<C: Ciphersuite>(&self) -> Result<KeyPackage<C>, Error<C>> {
         KeyPackage::deserialize(&self.data)
     }
 }
 
 impl ParticipantIdentifier {
-    pub fn from_identifier(identifier: Identifier) -> Result<ParticipantIdentifier, Error> {
+    pub fn from_json_string<C: Ciphersuite>(string: &str) -> Option<ParticipantIdentifier> {
+        let identifier: Result<Identifier<C>, serde_json::Error> = serde_json::from_str(string);
+        match identifier {
+            Ok(_) => Some(ParticipantIdentifier {
+                data: string.to_string(),
+            }),
+            Err(_) => None,
+        }
+    }
+
+    pub fn from_identifier<C: Ciphersuite>(
+        identifier: frost_core::Identifier<C>,
+    ) -> Result<ParticipantIdentifier, frost_core::Error<C>> {
         Ok(ParticipantIdentifier {
-            data: hex::encode(identifier.clone().serialize()),
+            data: serde_json::to_string(&identifier).map_err(|_| Error::SerializationError)?,
         })
     }
 
-    pub fn into_identifier(&self) -> Result<Identifier, Error> {
-        let raw_bytes = hex::decode(self.data.clone()).map_err(|_| Error::DeserializationError)?;
+    pub fn into_identifier<C: Ciphersuite>(
+        &self,
+    ) -> Result<frost_core::Identifier<C>, frost_core::Error<C>> {
+        let identifier: Identifier<C> = serde_json::from_str(&self.data)
+            .map_err(|_| frost_core::Error::DeserializationError)?;
 
-        let raw_identifier = raw_bytes[0..32]
-            .try_into()
-            .map_err(|_| Error::DeserializationError)?;
-
-        Identifier::deserialize(&raw_identifier)
+        Ok(identifier)
     }
 }
 
 impl FrostSecretKeyShare {
-    pub fn from_secret_share(
-        secret_share: SecretShare,
-    ) -> Result<FrostSecretKeyShare, frost::Error> {
+    pub fn from_secret_share<C: Ciphersuite>(
+        secret_share: frost_core::keys::SecretShare<C>,
+    ) -> Result<FrostSecretKeyShare, frost_core::Error<C>> {
         let identifier = ParticipantIdentifier::from_identifier(*secret_share.identifier())?;
-        let serialized_share = secret_share
-            .serialize()
-            .map_err(|_| frost::Error::SerializationError)?;
+        let serialized_share = secret_share.serialize()?;
 
         Ok(FrostSecretKeyShare {
             identifier,
@@ -247,35 +340,34 @@ impl FrostSecretKeyShare {
         })
     }
 
-    pub fn to_secret_share(&self) -> Result<SecretShare, Error> {
-        let identifier = self.identifier.into_identifier()?;
+    pub fn to_secret_share<C: Ciphersuite>(
+        &self,
+    ) -> Result<frost_core::keys::SecretShare<C>, frost_core::Error<C>> {
+        let identifier = self.identifier.into_identifier::<C>()?;
 
-        let secret_share =
-            SecretShare::deserialize(&self.data).map_err(|_| frost::Error::SerializationError)?;
+        let secret_share = frost_core::keys::SecretShare::deserialize(&self.data)?;
 
         if identifier != *secret_share.identifier() {
-            Err(frost::Error::UnknownIdentifier)
+            Err(frost_core::Error::UnknownIdentifier)
         } else {
             Ok(secret_share)
         }
     }
 
-    pub fn into_key_package(&self) -> Result<FrostKeyPackage, FrostError> {
-        let secret_share = self
-            .to_secret_share()
-            .map_err(|_| FrostError::InvalidSecretKey)?;
+    pub fn into_key_package<C: Ciphersuite>(&self) -> Result<FrostKeyPackage, FrostError> {
+        let secret_share = self.to_secret_share::<C>().map_err(FrostError::map_err)?;
 
-        let key_package = frost::keys::KeyPackage::try_from(secret_share)
-            .map_err(|_| FrostError::InvalidSecretKey)?;
+        let key_package =
+            frost_core::keys::KeyPackage::try_from(secret_share).map_err(FrostError::map_err)?;
 
-        FrostKeyPackage::from_key_package(&key_package).map_err(|_| FrostError::SerializationError)
+        FrostKeyPackage::from_key_package(&key_package).map_err(FrostError::map_err)
     }
 }
 
 impl FrostPublicKeyPackage {
-    pub fn from_public_key_package(
-        key_package: PublicKeyPackage,
-    ) -> Result<FrostPublicKeyPackage, Error> {
+    pub fn from_public_key_package<C: Ciphersuite>(
+        key_package: frost_core::keys::PublicKeyPackage<C>,
+    ) -> Result<FrostPublicKeyPackage, frost_core::Error<C>> {
         let verifying_shares = key_package.verifying_shares();
         let verifying_key = key_package.verifying_key();
 
@@ -294,7 +386,7 @@ impl FrostPublicKeyPackage {
         })
     }
 
-    pub fn into_public_key_package(&self) -> Result<PublicKeyPackage, Error> {
+    pub fn into_public_key_package(&self) -> Result<PublicKeyPackage<E>, Error<E>> {
         let raw_verifying_key =
             hex::decode(self.verifying_key.clone()).map_err(|_| Error::DeserializationError)?;
 
@@ -305,7 +397,7 @@ impl FrostPublicKeyPackage {
         let verifying_key = VerifyingKey::deserialize(verifying_key_bytes)
             .map_err(|_| Error::DeserializationError)?;
 
-        let mut btree_map: BTreeMap<Identifier, VerifyingShare> = BTreeMap::new();
+        let mut btree_map: BTreeMap<Identifier<E>, VerifyingShare<E>> = BTreeMap::new();
         for (k, v) in self.verifying_shares.clone() {
             let identifier = k.into_identifier()?;
 

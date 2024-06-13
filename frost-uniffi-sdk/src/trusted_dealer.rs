@@ -1,7 +1,4 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{self as frost, Ciphersuite};
 
 use crate::{Configuration, FrostPublicKeyPackage, FrostSecretKeyShare, ParticipantIdentifier};
 use rand::thread_rng;
@@ -12,14 +9,14 @@ use frost::{Error, Identifier, SigningKey};
 use rand::rngs::ThreadRng;
 use std::collections::BTreeMap;
 
-pub fn trusted_dealer_keygen_from_configuration(
+pub fn trusted_dealer_keygen_from_configuration<C: Ciphersuite>(
     config: &Configuration,
 ) -> Result<
     (
         FrostPublicKeyPackage,
         HashMap<ParticipantIdentifier, FrostSecretKeyShare>,
     ),
-    Error,
+    frost_core::Error<C>,
 > {
     let mut rng = thread_rng();
 
@@ -29,13 +26,15 @@ pub fn trusted_dealer_keygen_from_configuration(
         split_secret(config, IdentifierList::Default, &mut rng)
     };
 
-    let (shares, pubkeys) = keygen?;
+    let trusted_dealt_keys = keygen?;
 
-    let pubkey = FrostPublicKeyPackage::from_public_key_package(pubkeys)?;
+
+
+    let pubkey = FrostPublicKeyPackage::from_public_key_package::<C>(trusted_dealt_keys.public_keys)?;
 
     let mut hash_map: HashMap<ParticipantIdentifier, FrostSecretKeyShare> = HashMap::new();
 
-    for (k, v) in shares {
+    for (k, v) in trusted_dealt_keys.secret_shares {
         hash_map.insert(
             ParticipantIdentifier::from_identifier(k)?,
             FrostSecretKeyShare::from_secret_share(v)?,
@@ -45,11 +44,16 @@ pub fn trusted_dealer_keygen_from_configuration(
     Ok((pubkey, hash_map))
 }
 
-pub fn trusted_dealer_keygen(
+pub struct TrustDealtKeys<C: Ciphersuite> {
+    pub secret_shares: BTreeMap<Identifier<C>,SecretShare<C>>,
+    pub public_keys: PublicKeyPackage<C>
+}
+
+pub fn trusted_dealer_keygen<C: Ciphersuite>(
     config: &Configuration,
-    identifiers: IdentifierList,
+    identifiers: IdentifierList<C>,
     rng: &mut ThreadRng,
-) -> Result<(BTreeMap<Identifier, SecretShare>, PublicKeyPackage), Error> {
+) -> Result<TrustDealtKeys<C>, Error<C>> {
     let (shares, pubkeys) = frost::keys::generate_with_dealer(
         config.max_signers,
         config.min_signers,
@@ -61,14 +65,19 @@ pub fn trusted_dealer_keygen(
         frost::keys::KeyPackage::try_from(v)?;
     }
 
-    Ok((shares, pubkeys))
+    Ok(
+        TrustDealtKeys {
+            secret_shares: shares,
+            public_keys: pubkeys
+        }
+    )
 }
 
-fn split_secret(
+fn split_secret<C: Ciphersuite>(
     config: &Configuration,
-    identifiers: IdentifierList,
+    identifiers: IdentifierList<C>,
     rng: &mut ThreadRng,
-) -> Result<(BTreeMap<Identifier, SecretShare>, PublicKeyPackage), Error> {
+) -> Result<TrustDealtKeys<C>, Error<C>> {
     let secret_key = SigningKey::deserialize(
         config
             .secret
@@ -88,13 +97,24 @@ fn split_secret(
         frost::keys::KeyPackage::try_from(v)?;
     }
 
-    Ok((shares, pubkeys))
+    Ok(
+        TrustDealtKeys {
+            secret_shares: shares,
+            public_keys: pubkeys
+        }
+    )
 }
 #[cfg(test)]
 mod tests {
 
-    use crate::frost::keys::IdentifierList;
+    #[cfg(not(feature = "redpallas"))]
+    type E = frost_ed25519::Ed25519Sha512;
+
+    #[cfg(feature = "redpallas")]
+    type E = reddsa::frost::redpallas::PallasBlake2b512;
+
     use crate::{trusted_dealer::split_secret, Configuration};
+    use frost_core::keys::IdentifierList;
     use rand::thread_rng;
 
     #[test]
@@ -109,7 +129,7 @@ mod tests {
             secret: b"helloIamaninvalidsecret111111111".to_vec(),
         };
 
-        let out = split_secret(&secret_config, IdentifierList::Default, &mut rng);
+        let out = split_secret(&secret_config, IdentifierList::<E>::Default, &mut rng);
 
         assert!(out.is_err());
     }
@@ -128,7 +148,7 @@ mod tests {
             secret,
         };
 
-        let out = split_secret(&secret_config, IdentifierList::Default, &mut rng);
+        let out = split_secret(&secret_config, IdentifierList::<E>::Default, &mut rng);
 
         assert!(out.is_err());
     }

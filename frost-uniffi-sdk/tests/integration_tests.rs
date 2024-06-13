@@ -15,6 +15,12 @@ use frost_uniffi_sdk::{randomized::coordinator::aggregate, randomized::tests::he
 #[cfg(not(feature = "redpallas"))]
 use helpers::round_2;
 
+
+#[cfg(feature = "redpallas")]
+type E = reddsa::frost::redpallas::PallasBlake2b512;
+#[cfg(not(feature = "redpallas"))]
+type E = frost_ed25519::Ed25519Sha512;
+
 fn test_signing_key() -> Vec<u8> {
     #[cfg(feature = "redpallas")]
     return hex::decode("f500df73b2b416bec6a2b6bbb44e97164e05520b63aa27554cfc7ba82f5ba215")
@@ -37,9 +43,9 @@ fn test_trusted_from_configuration_with_secret() {
         secret,
     };
 
-    let (pubkeys, shares) = trusted_dealer_keygen_from_configuration(&secret_config).unwrap();
-    let key_packages = key_package(&shares);
-    let (nonces, commitments) = round_1(&mut rng, &key_packages);
+    let (pubkeys, shares) = trusted_dealer_keygen_from_configuration::<E>(&secret_config).unwrap();
+    let key_packages = key_package::<E>(&shares);
+    let (nonces, commitments) = round_1::<E>(&mut rng, &key_packages);
     let message = Message {
         data: "i am a message".as_bytes().to_vec(),
     };
@@ -86,9 +92,11 @@ fn check_keygen_with_dealer_with_secret_with_large_num_of_signers() {
         max_signers: 20,
         secret,
     };
-    let (pubkeys, shares) = trusted_dealer_keygen_from_configuration(&secret_config).unwrap();
-    let key_packages = key_package(&shares);
-    let (nonces, commitments) = round_1(&mut rng, &key_packages);
+
+    let (pubkeys, shares) = trusted_dealer_keygen_from_configuration::<E>(&secret_config).unwrap();
+
+    let key_packages = key_package::<E>(&shares);
+    let (nonces, commitments) = round_1::<E>(&mut rng, &key_packages);
     let message = Message {
         data: "i am a message".as_bytes().to_vec(),
     };

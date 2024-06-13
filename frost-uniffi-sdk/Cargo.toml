@@ -12,6 +12,7 @@ name = "frost_uniffi_sdk"
 [dependencies]
 uniffi = { workspace = true }
 thiserror = { workspace = true }
+frost-core = { workspace = true }
 frost-ed25519 = { workspace = true }
 reddsa = { workspace = true }
 serde_json = { workspace = true }

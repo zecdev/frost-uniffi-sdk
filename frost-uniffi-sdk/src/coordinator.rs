@@ -1,8 +1,9 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
+use frost_core as frost;
 
 #[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+type E = reddsa::frost::redpallas::PallasBlake2b512;
+#[cfg(not(feature = "redpallas"))]
+type E = frost_ed25519::Ed25519Sha512;
 
 #[cfg(not(feature = "redpallas"))]
 use crate::participant::FrostSignatureShare;
@@ -12,7 +13,9 @@ use frost::round2::SignatureShare;
 
 use crate::{participant::FrostSigningCommitments, FrostPublicKeyPackage};
 
-use frost::{round1::SigningCommitments, Error, Identifier, Signature, SigningPackage};
+use frost::{
+    round1::SigningCommitments, Ciphersuite, Error, Identifier, Signature, SigningPackage,
+};
 use std::collections::BTreeMap;
 use uniffi;
 
@@ -57,7 +60,7 @@ pub fn new_signing_package(
     message: Message,
     commitments: Vec<FrostSigningCommitments>,
 ) -> Result<FrostSigningPackage, CoordinationError> {
-    let mut signing_commitments: BTreeMap<Identifier, SigningCommitments> = BTreeMap::new();
+    let mut signing_commitments: BTreeMap<Identifier<E>, SigningCommitments<E>> = BTreeMap::new();
 
     for c in commitments.into_iter() {
         let commitment = c
@@ -89,7 +92,7 @@ pub fn aggregate(
         .to_signing_package()
         .map_err(|_| CoordinationError::FailedToCreateSigningPackage)?;
 
-    let mut shares: BTreeMap<Identifier, SignatureShare> = BTreeMap::new();
+    let mut shares: BTreeMap<Identifier<E>, SignatureShare<E>> = BTreeMap::new();
 
     for share in signature_shares {
         shares.insert(
@@ -98,7 +101,7 @@ pub fn aggregate(
                 .into_identifier()
                 .map_err(|_| CoordinationError::IdentifierDeserializationError)?,
             share
-                .to_signature_share()
+                .to_signature_share::<E>()
                 .map_err(|_| CoordinationError::SignatureShareDeserializationError)?,
         );
     }
@@ -128,7 +131,7 @@ pub fn verify_signature(
     signature: FrostSignature,
     pubkey: FrostPublicKeyPackage,
 ) -> Result<(), FrostSignatureVerificationError> {
-    let signature = signature.to_signature().map_err(|e| {
+    let signature = signature.to_signature::<E>().map_err(|e| {
         FrostSignatureVerificationError::ValidationFailed {
             reason: e.to_string(),
         }
@@ -147,29 +150,28 @@ pub fn verify_signature(
 }
 
 impl FrostSignature {
-    pub fn to_signature(&self) -> Result<Signature, Error> {
-        Signature::deserialize(
-            self.data[0..64]
-                .try_into()
-                .map_err(|_| Error::DeserializationError)?,
-        )
+    pub fn to_signature<C: Ciphersuite>(&self) -> Result<Signature<E>, Error<E>> {
+        let bytes: [u8; 64] = self.data[0..64]
+            .try_into()
+            .map_err(|_| Error::DeserializationError)?;
+        Signature::<E>::deserialize(bytes)
     }
 
-    pub fn from_signature(signature: Signature) -> FrostSignature {
+    pub fn from_signature<C: Ciphersuite>(signature: Signature<C>) -> FrostSignature {
         FrostSignature {
-            data: signature.serialize().to_vec(),
+            data: signature.serialize().as_ref().to_vec(),
         }
     }
 }
 
 impl FrostSigningPackage {
-    pub fn to_signing_package(&self) -> Result<SigningPackage, Error> {
+    pub fn to_signing_package<C: Ciphersuite>(&self) -> Result<SigningPackage<C>, Error<C>> {
         SigningPackage::deserialize(&self.data)
     }
 
-    pub fn from_signing_package(
-        signing_package: SigningPackage,
-    ) -> Result<FrostSigningPackage, Error> {
+    pub fn from_signing_package<C: Ciphersuite>(
+        signing_package: SigningPackage<C>,
+    ) -> Result<FrostSigningPackage, Error<C>> {
         let data = signing_package.serialize()?;
         Ok(FrostSigningPackage { data })
     }

@@ -35,7 +35,7 @@ pub fn round_2(
                 frost::round2::Randomizer::new(rng, &signing_package.to_signing_package().unwrap())
                     .unwrap();
 
-            FrostRandomizer::from_randomizer(randomizer).unwrap()
+            FrostRandomizer::from_randomizer::<frost::PallasBlake2b512>(randomizer).unwrap()
         }
     };
 
