@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"runtime"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -371,6 +373,33 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_part_1(uniffiStatus)
+		})
+		if checksum != 7592 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_part_1: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_part_2(uniffiStatus)
+		})
+		if checksum != 30136 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_part_2: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_part_3(uniffiStatus)
+		})
+		if checksum != 31134 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_part_3: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_frost_uniffi_sdk_checksum_func_sign(uniffiStatus)
 		})
 		if checksum != 48101 {
@@ -543,6 +572,253 @@ type FfiDestroyerBytes struct{}
 
 func (FfiDestroyerBytes) Destroy(_ []byte) {}
 
+// Below is an implementation of synchronization requirements outlined in the link.
+// https://github.com/mozilla/uniffi-rs/blob/0dc031132d9493ca812c3af6e7dd60ad2ea95bf0/uniffi_bindgen/src/bindings/kotlin/templates/ObjectRuntime.kt#L31
+
+type FfiObject struct {
+	pointer      unsafe.Pointer
+	callCounter  atomic.Int64
+	freeFunction func(unsafe.Pointer, *C.RustCallStatus)
+	destroyed    atomic.Bool
+}
+
+func newFfiObject(pointer unsafe.Pointer, freeFunction func(unsafe.Pointer, *C.RustCallStatus)) FfiObject {
+	return FfiObject{
+		pointer:      pointer,
+		freeFunction: freeFunction,
+	}
+}
+
+func (ffiObject *FfiObject) incrementPointer(debugName string) unsafe.Pointer {
+	for {
+		counter := ffiObject.callCounter.Load()
+		if counter <= -1 {
+			panic(fmt.Errorf("%v object has already been destroyed", debugName))
+		}
+		if counter == math.MaxInt64 {
+			panic(fmt.Errorf("%v object call counter would overflow", debugName))
+		}
+		if ffiObject.callCounter.CompareAndSwap(counter, counter+1) {
+			break
+		}
+	}
+
+	return ffiObject.pointer
+}
+
+func (ffiObject *FfiObject) decrementPointer() {
+	if ffiObject.callCounter.Add(-1) == -1 {
+		ffiObject.freeRustArcPtr()
+	}
+}
+
+func (ffiObject *FfiObject) destroy() {
+	if ffiObject.destroyed.CompareAndSwap(false, true) {
+		if ffiObject.callCounter.Add(-1) == -1 {
+			ffiObject.freeRustArcPtr()
+		}
+	}
+}
+
+func (ffiObject *FfiObject) freeRustArcPtr() {
+	rustCall(func(status *C.RustCallStatus) int32 {
+		ffiObject.freeFunction(ffiObject.pointer, status)
+		return 0
+	})
+}
+
+type DkgPart1Result struct {
+	ffiObject FfiObject
+}
+
+func (object *DkgPart1Result) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterDKGPart1Result struct{}
+
+var FfiConverterDKGPart1ResultINSTANCE = FfiConverterDKGPart1Result{}
+
+func (c FfiConverterDKGPart1Result) Lift(pointer unsafe.Pointer) *DkgPart1Result {
+	result := &DkgPart1Result{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_dkgpart1result(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*DkgPart1Result).Destroy)
+	return result
+}
+
+func (c FfiConverterDKGPart1Result) Read(reader io.Reader) *DkgPart1Result {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterDKGPart1Result) Lower(value *DkgPart1Result) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*DkgPart1Result")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterDKGPart1Result) Write(writer io.Writer, value *DkgPart1Result) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerDkgPart1Result struct{}
+
+func (_ FfiDestroyerDkgPart1Result) Destroy(value *DkgPart1Result) {
+	value.Destroy()
+}
+
+type DkgPart2Result struct {
+	ffiObject FfiObject
+}
+
+func (object *DkgPart2Result) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterDKGPart2Result struct{}
+
+var FfiConverterDKGPart2ResultINSTANCE = FfiConverterDKGPart2Result{}
+
+func (c FfiConverterDKGPart2Result) Lift(pointer unsafe.Pointer) *DkgPart2Result {
+	result := &DkgPart2Result{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_dkgpart2result(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*DkgPart2Result).Destroy)
+	return result
+}
+
+func (c FfiConverterDKGPart2Result) Read(reader io.Reader) *DkgPart2Result {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterDKGPart2Result) Lower(value *DkgPart2Result) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*DkgPart2Result")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterDKGPart2Result) Write(writer io.Writer, value *DkgPart2Result) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerDkgPart2Result struct{}
+
+func (_ FfiDestroyerDkgPart2Result) Destroy(value *DkgPart2Result) {
+	value.Destroy()
+}
+
+type DkgRound1SecretPackage struct {
+	ffiObject FfiObject
+}
+
+func (object *DkgRound1SecretPackage) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterDKGRound1SecretPackage struct{}
+
+var FfiConverterDKGRound1SecretPackageINSTANCE = FfiConverterDKGRound1SecretPackage{}
+
+func (c FfiConverterDKGRound1SecretPackage) Lift(pointer unsafe.Pointer) *DkgRound1SecretPackage {
+	result := &DkgRound1SecretPackage{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_dkground1secretpackage(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*DkgRound1SecretPackage).Destroy)
+	return result
+}
+
+func (c FfiConverterDKGRound1SecretPackage) Read(reader io.Reader) *DkgRound1SecretPackage {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterDKGRound1SecretPackage) Lower(value *DkgRound1SecretPackage) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*DkgRound1SecretPackage")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterDKGRound1SecretPackage) Write(writer io.Writer, value *DkgRound1SecretPackage) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerDkgRound1SecretPackage struct{}
+
+func (_ FfiDestroyerDkgRound1SecretPackage) Destroy(value *DkgRound1SecretPackage) {
+	value.Destroy()
+}
+
+type DkgRound2SecretPackage struct {
+	ffiObject FfiObject
+}
+
+func (object *DkgRound2SecretPackage) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterDKGRound2SecretPackage struct{}
+
+var FfiConverterDKGRound2SecretPackageINSTANCE = FfiConverterDKGRound2SecretPackage{}
+
+func (c FfiConverterDKGRound2SecretPackage) Lift(pointer unsafe.Pointer) *DkgRound2SecretPackage {
+	result := &DkgRound2SecretPackage{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_dkground2secretpackage(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*DkgRound2SecretPackage).Destroy)
+	return result
+}
+
+func (c FfiConverterDKGRound2SecretPackage) Read(reader io.Reader) *DkgRound2SecretPackage {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterDKGRound2SecretPackage) Lower(value *DkgRound2SecretPackage) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*DkgRound2SecretPackage")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterDKGRound2SecretPackage) Write(writer io.Writer, value *DkgRound2SecretPackage) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerDkgRound2SecretPackage struct{}
+
+func (_ FfiDestroyerDkgRound2SecretPackage) Destroy(value *DkgRound2SecretPackage) {
+	value.Destroy()
+}
+
 type Configuration struct {
 	MinSigners uint16
 	MaxSigners uint16
@@ -584,6 +860,126 @@ func (c FfiConverterTypeConfiguration) Write(writer io.Writer, value Configurati
 type FfiDestroyerTypeConfiguration struct{}
 
 func (_ FfiDestroyerTypeConfiguration) Destroy(value Configuration) {
+	value.Destroy()
+}
+
+type DkgPart3Result struct {
+	PublicKeyPackage FrostPublicKeyPackage
+	KeyPackage       FrostKeyPackage
+}
+
+func (r *DkgPart3Result) Destroy() {
+	FfiDestroyerTypeFrostPublicKeyPackage{}.Destroy(r.PublicKeyPackage)
+	FfiDestroyerTypeFrostKeyPackage{}.Destroy(r.KeyPackage)
+}
+
+type FfiConverterTypeDKGPart3Result struct{}
+
+var FfiConverterTypeDKGPart3ResultINSTANCE = FfiConverterTypeDKGPart3Result{}
+
+func (c FfiConverterTypeDKGPart3Result) Lift(rb RustBufferI) DkgPart3Result {
+	return LiftFromRustBuffer[DkgPart3Result](c, rb)
+}
+
+func (c FfiConverterTypeDKGPart3Result) Read(reader io.Reader) DkgPart3Result {
+	return DkgPart3Result{
+		FfiConverterTypeFrostPublicKeyPackageINSTANCE.Read(reader),
+		FfiConverterTypeFrostKeyPackageINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeDKGPart3Result) Lower(value DkgPart3Result) RustBuffer {
+	return LowerIntoRustBuffer[DkgPart3Result](c, value)
+}
+
+func (c FfiConverterTypeDKGPart3Result) Write(writer io.Writer, value DkgPart3Result) {
+	FfiConverterTypeFrostPublicKeyPackageINSTANCE.Write(writer, value.PublicKeyPackage)
+	FfiConverterTypeFrostKeyPackageINSTANCE.Write(writer, value.KeyPackage)
+}
+
+type FfiDestroyerTypeDkgPart3Result struct{}
+
+func (_ FfiDestroyerTypeDkgPart3Result) Destroy(value DkgPart3Result) {
+	value.Destroy()
+}
+
+type DkgRound1Package struct {
+	Identifier ParticipantIdentifier
+	Data       []byte
+}
+
+func (r *DkgRound1Package) Destroy() {
+	FfiDestroyerTypeParticipantIdentifier{}.Destroy(r.Identifier)
+	FfiDestroyerBytes{}.Destroy(r.Data)
+}
+
+type FfiConverterTypeDKGRound1Package struct{}
+
+var FfiConverterTypeDKGRound1PackageINSTANCE = FfiConverterTypeDKGRound1Package{}
+
+func (c FfiConverterTypeDKGRound1Package) Lift(rb RustBufferI) DkgRound1Package {
+	return LiftFromRustBuffer[DkgRound1Package](c, rb)
+}
+
+func (c FfiConverterTypeDKGRound1Package) Read(reader io.Reader) DkgRound1Package {
+	return DkgRound1Package{
+		FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		FfiConverterBytesINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeDKGRound1Package) Lower(value DkgRound1Package) RustBuffer {
+	return LowerIntoRustBuffer[DkgRound1Package](c, value)
+}
+
+func (c FfiConverterTypeDKGRound1Package) Write(writer io.Writer, value DkgRound1Package) {
+	FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
+	FfiConverterBytesINSTANCE.Write(writer, value.Data)
+}
+
+type FfiDestroyerTypeDkgRound1Package struct{}
+
+func (_ FfiDestroyerTypeDkgRound1Package) Destroy(value DkgRound1Package) {
+	value.Destroy()
+}
+
+type DkgRound2Package struct {
+	Identifier ParticipantIdentifier
+	Data       []byte
+}
+
+func (r *DkgRound2Package) Destroy() {
+	FfiDestroyerTypeParticipantIdentifier{}.Destroy(r.Identifier)
+	FfiDestroyerBytes{}.Destroy(r.Data)
+}
+
+type FfiConverterTypeDKGRound2Package struct{}
+
+var FfiConverterTypeDKGRound2PackageINSTANCE = FfiConverterTypeDKGRound2Package{}
+
+func (c FfiConverterTypeDKGRound2Package) Lift(rb RustBufferI) DkgRound2Package {
+	return LiftFromRustBuffer[DkgRound2Package](c, rb)
+}
+
+func (c FfiConverterTypeDKGRound2Package) Read(reader io.Reader) DkgRound2Package {
+	return DkgRound2Package{
+		FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		FfiConverterBytesINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeDKGRound2Package) Lower(value DkgRound2Package) RustBuffer {
+	return LowerIntoRustBuffer[DkgRound2Package](c, value)
+}
+
+func (c FfiConverterTypeDKGRound2Package) Write(writer io.Writer, value DkgRound2Package) {
+	FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
+	FfiConverterBytesINSTANCE.Write(writer, value.Data)
+}
+
+type FfiDestroyerTypeDkgRound2Package struct{}
+
+func (_ FfiDestroyerTypeDkgRound2Package) Destroy(value DkgRound2Package) {
 	value.Destroy()
 }
 
@@ -1443,7 +1839,14 @@ var ErrFrostErrorSerializationError = fmt.Errorf("FrostErrorSerializationError")
 var ErrFrostErrorDeserializationError = fmt.Errorf("FrostErrorDeserializationError")
 var ErrFrostErrorInvalidKeyPackage = fmt.Errorf("FrostErrorInvalidKeyPackage")
 var ErrFrostErrorInvalidSecretKey = fmt.Errorf("FrostErrorInvalidSecretKey")
+var ErrFrostErrorInvalidConfiguration = fmt.Errorf("FrostErrorInvalidConfiguration")
+var ErrFrostErrorDkgPart2IncorrectNumberOfCommitments = fmt.Errorf("FrostErrorDkgPart2IncorrectNumberOfCommitments")
+var ErrFrostErrorDkgPart2IncorrectNumberOfPackages = fmt.Errorf("FrostErrorDkgPart2IncorrectNumberOfPackages")
+var ErrFrostErrorDkgPart3IncorrectRound1Packages = fmt.Errorf("FrostErrorDkgPart3IncorrectRound1Packages")
+var ErrFrostErrorDkgPart3IncorrectNumberOfPackages = fmt.Errorf("FrostErrorDkgPart3IncorrectNumberOfPackages")
+var ErrFrostErrorDkgPart3PackageSendersMismatch = fmt.Errorf("FrostErrorDkgPart3PackageSendersMismatch")
 var ErrFrostErrorUnknownIdentifier = fmt.Errorf("FrostErrorUnknownIdentifier")
+var ErrFrostErrorUnexpectedError = fmt.Errorf("FrostErrorUnexpectedError")
 
 // Variant structs
 type FrostErrorSerializationError struct {
@@ -1514,6 +1917,108 @@ func (self FrostErrorInvalidSecretKey) Is(target error) bool {
 	return target == ErrFrostErrorInvalidSecretKey
 }
 
+type FrostErrorInvalidConfiguration struct {
+}
+
+func NewFrostErrorInvalidConfiguration() *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidConfiguration{},
+	}
+}
+
+func (err FrostErrorInvalidConfiguration) Error() string {
+	return fmt.Sprint("InvalidConfiguration")
+}
+
+func (self FrostErrorInvalidConfiguration) Is(target error) bool {
+	return target == ErrFrostErrorInvalidConfiguration
+}
+
+type FrostErrorDkgPart2IncorrectNumberOfCommitments struct {
+}
+
+func NewFrostErrorDkgPart2IncorrectNumberOfCommitments() *FrostError {
+	return &FrostError{
+		err: &FrostErrorDkgPart2IncorrectNumberOfCommitments{},
+	}
+}
+
+func (err FrostErrorDkgPart2IncorrectNumberOfCommitments) Error() string {
+	return fmt.Sprint("DkgPart2IncorrectNumberOfCommitments")
+}
+
+func (self FrostErrorDkgPart2IncorrectNumberOfCommitments) Is(target error) bool {
+	return target == ErrFrostErrorDkgPart2IncorrectNumberOfCommitments
+}
+
+type FrostErrorDkgPart2IncorrectNumberOfPackages struct {
+}
+
+func NewFrostErrorDkgPart2IncorrectNumberOfPackages() *FrostError {
+	return &FrostError{
+		err: &FrostErrorDkgPart2IncorrectNumberOfPackages{},
+	}
+}
+
+func (err FrostErrorDkgPart2IncorrectNumberOfPackages) Error() string {
+	return fmt.Sprint("DkgPart2IncorrectNumberOfPackages")
+}
+
+func (self FrostErrorDkgPart2IncorrectNumberOfPackages) Is(target error) bool {
+	return target == ErrFrostErrorDkgPart2IncorrectNumberOfPackages
+}
+
+type FrostErrorDkgPart3IncorrectRound1Packages struct {
+}
+
+func NewFrostErrorDkgPart3IncorrectRound1Packages() *FrostError {
+	return &FrostError{
+		err: &FrostErrorDkgPart3IncorrectRound1Packages{},
+	}
+}
+
+func (err FrostErrorDkgPart3IncorrectRound1Packages) Error() string {
+	return fmt.Sprint("DkgPart3IncorrectRound1Packages")
+}
+
+func (self FrostErrorDkgPart3IncorrectRound1Packages) Is(target error) bool {
+	return target == ErrFrostErrorDkgPart3IncorrectRound1Packages
+}
+
+type FrostErrorDkgPart3IncorrectNumberOfPackages struct {
+}
+
+func NewFrostErrorDkgPart3IncorrectNumberOfPackages() *FrostError {
+	return &FrostError{
+		err: &FrostErrorDkgPart3IncorrectNumberOfPackages{},
+	}
+}
+
+func (err FrostErrorDkgPart3IncorrectNumberOfPackages) Error() string {
+	return fmt.Sprint("DkgPart3IncorrectNumberOfPackages")
+}
+
+func (self FrostErrorDkgPart3IncorrectNumberOfPackages) Is(target error) bool {
+	return target == ErrFrostErrorDkgPart3IncorrectNumberOfPackages
+}
+
+type FrostErrorDkgPart3PackageSendersMismatch struct {
+}
+
+func NewFrostErrorDkgPart3PackageSendersMismatch() *FrostError {
+	return &FrostError{
+		err: &FrostErrorDkgPart3PackageSendersMismatch{},
+	}
+}
+
+func (err FrostErrorDkgPart3PackageSendersMismatch) Error() string {
+	return fmt.Sprint("DkgPart3PackageSendersMismatch")
+}
+
+func (self FrostErrorDkgPart3PackageSendersMismatch) Is(target error) bool {
+	return target == ErrFrostErrorDkgPart3PackageSendersMismatch
+}
+
 type FrostErrorUnknownIdentifier struct {
 }
 
@@ -1529,6 +2034,23 @@ func (err FrostErrorUnknownIdentifier) Error() string {
 
 func (self FrostErrorUnknownIdentifier) Is(target error) bool {
 	return target == ErrFrostErrorUnknownIdentifier
+}
+
+type FrostErrorUnexpectedError struct {
+}
+
+func NewFrostErrorUnexpectedError() *FrostError {
+	return &FrostError{
+		err: &FrostErrorUnexpectedError{},
+	}
+}
+
+func (err FrostErrorUnexpectedError) Error() string {
+	return fmt.Sprint("UnexpectedError")
+}
+
+func (self FrostErrorUnexpectedError) Is(target error) bool {
+	return target == ErrFrostErrorUnexpectedError
 }
 
 type FfiConverterTypeFrostError struct{}
@@ -1556,7 +2078,21 @@ func (c FfiConverterTypeFrostError) Read(reader io.Reader) error {
 	case 4:
 		return &FrostError{&FrostErrorInvalidSecretKey{}}
 	case 5:
+		return &FrostError{&FrostErrorInvalidConfiguration{}}
+	case 6:
+		return &FrostError{&FrostErrorDkgPart2IncorrectNumberOfCommitments{}}
+	case 7:
+		return &FrostError{&FrostErrorDkgPart2IncorrectNumberOfPackages{}}
+	case 8:
+		return &FrostError{&FrostErrorDkgPart3IncorrectRound1Packages{}}
+	case 9:
+		return &FrostError{&FrostErrorDkgPart3IncorrectNumberOfPackages{}}
+	case 10:
+		return &FrostError{&FrostErrorDkgPart3PackageSendersMismatch{}}
+	case 11:
 		return &FrostError{&FrostErrorUnknownIdentifier{}}
+	case 12:
+		return &FrostError{&FrostErrorUnexpectedError{}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeFrostError.Read()", errorID))
 	}
@@ -1572,8 +2108,22 @@ func (c FfiConverterTypeFrostError) Write(writer io.Writer, value *FrostError) {
 		writeInt32(writer, 3)
 	case *FrostErrorInvalidSecretKey:
 		writeInt32(writer, 4)
-	case *FrostErrorUnknownIdentifier:
+	case *FrostErrorInvalidConfiguration:
 		writeInt32(writer, 5)
+	case *FrostErrorDkgPart2IncorrectNumberOfCommitments:
+		writeInt32(writer, 6)
+	case *FrostErrorDkgPart2IncorrectNumberOfPackages:
+		writeInt32(writer, 7)
+	case *FrostErrorDkgPart3IncorrectRound1Packages:
+		writeInt32(writer, 8)
+	case *FrostErrorDkgPart3IncorrectNumberOfPackages:
+		writeInt32(writer, 9)
+	case *FrostErrorDkgPart3PackageSendersMismatch:
+		writeInt32(writer, 10)
+	case *FrostErrorUnknownIdentifier:
+		writeInt32(writer, 11)
+	case *FrostErrorUnexpectedError:
+		writeInt32(writer, 12)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeFrostError.Write", value))
@@ -2131,6 +2681,94 @@ func (_ FfiDestroyerMapTypeParticipantIdentifierString) Destroy(mapValue map[Par
 	}
 }
 
+type FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package struct{}
+
+var FfiConverterMapTypeParticipantIdentifierTypeDKGRound1PackageINSTANCE = FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package{}
+
+func (c FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package) Lift(rb RustBufferI) map[ParticipantIdentifier]DkgRound1Package {
+	return LiftFromRustBuffer[map[ParticipantIdentifier]DkgRound1Package](c, rb)
+}
+
+func (_ FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package) Read(reader io.Reader) map[ParticipantIdentifier]DkgRound1Package {
+	result := make(map[ParticipantIdentifier]DkgRound1Package)
+	length := readInt32(reader)
+	for i := int32(0); i < length; i++ {
+		key := FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader)
+		value := FfiConverterTypeDKGRound1PackageINSTANCE.Read(reader)
+		result[key] = value
+	}
+	return result
+}
+
+func (c FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package) Lower(value map[ParticipantIdentifier]DkgRound1Package) RustBuffer {
+	return LowerIntoRustBuffer[map[ParticipantIdentifier]DkgRound1Package](c, value)
+}
+
+func (_ FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package) Write(writer io.Writer, mapValue map[ParticipantIdentifier]DkgRound1Package) {
+	if len(mapValue) > math.MaxInt32 {
+		panic("map[ParticipantIdentifier]DkgRound1Package is too large to fit into Int32")
+	}
+
+	writeInt32(writer, int32(len(mapValue)))
+	for key, value := range mapValue {
+		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, key)
+		FfiConverterTypeDKGRound1PackageINSTANCE.Write(writer, value)
+	}
+}
+
+type FfiDestroyerMapTypeParticipantIdentifierTypeDkgRound1Package struct{}
+
+func (_ FfiDestroyerMapTypeParticipantIdentifierTypeDkgRound1Package) Destroy(mapValue map[ParticipantIdentifier]DkgRound1Package) {
+	for key, value := range mapValue {
+		FfiDestroyerTypeParticipantIdentifier{}.Destroy(key)
+		FfiDestroyerTypeDkgRound1Package{}.Destroy(value)
+	}
+}
+
+type FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package struct{}
+
+var FfiConverterMapTypeParticipantIdentifierTypeDKGRound2PackageINSTANCE = FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package{}
+
+func (c FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package) Lift(rb RustBufferI) map[ParticipantIdentifier]DkgRound2Package {
+	return LiftFromRustBuffer[map[ParticipantIdentifier]DkgRound2Package](c, rb)
+}
+
+func (_ FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package) Read(reader io.Reader) map[ParticipantIdentifier]DkgRound2Package {
+	result := make(map[ParticipantIdentifier]DkgRound2Package)
+	length := readInt32(reader)
+	for i := int32(0); i < length; i++ {
+		key := FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader)
+		value := FfiConverterTypeDKGRound2PackageINSTANCE.Read(reader)
+		result[key] = value
+	}
+	return result
+}
+
+func (c FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package) Lower(value map[ParticipantIdentifier]DkgRound2Package) RustBuffer {
+	return LowerIntoRustBuffer[map[ParticipantIdentifier]DkgRound2Package](c, value)
+}
+
+func (_ FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package) Write(writer io.Writer, mapValue map[ParticipantIdentifier]DkgRound2Package) {
+	if len(mapValue) > math.MaxInt32 {
+		panic("map[ParticipantIdentifier]DkgRound2Package is too large to fit into Int32")
+	}
+
+	writeInt32(writer, int32(len(mapValue)))
+	for key, value := range mapValue {
+		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, key)
+		FfiConverterTypeDKGRound2PackageINSTANCE.Write(writer, value)
+	}
+}
+
+type FfiDestroyerMapTypeParticipantIdentifierTypeDkgRound2Package struct{}
+
+func (_ FfiDestroyerMapTypeParticipantIdentifierTypeDkgRound2Package) Destroy(mapValue map[ParticipantIdentifier]DkgRound2Package) {
+	for key, value := range mapValue {
+		FfiDestroyerTypeParticipantIdentifier{}.Destroy(key)
+		FfiDestroyerTypeDkgRound2Package{}.Destroy(value)
+	}
+}
+
 type FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShare struct{}
 
 var FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShareINSTANCE = FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShare{}
@@ -2208,6 +2846,42 @@ func NewSigningPackage(message Message, commitments []FrostSigningCommitments) (
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterTypeFrostSigningPackageINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func Part1(participantIdentifier ParticipantIdentifier, maxSigners uint16, minSigners uint16) (*DkgPart1Result, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_func_part_1(FfiConverterTypeParticipantIdentifierINSTANCE.Lower(participantIdentifier), FfiConverterUint16INSTANCE.Lower(maxSigners), FfiConverterUint16INSTANCE.Lower(minSigners), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *DkgPart1Result
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterDKGPart1ResultINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func Part2(secretPackage *DkgRound1SecretPackage, round1Packages map[ParticipantIdentifier]DkgRound1Package) (*DkgPart2Result, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_func_part_2(FfiConverterDKGRound1SecretPackageINSTANCE.Lower(secretPackage), FfiConverterMapTypeParticipantIdentifierTypeDKGRound1PackageINSTANCE.Lower(round1Packages), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *DkgPart2Result
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterDKGPart2ResultINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func Part3(secretPackage *DkgRound2SecretPackage, round1Packages map[ParticipantIdentifier]DkgRound1Package, round2Packages map[ParticipantIdentifier]DkgRound2Package) (DkgPart3Result, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_part_3(FfiConverterDKGRound2SecretPackageINSTANCE.Lower(secretPackage), FfiConverterMapTypeParticipantIdentifierTypeDKGRound1PackageINSTANCE.Lower(round1Packages), FfiConverterMapTypeParticipantIdentifierTypeDKGRound2PackageINSTANCE.Lower(round2Packages), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue DkgPart3Result
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeDKGPart3ResultINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 

@@ -8,21 +8,18 @@ use frost_uniffi_sdk::{
 use helpers::{key_package, round_1};
 use rand::thread_rng;
 
-#[cfg(feature = "redpallas")]
-use frost_uniffi_sdk::{
-    randomized::tests::helpers::round_2,
-    randomized::coordinator::aggregate
-};
 #[cfg(not(feature = "redpallas"))]
 use frost_uniffi_sdk::coordinator::aggregate;
+#[cfg(feature = "redpallas")]
+use frost_uniffi_sdk::{randomized::coordinator::aggregate, randomized::tests::helpers::round_2};
 #[cfg(not(feature = "redpallas"))]
 use helpers::round_2;
 
-
 fn test_signing_key() -> Vec<u8> {
     #[cfg(feature = "redpallas")]
-    return hex::decode("f500df73b2b416bec6a2b6bbb44e97164e05520b63aa27554cfc7ba82f5ba215").unwrap();
-   
+    return hex::decode("f500df73b2b416bec6a2b6bbb44e97164e05520b63aa27554cfc7ba82f5ba215")
+        .unwrap();
+
     #[cfg(not(feature = "redpallas"))]
     return vec![
         123, 28, 51, 211, 245, 41, 29, 133, 222, 102, 72, 51, 190, 177, 173, 70, 159, 127, 182, 2,
