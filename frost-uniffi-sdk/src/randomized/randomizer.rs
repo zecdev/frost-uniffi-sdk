@@ -9,7 +9,7 @@ use uniffi;
 type E = reddsa::frost::redpallas::PallasBlake2b512;
 
 #[cfg(feature = "redpallas")]
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Clone)]
 pub struct FrostRandomizer {
     data: Vec<u8>,
 }

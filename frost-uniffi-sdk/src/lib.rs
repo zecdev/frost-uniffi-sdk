@@ -265,8 +265,8 @@ pub fn trusted_dealer_keygen_with_identifiers(
     let trust_dealt_keys =
         trusted_dealer_keygen(&configuration, list, &mut rng).map_err(FrostError::map_err)?;
 
-    let pubkey =
-        FrostPublicKeyPackage::from_public_key_package::<E>(trust_dealt_keys.public_keys).map_err(FrostError::map_err)?;
+    let pubkey = FrostPublicKeyPackage::from_public_key_package::<E>(trust_dealt_keys.public_keys)
+        .map_err(FrostError::map_err)?;
 
     let mut hash_map: HashMap<ParticipantIdentifier, FrostSecretKeyShare> = HashMap::new();
 

@@ -1,5 +1,6 @@
 #[cfg(feature = "redpallas")]
 use reddsa::frost::redpallas as frost;
+use reddsa::frost::redpallas::RandomizedParams;
 
 #[cfg(feature = "redpallas")]
 use crate::randomized::randomizer::FrostRandomizer;
@@ -10,7 +11,10 @@ type E = reddsa::frost::redpallas::PallasBlake2b512;
 type E = frost_ed25519::Ed25519Sha512;
 
 use crate::{
-    coordinator::{CoordinationError, FrostSignature, FrostSigningPackage},
+    coordinator::{
+        CoordinationError, FrostSignature, FrostSignatureVerificationError, FrostSigningPackage,
+        Message,
+    },
     participant::FrostSignatureShare,
     FrostPublicKeyPackage,
 };
@@ -65,4 +69,37 @@ pub fn aggregate(
         message: e.to_string(),
     })
     .map(FrostSignature::from_signature)
+}
+
+#[uniffi::export]
+pub fn verify_randomized_signature(
+    randomizer: FrostRandomizer,
+    message: Message,
+    signature: FrostSignature,
+    pubkey: FrostPublicKeyPackage,
+) -> Result<(), FrostSignatureVerificationError> {
+    let randomizer = randomizer
+        .into_randomizer::<E>()
+        .map_err(|_| FrostSignatureVerificationError::InvalidPublicKeyPackage)?;
+
+    let signature = signature.to_signature::<E>().map_err(|e| {
+        FrostSignatureVerificationError::ValidationFailed {
+            reason: e.to_string(),
+        }
+    })?;
+
+    let pubkey = pubkey
+        .into_public_key_package()
+        .map_err(|_| FrostSignatureVerificationError::InvalidPublicKeyPackage)?;
+
+    let verifying_key = pubkey.verifying_key();
+
+    let randomizer_params = RandomizedParams::from_randomizer(verifying_key, randomizer);
+
+    randomizer_params
+        .randomized_verifying_key()
+        .verify(&message.data, &signature)
+        .map_err(|e| FrostSignatureVerificationError::ValidationFailed {
+            reason: e.to_string(),
+        })
 }
