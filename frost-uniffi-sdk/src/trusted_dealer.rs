@@ -28,9 +28,8 @@ pub fn trusted_dealer_keygen_from_configuration<C: Ciphersuite>(
 
     let trusted_dealt_keys = keygen?;
 
-
-
-    let pubkey = FrostPublicKeyPackage::from_public_key_package::<C>(trusted_dealt_keys.public_keys)?;
+    let pubkey =
+        FrostPublicKeyPackage::from_public_key_package::<C>(trusted_dealt_keys.public_keys)?;
 
     let mut hash_map: HashMap<ParticipantIdentifier, FrostSecretKeyShare> = HashMap::new();
 
@@ -45,8 +44,8 @@ pub fn trusted_dealer_keygen_from_configuration<C: Ciphersuite>(
 }
 
 pub struct TrustDealtKeys<C: Ciphersuite> {
-    pub secret_shares: BTreeMap<Identifier<C>,SecretShare<C>>,
-    pub public_keys: PublicKeyPackage<C>
+    pub secret_shares: BTreeMap<Identifier<C>, SecretShare<C>>,
+    pub public_keys: PublicKeyPackage<C>,
 }
 
 pub fn trusted_dealer_keygen<C: Ciphersuite>(
@@ -65,12 +64,10 @@ pub fn trusted_dealer_keygen<C: Ciphersuite>(
         frost::keys::KeyPackage::try_from(v)?;
     }
 
-    Ok(
-        TrustDealtKeys {
-            secret_shares: shares,
-            public_keys: pubkeys
-        }
-    )
+    Ok(TrustDealtKeys {
+        secret_shares: shares,
+        public_keys: pubkeys,
+    })
 }
 
 fn split_secret<C: Ciphersuite>(
@@ -97,12 +94,10 @@ fn split_secret<C: Ciphersuite>(
         frost::keys::KeyPackage::try_from(v)?;
     }
 
-    Ok(
-        TrustDealtKeys {
-            secret_shares: shares,
-            public_keys: pubkeys
-        }
-    )
+    Ok(TrustDealtKeys {
+        secret_shares: shares,
+        public_keys: pubkeys,
+    })
 }
 #[cfg(test)]
 mod tests {

@@ -34,3 +34,19 @@ jobs:
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - run: cargo build --verbose --all-features
       - run: cargo test --verbose
+  
+  build_and_test_redpallas:
+    if: ${{ ! startsWith(github.event.pull_request.head.ref, 'release-') }}
+    name: Rust project - latest
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+          - beta
+          - nightly
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+      - run: cargo build --verbose --features redpallas
+      - run: cargo test --verbose --features redpallas

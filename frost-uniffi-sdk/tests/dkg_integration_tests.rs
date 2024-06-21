@@ -8,10 +8,14 @@ use frost_core::Identifier;
 use frost_uniffi_sdk::coordinator::{aggregate, verify_signature};
 
 #[cfg(feature = "redpallas")]
-use frost_uniffi_sdk::{
-    coordinator::verify_signature,
-    randomized::{coordinator::aggregate, tests::helpers::round_2},
+use frost_uniffi_sdk::randomized::{
+    coordinator::{aggregate, verify_randomized_signature},
+    randomizer::FrostRandomizer,
+    tests::helpers::round_2,
 };
+
+mod helpers;
+use helpers::round_1;
 
 use rand::thread_rng;
 use std::{collections::HashMap, sync::Arc};
@@ -24,8 +28,6 @@ use frost_uniffi_sdk::dkg::lib::{
     part_1, part_2, part_3, DKGRound1Package, DKGRound1SecretPackage, DKGRound2Package,
     DKGRound2SecretPackage,
 };
-mod helpers;
-use helpers::round_1;
 
 #[cfg(not(feature = "redpallas"))]
 use helpers::round_2;
@@ -198,18 +200,25 @@ fn test_dkg_from_3_participants() {
     };
 
     #[cfg(feature = "redpallas")]
-    let (signing_package, signature_shares, randomizer) = round_2(
+    let pubkey = pubkeys.get(&p1_identifier).unwrap();
+
+    #[cfg(feature = "redpallas")]
+    let (signing_package, signature_shares, randomized_params) = round_2(
         &mut rng,
         &nonces,
         &key_packages,
         commitments,
+        pubkey.clone(),
         message.clone(),
-        None,
     );
 
     #[cfg(not(feature = "redpallas"))]
     let (signing_package, signature_shares) =
         round_2(&nonces, &key_packages, commitments, message.clone());
+
+    #[cfg(feature = "redpallas")]
+    let randomizer =
+        FrostRandomizer::from_randomizer::<E>(*randomized_params.randomizer()).unwrap();
 
     let p1identifier = p1_identifier.clone();
     let pubkey = pubkeys.get(&p1identifier).unwrap().clone();
@@ -218,16 +227,31 @@ fn test_dkg_from_3_participants() {
         signature_shares.into_iter().map(|s| s.1).collect(),
         pubkey.clone(),
         #[cfg(feature = "redpallas")]
-        randomizer.unwrap(),
+        randomizer.clone(),
     )
     .unwrap();
 
-    let verify_signature = verify_signature(message, group_signature, pubkey.clone());
+    #[cfg(feature = "redpallas")]
+    {
+        let verify_signature =
+            verify_randomized_signature(randomizer, message, group_signature, pubkey);
 
-    match verify_signature {
-        Ok(()) => assert!(true),
-        Err(e) => {
-            assert!(false, "signature verification failed with error: {e:?}")
+        match verify_signature {
+            Ok(()) => assert!(true),
+            Err(e) => {
+                assert!(false, "signature verification failed with error: {e:?}")
+            }
+        }
+    }
+    #[cfg(not(feature = "redpallas"))]
+    {
+        let verify_signature = verify_signature(message, group_signature, pubkey.clone());
+
+        match verify_signature {
+            Ok(()) => assert!(true),
+            Err(e) => {
+                assert!(false, "signature verification failed with error: {e:?}")
+            }
         }
     }
 }
