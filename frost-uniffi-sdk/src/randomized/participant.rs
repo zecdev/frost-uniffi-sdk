@@ -31,7 +31,7 @@ pub fn sign(
     let identifier = *key_package.identifier();
 
     let randomizer = randomizer
-        .into_randomizer()
+        .into_randomizer::<frost::PallasBlake2b512>()
         .map_err(|_| Round2Error::InvalidRandomizer)?;
 
     let share =

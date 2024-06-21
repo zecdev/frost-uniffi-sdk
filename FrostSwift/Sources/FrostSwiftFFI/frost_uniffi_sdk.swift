@@ -1669,17 +1669,44 @@ public enum FrostError {
 
     
     
+    case InvalidMinSigners
+    case InvalidMaxSigners
+    case InvalidCoefficients
+    case MalformedIdentifier
+    case DuplicatedIdentifier
+    case UnknownIdentifier
+    case IncorrectNumberOfIdentifiers
+    case MalformedSigningKey
+    case MalformedVerifyingKey
+    case MalformedSignature
+    case InvalidSignature
+    case DuplicatedShares
+    case IncorrectNumberOfShares
+    case IdentityCommitment
+    case MissingCommitment
+    case IncorrectCommitment
+    case IncorrectNumberOfCommitments
+    case InvalidSignatureShare(culprit: ParticipantIdentifier)
+    case InvalidSecretShare
+    case PackageNotFound
+    case IncorrectNumberOfPackages
+    case IncorrectPackage
+    case DkgNotSupported
+    case InvalidProofOfKnowledge(culprit: ParticipantIdentifier)
+    case FieldError(message: String)
+    case GroupError(message: String)
+    case InvalidCoefficient
+    case IdentifierDerivationNotSupported
     case SerializationError
     case DeserializationError
-    case InvalidKeyPackage
-    case InvalidSecretKey
-    case InvalidConfiguration
     case DkgPart2IncorrectNumberOfCommitments
     case DkgPart2IncorrectNumberOfPackages
     case DkgPart3IncorrectRound1Packages
     case DkgPart3IncorrectNumberOfPackages
     case DkgPart3PackageSendersMismatch
-    case UnknownIdentifier
+    case InvalidKeyPackage
+    case InvalidSecretKey
+    case InvalidConfiguration
     case UnexpectedError
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
@@ -1698,18 +1725,53 @@ public struct FfiConverterTypeFrostError: FfiConverterRustBuffer {
         
 
         
-        case 1: return .SerializationError
-        case 2: return .DeserializationError
-        case 3: return .InvalidKeyPackage
-        case 4: return .InvalidSecretKey
-        case 5: return .InvalidConfiguration
-        case 6: return .DkgPart2IncorrectNumberOfCommitments
-        case 7: return .DkgPart2IncorrectNumberOfPackages
-        case 8: return .DkgPart3IncorrectRound1Packages
-        case 9: return .DkgPart3IncorrectNumberOfPackages
-        case 10: return .DkgPart3PackageSendersMismatch
-        case 11: return .UnknownIdentifier
-        case 12: return .UnexpectedError
+        case 1: return .InvalidMinSigners
+        case 2: return .InvalidMaxSigners
+        case 3: return .InvalidCoefficients
+        case 4: return .MalformedIdentifier
+        case 5: return .DuplicatedIdentifier
+        case 6: return .UnknownIdentifier
+        case 7: return .IncorrectNumberOfIdentifiers
+        case 8: return .MalformedSigningKey
+        case 9: return .MalformedVerifyingKey
+        case 10: return .MalformedSignature
+        case 11: return .InvalidSignature
+        case 12: return .DuplicatedShares
+        case 13: return .IncorrectNumberOfShares
+        case 14: return .IdentityCommitment
+        case 15: return .MissingCommitment
+        case 16: return .IncorrectCommitment
+        case 17: return .IncorrectNumberOfCommitments
+        case 18: return .InvalidSignatureShare(
+            culprit: try FfiConverterTypeParticipantIdentifier.read(from: &buf)
+            )
+        case 19: return .InvalidSecretShare
+        case 20: return .PackageNotFound
+        case 21: return .IncorrectNumberOfPackages
+        case 22: return .IncorrectPackage
+        case 23: return .DkgNotSupported
+        case 24: return .InvalidProofOfKnowledge(
+            culprit: try FfiConverterTypeParticipantIdentifier.read(from: &buf)
+            )
+        case 25: return .FieldError(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 26: return .GroupError(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 27: return .InvalidCoefficient
+        case 28: return .IdentifierDerivationNotSupported
+        case 29: return .SerializationError
+        case 30: return .DeserializationError
+        case 31: return .DkgPart2IncorrectNumberOfCommitments
+        case 32: return .DkgPart2IncorrectNumberOfPackages
+        case 33: return .DkgPart3IncorrectRound1Packages
+        case 34: return .DkgPart3IncorrectNumberOfPackages
+        case 35: return .DkgPart3PackageSendersMismatch
+        case 36: return .InvalidKeyPackage
+        case 37: return .InvalidSecretKey
+        case 38: return .InvalidConfiguration
+        case 39: return .UnexpectedError
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1722,52 +1784,164 @@ public struct FfiConverterTypeFrostError: FfiConverterRustBuffer {
 
         
         
-        case .SerializationError:
+        case .InvalidMinSigners:
             writeInt(&buf, Int32(1))
         
         
-        case .DeserializationError:
+        case .InvalidMaxSigners:
             writeInt(&buf, Int32(2))
         
         
-        case .InvalidKeyPackage:
+        case .InvalidCoefficients:
             writeInt(&buf, Int32(3))
         
         
-        case .InvalidSecretKey:
+        case .MalformedIdentifier:
             writeInt(&buf, Int32(4))
         
         
-        case .InvalidConfiguration:
+        case .DuplicatedIdentifier:
             writeInt(&buf, Int32(5))
         
         
-        case .DkgPart2IncorrectNumberOfCommitments:
+        case .UnknownIdentifier:
             writeInt(&buf, Int32(6))
         
         
-        case .DkgPart2IncorrectNumberOfPackages:
+        case .IncorrectNumberOfIdentifiers:
             writeInt(&buf, Int32(7))
         
         
-        case .DkgPart3IncorrectRound1Packages:
+        case .MalformedSigningKey:
             writeInt(&buf, Int32(8))
         
         
-        case .DkgPart3IncorrectNumberOfPackages:
+        case .MalformedVerifyingKey:
             writeInt(&buf, Int32(9))
         
         
-        case .DkgPart3PackageSendersMismatch:
+        case .MalformedSignature:
             writeInt(&buf, Int32(10))
         
         
-        case .UnknownIdentifier:
+        case .InvalidSignature:
             writeInt(&buf, Int32(11))
         
         
-        case .UnexpectedError:
+        case .DuplicatedShares:
             writeInt(&buf, Int32(12))
+        
+        
+        case .IncorrectNumberOfShares:
+            writeInt(&buf, Int32(13))
+        
+        
+        case .IdentityCommitment:
+            writeInt(&buf, Int32(14))
+        
+        
+        case .MissingCommitment:
+            writeInt(&buf, Int32(15))
+        
+        
+        case .IncorrectCommitment:
+            writeInt(&buf, Int32(16))
+        
+        
+        case .IncorrectNumberOfCommitments:
+            writeInt(&buf, Int32(17))
+        
+        
+        case let .InvalidSignatureShare(culprit):
+            writeInt(&buf, Int32(18))
+            FfiConverterTypeParticipantIdentifier.write(culprit, into: &buf)
+            
+        
+        case .InvalidSecretShare:
+            writeInt(&buf, Int32(19))
+        
+        
+        case .PackageNotFound:
+            writeInt(&buf, Int32(20))
+        
+        
+        case .IncorrectNumberOfPackages:
+            writeInt(&buf, Int32(21))
+        
+        
+        case .IncorrectPackage:
+            writeInt(&buf, Int32(22))
+        
+        
+        case .DkgNotSupported:
+            writeInt(&buf, Int32(23))
+        
+        
+        case let .InvalidProofOfKnowledge(culprit):
+            writeInt(&buf, Int32(24))
+            FfiConverterTypeParticipantIdentifier.write(culprit, into: &buf)
+            
+        
+        case let .FieldError(message):
+            writeInt(&buf, Int32(25))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case let .GroupError(message):
+            writeInt(&buf, Int32(26))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case .InvalidCoefficient:
+            writeInt(&buf, Int32(27))
+        
+        
+        case .IdentifierDerivationNotSupported:
+            writeInt(&buf, Int32(28))
+        
+        
+        case .SerializationError:
+            writeInt(&buf, Int32(29))
+        
+        
+        case .DeserializationError:
+            writeInt(&buf, Int32(30))
+        
+        
+        case .DkgPart2IncorrectNumberOfCommitments:
+            writeInt(&buf, Int32(31))
+        
+        
+        case .DkgPart2IncorrectNumberOfPackages:
+            writeInt(&buf, Int32(32))
+        
+        
+        case .DkgPart3IncorrectRound1Packages:
+            writeInt(&buf, Int32(33))
+        
+        
+        case .DkgPart3IncorrectNumberOfPackages:
+            writeInt(&buf, Int32(34))
+        
+        
+        case .DkgPart3PackageSendersMismatch:
+            writeInt(&buf, Int32(35))
+        
+        
+        case .InvalidKeyPackage:
+            writeInt(&buf, Int32(36))
+        
+        
+        case .InvalidSecretKey:
+            writeInt(&buf, Int32(37))
+        
+        
+        case .InvalidConfiguration:
+            writeInt(&buf, Int32(38))
+        
+        
+        case .UnexpectedError:
+            writeInt(&buf, Int32(39))
         
         }
     }
@@ -2200,7 +2374,7 @@ public func sign(signingPackage: FrostSigningPackage, nonces: FrostSigningNonces
 
 public func trustedDealerKeygenFrom(configuration: Configuration) throws -> TrustedKeyGeneration {
     return try  FfiConverterTypeTrustedKeyGeneration.lift(
-        try rustCallWithError(FfiConverterTypeConfigurationError.lift) {
+        try rustCallWithError(FfiConverterTypeFrostError.lift) {
     uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_from(
         FfiConverterTypeConfiguration.lower(configuration),$0)
 }
@@ -2209,7 +2383,7 @@ public func trustedDealerKeygenFrom(configuration: Configuration) throws -> Trus
 
 public func trustedDealerKeygenWithIdentifiers(configuration: Configuration, participants: ParticipantList) throws -> TrustedKeyGeneration {
     return try  FfiConverterTypeTrustedKeyGeneration.lift(
-        try rustCallWithError(FfiConverterTypeConfigurationError.lift) {
+        try rustCallWithError(FfiConverterTypeFrostError.lift) {
     uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_with_identifiers(
         FfiConverterTypeConfiguration.lower(configuration),
         FfiConverterTypeParticipantList.lower(participants),$0)
@@ -2282,10 +2456,10 @@ private var initializationResult: InitializationResult {
     if (uniffi_frost_uniffi_sdk_checksum_func_sign() != 48101) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from() != 27691) {
+    if (uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from() != 43563) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers() != 46297) {
+    if (uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers() != 49159) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_frost_uniffi_sdk_checksum_func_validate_config() != 26688) {

@@ -411,7 +411,7 @@ func uniffiCheckChecksums() {
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from(uniffiStatus)
 		})
-		if checksum != 27691 {
+		if checksum != 43563 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from: UniFFI API checksum mismatch")
 		}
@@ -420,7 +420,7 @@ func uniffiCheckChecksums() {
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers(uniffiStatus)
 		})
-		if checksum != 46297 {
+		if checksum != 49159 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers: UniFFI API checksum mismatch")
 		}
@@ -1835,20 +1835,563 @@ func (err FrostError) Unwrap() error {
 }
 
 // Err* are used for checking error type with `errors.Is`
+var ErrFrostErrorInvalidMinSigners = fmt.Errorf("FrostErrorInvalidMinSigners")
+var ErrFrostErrorInvalidMaxSigners = fmt.Errorf("FrostErrorInvalidMaxSigners")
+var ErrFrostErrorInvalidCoefficients = fmt.Errorf("FrostErrorInvalidCoefficients")
+var ErrFrostErrorMalformedIdentifier = fmt.Errorf("FrostErrorMalformedIdentifier")
+var ErrFrostErrorDuplicatedIdentifier = fmt.Errorf("FrostErrorDuplicatedIdentifier")
+var ErrFrostErrorUnknownIdentifier = fmt.Errorf("FrostErrorUnknownIdentifier")
+var ErrFrostErrorIncorrectNumberOfIdentifiers = fmt.Errorf("FrostErrorIncorrectNumberOfIdentifiers")
+var ErrFrostErrorMalformedSigningKey = fmt.Errorf("FrostErrorMalformedSigningKey")
+var ErrFrostErrorMalformedVerifyingKey = fmt.Errorf("FrostErrorMalformedVerifyingKey")
+var ErrFrostErrorMalformedSignature = fmt.Errorf("FrostErrorMalformedSignature")
+var ErrFrostErrorInvalidSignature = fmt.Errorf("FrostErrorInvalidSignature")
+var ErrFrostErrorDuplicatedShares = fmt.Errorf("FrostErrorDuplicatedShares")
+var ErrFrostErrorIncorrectNumberOfShares = fmt.Errorf("FrostErrorIncorrectNumberOfShares")
+var ErrFrostErrorIdentityCommitment = fmt.Errorf("FrostErrorIdentityCommitment")
+var ErrFrostErrorMissingCommitment = fmt.Errorf("FrostErrorMissingCommitment")
+var ErrFrostErrorIncorrectCommitment = fmt.Errorf("FrostErrorIncorrectCommitment")
+var ErrFrostErrorIncorrectNumberOfCommitments = fmt.Errorf("FrostErrorIncorrectNumberOfCommitments")
+var ErrFrostErrorInvalidSignatureShare = fmt.Errorf("FrostErrorInvalidSignatureShare")
+var ErrFrostErrorInvalidSecretShare = fmt.Errorf("FrostErrorInvalidSecretShare")
+var ErrFrostErrorPackageNotFound = fmt.Errorf("FrostErrorPackageNotFound")
+var ErrFrostErrorIncorrectNumberOfPackages = fmt.Errorf("FrostErrorIncorrectNumberOfPackages")
+var ErrFrostErrorIncorrectPackage = fmt.Errorf("FrostErrorIncorrectPackage")
+var ErrFrostErrorDkgNotSupported = fmt.Errorf("FrostErrorDkgNotSupported")
+var ErrFrostErrorInvalidProofOfKnowledge = fmt.Errorf("FrostErrorInvalidProofOfKnowledge")
+var ErrFrostErrorFieldError = fmt.Errorf("FrostErrorFieldError")
+var ErrFrostErrorGroupError = fmt.Errorf("FrostErrorGroupError")
+var ErrFrostErrorInvalidCoefficient = fmt.Errorf("FrostErrorInvalidCoefficient")
+var ErrFrostErrorIdentifierDerivationNotSupported = fmt.Errorf("FrostErrorIdentifierDerivationNotSupported")
 var ErrFrostErrorSerializationError = fmt.Errorf("FrostErrorSerializationError")
 var ErrFrostErrorDeserializationError = fmt.Errorf("FrostErrorDeserializationError")
-var ErrFrostErrorInvalidKeyPackage = fmt.Errorf("FrostErrorInvalidKeyPackage")
-var ErrFrostErrorInvalidSecretKey = fmt.Errorf("FrostErrorInvalidSecretKey")
-var ErrFrostErrorInvalidConfiguration = fmt.Errorf("FrostErrorInvalidConfiguration")
 var ErrFrostErrorDkgPart2IncorrectNumberOfCommitments = fmt.Errorf("FrostErrorDkgPart2IncorrectNumberOfCommitments")
 var ErrFrostErrorDkgPart2IncorrectNumberOfPackages = fmt.Errorf("FrostErrorDkgPart2IncorrectNumberOfPackages")
 var ErrFrostErrorDkgPart3IncorrectRound1Packages = fmt.Errorf("FrostErrorDkgPart3IncorrectRound1Packages")
 var ErrFrostErrorDkgPart3IncorrectNumberOfPackages = fmt.Errorf("FrostErrorDkgPart3IncorrectNumberOfPackages")
 var ErrFrostErrorDkgPart3PackageSendersMismatch = fmt.Errorf("FrostErrorDkgPart3PackageSendersMismatch")
-var ErrFrostErrorUnknownIdentifier = fmt.Errorf("FrostErrorUnknownIdentifier")
+var ErrFrostErrorInvalidKeyPackage = fmt.Errorf("FrostErrorInvalidKeyPackage")
+var ErrFrostErrorInvalidSecretKey = fmt.Errorf("FrostErrorInvalidSecretKey")
+var ErrFrostErrorInvalidConfiguration = fmt.Errorf("FrostErrorInvalidConfiguration")
 var ErrFrostErrorUnexpectedError = fmt.Errorf("FrostErrorUnexpectedError")
 
 // Variant structs
+type FrostErrorInvalidMinSigners struct {
+}
+
+func NewFrostErrorInvalidMinSigners() *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidMinSigners{},
+	}
+}
+
+func (err FrostErrorInvalidMinSigners) Error() string {
+	return fmt.Sprint("InvalidMinSigners")
+}
+
+func (self FrostErrorInvalidMinSigners) Is(target error) bool {
+	return target == ErrFrostErrorInvalidMinSigners
+}
+
+type FrostErrorInvalidMaxSigners struct {
+}
+
+func NewFrostErrorInvalidMaxSigners() *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidMaxSigners{},
+	}
+}
+
+func (err FrostErrorInvalidMaxSigners) Error() string {
+	return fmt.Sprint("InvalidMaxSigners")
+}
+
+func (self FrostErrorInvalidMaxSigners) Is(target error) bool {
+	return target == ErrFrostErrorInvalidMaxSigners
+}
+
+type FrostErrorInvalidCoefficients struct {
+}
+
+func NewFrostErrorInvalidCoefficients() *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidCoefficients{},
+	}
+}
+
+func (err FrostErrorInvalidCoefficients) Error() string {
+	return fmt.Sprint("InvalidCoefficients")
+}
+
+func (self FrostErrorInvalidCoefficients) Is(target error) bool {
+	return target == ErrFrostErrorInvalidCoefficients
+}
+
+type FrostErrorMalformedIdentifier struct {
+}
+
+func NewFrostErrorMalformedIdentifier() *FrostError {
+	return &FrostError{
+		err: &FrostErrorMalformedIdentifier{},
+	}
+}
+
+func (err FrostErrorMalformedIdentifier) Error() string {
+	return fmt.Sprint("MalformedIdentifier")
+}
+
+func (self FrostErrorMalformedIdentifier) Is(target error) bool {
+	return target == ErrFrostErrorMalformedIdentifier
+}
+
+type FrostErrorDuplicatedIdentifier struct {
+}
+
+func NewFrostErrorDuplicatedIdentifier() *FrostError {
+	return &FrostError{
+		err: &FrostErrorDuplicatedIdentifier{},
+	}
+}
+
+func (err FrostErrorDuplicatedIdentifier) Error() string {
+	return fmt.Sprint("DuplicatedIdentifier")
+}
+
+func (self FrostErrorDuplicatedIdentifier) Is(target error) bool {
+	return target == ErrFrostErrorDuplicatedIdentifier
+}
+
+type FrostErrorUnknownIdentifier struct {
+}
+
+func NewFrostErrorUnknownIdentifier() *FrostError {
+	return &FrostError{
+		err: &FrostErrorUnknownIdentifier{},
+	}
+}
+
+func (err FrostErrorUnknownIdentifier) Error() string {
+	return fmt.Sprint("UnknownIdentifier")
+}
+
+func (self FrostErrorUnknownIdentifier) Is(target error) bool {
+	return target == ErrFrostErrorUnknownIdentifier
+}
+
+type FrostErrorIncorrectNumberOfIdentifiers struct {
+}
+
+func NewFrostErrorIncorrectNumberOfIdentifiers() *FrostError {
+	return &FrostError{
+		err: &FrostErrorIncorrectNumberOfIdentifiers{},
+	}
+}
+
+func (err FrostErrorIncorrectNumberOfIdentifiers) Error() string {
+	return fmt.Sprint("IncorrectNumberOfIdentifiers")
+}
+
+func (self FrostErrorIncorrectNumberOfIdentifiers) Is(target error) bool {
+	return target == ErrFrostErrorIncorrectNumberOfIdentifiers
+}
+
+type FrostErrorMalformedSigningKey struct {
+}
+
+func NewFrostErrorMalformedSigningKey() *FrostError {
+	return &FrostError{
+		err: &FrostErrorMalformedSigningKey{},
+	}
+}
+
+func (err FrostErrorMalformedSigningKey) Error() string {
+	return fmt.Sprint("MalformedSigningKey")
+}
+
+func (self FrostErrorMalformedSigningKey) Is(target error) bool {
+	return target == ErrFrostErrorMalformedSigningKey
+}
+
+type FrostErrorMalformedVerifyingKey struct {
+}
+
+func NewFrostErrorMalformedVerifyingKey() *FrostError {
+	return &FrostError{
+		err: &FrostErrorMalformedVerifyingKey{},
+	}
+}
+
+func (err FrostErrorMalformedVerifyingKey) Error() string {
+	return fmt.Sprint("MalformedVerifyingKey")
+}
+
+func (self FrostErrorMalformedVerifyingKey) Is(target error) bool {
+	return target == ErrFrostErrorMalformedVerifyingKey
+}
+
+type FrostErrorMalformedSignature struct {
+}
+
+func NewFrostErrorMalformedSignature() *FrostError {
+	return &FrostError{
+		err: &FrostErrorMalformedSignature{},
+	}
+}
+
+func (err FrostErrorMalformedSignature) Error() string {
+	return fmt.Sprint("MalformedSignature")
+}
+
+func (self FrostErrorMalformedSignature) Is(target error) bool {
+	return target == ErrFrostErrorMalformedSignature
+}
+
+type FrostErrorInvalidSignature struct {
+}
+
+func NewFrostErrorInvalidSignature() *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidSignature{},
+	}
+}
+
+func (err FrostErrorInvalidSignature) Error() string {
+	return fmt.Sprint("InvalidSignature")
+}
+
+func (self FrostErrorInvalidSignature) Is(target error) bool {
+	return target == ErrFrostErrorInvalidSignature
+}
+
+type FrostErrorDuplicatedShares struct {
+}
+
+func NewFrostErrorDuplicatedShares() *FrostError {
+	return &FrostError{
+		err: &FrostErrorDuplicatedShares{},
+	}
+}
+
+func (err FrostErrorDuplicatedShares) Error() string {
+	return fmt.Sprint("DuplicatedShares")
+}
+
+func (self FrostErrorDuplicatedShares) Is(target error) bool {
+	return target == ErrFrostErrorDuplicatedShares
+}
+
+type FrostErrorIncorrectNumberOfShares struct {
+}
+
+func NewFrostErrorIncorrectNumberOfShares() *FrostError {
+	return &FrostError{
+		err: &FrostErrorIncorrectNumberOfShares{},
+	}
+}
+
+func (err FrostErrorIncorrectNumberOfShares) Error() string {
+	return fmt.Sprint("IncorrectNumberOfShares")
+}
+
+func (self FrostErrorIncorrectNumberOfShares) Is(target error) bool {
+	return target == ErrFrostErrorIncorrectNumberOfShares
+}
+
+type FrostErrorIdentityCommitment struct {
+}
+
+func NewFrostErrorIdentityCommitment() *FrostError {
+	return &FrostError{
+		err: &FrostErrorIdentityCommitment{},
+	}
+}
+
+func (err FrostErrorIdentityCommitment) Error() string {
+	return fmt.Sprint("IdentityCommitment")
+}
+
+func (self FrostErrorIdentityCommitment) Is(target error) bool {
+	return target == ErrFrostErrorIdentityCommitment
+}
+
+type FrostErrorMissingCommitment struct {
+}
+
+func NewFrostErrorMissingCommitment() *FrostError {
+	return &FrostError{
+		err: &FrostErrorMissingCommitment{},
+	}
+}
+
+func (err FrostErrorMissingCommitment) Error() string {
+	return fmt.Sprint("MissingCommitment")
+}
+
+func (self FrostErrorMissingCommitment) Is(target error) bool {
+	return target == ErrFrostErrorMissingCommitment
+}
+
+type FrostErrorIncorrectCommitment struct {
+}
+
+func NewFrostErrorIncorrectCommitment() *FrostError {
+	return &FrostError{
+		err: &FrostErrorIncorrectCommitment{},
+	}
+}
+
+func (err FrostErrorIncorrectCommitment) Error() string {
+	return fmt.Sprint("IncorrectCommitment")
+}
+
+func (self FrostErrorIncorrectCommitment) Is(target error) bool {
+	return target == ErrFrostErrorIncorrectCommitment
+}
+
+type FrostErrorIncorrectNumberOfCommitments struct {
+}
+
+func NewFrostErrorIncorrectNumberOfCommitments() *FrostError {
+	return &FrostError{
+		err: &FrostErrorIncorrectNumberOfCommitments{},
+	}
+}
+
+func (err FrostErrorIncorrectNumberOfCommitments) Error() string {
+	return fmt.Sprint("IncorrectNumberOfCommitments")
+}
+
+func (self FrostErrorIncorrectNumberOfCommitments) Is(target error) bool {
+	return target == ErrFrostErrorIncorrectNumberOfCommitments
+}
+
+type FrostErrorInvalidSignatureShare struct {
+	Culprit ParticipantIdentifier
+}
+
+func NewFrostErrorInvalidSignatureShare(
+	culprit ParticipantIdentifier,
+) *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidSignatureShare{
+			Culprit: culprit,
+		},
+	}
+}
+
+func (err FrostErrorInvalidSignatureShare) Error() string {
+	return fmt.Sprint("InvalidSignatureShare",
+		": ",
+
+		"Culprit=",
+		err.Culprit,
+	)
+}
+
+func (self FrostErrorInvalidSignatureShare) Is(target error) bool {
+	return target == ErrFrostErrorInvalidSignatureShare
+}
+
+type FrostErrorInvalidSecretShare struct {
+}
+
+func NewFrostErrorInvalidSecretShare() *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidSecretShare{},
+	}
+}
+
+func (err FrostErrorInvalidSecretShare) Error() string {
+	return fmt.Sprint("InvalidSecretShare")
+}
+
+func (self FrostErrorInvalidSecretShare) Is(target error) bool {
+	return target == ErrFrostErrorInvalidSecretShare
+}
+
+type FrostErrorPackageNotFound struct {
+}
+
+func NewFrostErrorPackageNotFound() *FrostError {
+	return &FrostError{
+		err: &FrostErrorPackageNotFound{},
+	}
+}
+
+func (err FrostErrorPackageNotFound) Error() string {
+	return fmt.Sprint("PackageNotFound")
+}
+
+func (self FrostErrorPackageNotFound) Is(target error) bool {
+	return target == ErrFrostErrorPackageNotFound
+}
+
+type FrostErrorIncorrectNumberOfPackages struct {
+}
+
+func NewFrostErrorIncorrectNumberOfPackages() *FrostError {
+	return &FrostError{
+		err: &FrostErrorIncorrectNumberOfPackages{},
+	}
+}
+
+func (err FrostErrorIncorrectNumberOfPackages) Error() string {
+	return fmt.Sprint("IncorrectNumberOfPackages")
+}
+
+func (self FrostErrorIncorrectNumberOfPackages) Is(target error) bool {
+	return target == ErrFrostErrorIncorrectNumberOfPackages
+}
+
+type FrostErrorIncorrectPackage struct {
+}
+
+func NewFrostErrorIncorrectPackage() *FrostError {
+	return &FrostError{
+		err: &FrostErrorIncorrectPackage{},
+	}
+}
+
+func (err FrostErrorIncorrectPackage) Error() string {
+	return fmt.Sprint("IncorrectPackage")
+}
+
+func (self FrostErrorIncorrectPackage) Is(target error) bool {
+	return target == ErrFrostErrorIncorrectPackage
+}
+
+type FrostErrorDkgNotSupported struct {
+}
+
+func NewFrostErrorDkgNotSupported() *FrostError {
+	return &FrostError{
+		err: &FrostErrorDkgNotSupported{},
+	}
+}
+
+func (err FrostErrorDkgNotSupported) Error() string {
+	return fmt.Sprint("DkgNotSupported")
+}
+
+func (self FrostErrorDkgNotSupported) Is(target error) bool {
+	return target == ErrFrostErrorDkgNotSupported
+}
+
+type FrostErrorInvalidProofOfKnowledge struct {
+	Culprit ParticipantIdentifier
+}
+
+func NewFrostErrorInvalidProofOfKnowledge(
+	culprit ParticipantIdentifier,
+) *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidProofOfKnowledge{
+			Culprit: culprit,
+		},
+	}
+}
+
+func (err FrostErrorInvalidProofOfKnowledge) Error() string {
+	return fmt.Sprint("InvalidProofOfKnowledge",
+		": ",
+
+		"Culprit=",
+		err.Culprit,
+	)
+}
+
+func (self FrostErrorInvalidProofOfKnowledge) Is(target error) bool {
+	return target == ErrFrostErrorInvalidProofOfKnowledge
+}
+
+type FrostErrorFieldError struct {
+	Message string
+}
+
+func NewFrostErrorFieldError(
+	message string,
+) *FrostError {
+	return &FrostError{
+		err: &FrostErrorFieldError{
+			Message: message,
+		},
+	}
+}
+
+func (err FrostErrorFieldError) Error() string {
+	return fmt.Sprint("FieldError",
+		": ",
+
+		"Message=",
+		err.Message,
+	)
+}
+
+func (self FrostErrorFieldError) Is(target error) bool {
+	return target == ErrFrostErrorFieldError
+}
+
+type FrostErrorGroupError struct {
+	Message string
+}
+
+func NewFrostErrorGroupError(
+	message string,
+) *FrostError {
+	return &FrostError{
+		err: &FrostErrorGroupError{
+			Message: message,
+		},
+	}
+}
+
+func (err FrostErrorGroupError) Error() string {
+	return fmt.Sprint("GroupError",
+		": ",
+
+		"Message=",
+		err.Message,
+	)
+}
+
+func (self FrostErrorGroupError) Is(target error) bool {
+	return target == ErrFrostErrorGroupError
+}
+
+type FrostErrorInvalidCoefficient struct {
+}
+
+func NewFrostErrorInvalidCoefficient() *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidCoefficient{},
+	}
+}
+
+func (err FrostErrorInvalidCoefficient) Error() string {
+	return fmt.Sprint("InvalidCoefficient")
+}
+
+func (self FrostErrorInvalidCoefficient) Is(target error) bool {
+	return target == ErrFrostErrorInvalidCoefficient
+}
+
+type FrostErrorIdentifierDerivationNotSupported struct {
+}
+
+func NewFrostErrorIdentifierDerivationNotSupported() *FrostError {
+	return &FrostError{
+		err: &FrostErrorIdentifierDerivationNotSupported{},
+	}
+}
+
+func (err FrostErrorIdentifierDerivationNotSupported) Error() string {
+	return fmt.Sprint("IdentifierDerivationNotSupported")
+}
+
+func (self FrostErrorIdentifierDerivationNotSupported) Is(target error) bool {
+	return target == ErrFrostErrorIdentifierDerivationNotSupported
+}
+
 type FrostErrorSerializationError struct {
 }
 
@@ -1881,57 +2424,6 @@ func (err FrostErrorDeserializationError) Error() string {
 
 func (self FrostErrorDeserializationError) Is(target error) bool {
 	return target == ErrFrostErrorDeserializationError
-}
-
-type FrostErrorInvalidKeyPackage struct {
-}
-
-func NewFrostErrorInvalidKeyPackage() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidKeyPackage{},
-	}
-}
-
-func (err FrostErrorInvalidKeyPackage) Error() string {
-	return fmt.Sprint("InvalidKeyPackage")
-}
-
-func (self FrostErrorInvalidKeyPackage) Is(target error) bool {
-	return target == ErrFrostErrorInvalidKeyPackage
-}
-
-type FrostErrorInvalidSecretKey struct {
-}
-
-func NewFrostErrorInvalidSecretKey() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidSecretKey{},
-	}
-}
-
-func (err FrostErrorInvalidSecretKey) Error() string {
-	return fmt.Sprint("InvalidSecretKey")
-}
-
-func (self FrostErrorInvalidSecretKey) Is(target error) bool {
-	return target == ErrFrostErrorInvalidSecretKey
-}
-
-type FrostErrorInvalidConfiguration struct {
-}
-
-func NewFrostErrorInvalidConfiguration() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidConfiguration{},
-	}
-}
-
-func (err FrostErrorInvalidConfiguration) Error() string {
-	return fmt.Sprint("InvalidConfiguration")
-}
-
-func (self FrostErrorInvalidConfiguration) Is(target error) bool {
-	return target == ErrFrostErrorInvalidConfiguration
 }
 
 type FrostErrorDkgPart2IncorrectNumberOfCommitments struct {
@@ -2019,21 +2511,55 @@ func (self FrostErrorDkgPart3PackageSendersMismatch) Is(target error) bool {
 	return target == ErrFrostErrorDkgPart3PackageSendersMismatch
 }
 
-type FrostErrorUnknownIdentifier struct {
+type FrostErrorInvalidKeyPackage struct {
 }
 
-func NewFrostErrorUnknownIdentifier() *FrostError {
+func NewFrostErrorInvalidKeyPackage() *FrostError {
 	return &FrostError{
-		err: &FrostErrorUnknownIdentifier{},
+		err: &FrostErrorInvalidKeyPackage{},
 	}
 }
 
-func (err FrostErrorUnknownIdentifier) Error() string {
-	return fmt.Sprint("UnknownIdentifier")
+func (err FrostErrorInvalidKeyPackage) Error() string {
+	return fmt.Sprint("InvalidKeyPackage")
 }
 
-func (self FrostErrorUnknownIdentifier) Is(target error) bool {
-	return target == ErrFrostErrorUnknownIdentifier
+func (self FrostErrorInvalidKeyPackage) Is(target error) bool {
+	return target == ErrFrostErrorInvalidKeyPackage
+}
+
+type FrostErrorInvalidSecretKey struct {
+}
+
+func NewFrostErrorInvalidSecretKey() *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidSecretKey{},
+	}
+}
+
+func (err FrostErrorInvalidSecretKey) Error() string {
+	return fmt.Sprint("InvalidSecretKey")
+}
+
+func (self FrostErrorInvalidSecretKey) Is(target error) bool {
+	return target == ErrFrostErrorInvalidSecretKey
+}
+
+type FrostErrorInvalidConfiguration struct {
+}
+
+func NewFrostErrorInvalidConfiguration() *FrostError {
+	return &FrostError{
+		err: &FrostErrorInvalidConfiguration{},
+	}
+}
+
+func (err FrostErrorInvalidConfiguration) Error() string {
+	return fmt.Sprint("InvalidConfiguration")
+}
+
+func (self FrostErrorInvalidConfiguration) Is(target error) bool {
+	return target == ErrFrostErrorInvalidConfiguration
 }
 
 type FrostErrorUnexpectedError struct {
@@ -2070,28 +2596,90 @@ func (c FfiConverterTypeFrostError) Read(reader io.Reader) error {
 
 	switch errorID {
 	case 1:
-		return &FrostError{&FrostErrorSerializationError{}}
+		return &FrostError{&FrostErrorInvalidMinSigners{}}
 	case 2:
-		return &FrostError{&FrostErrorDeserializationError{}}
+		return &FrostError{&FrostErrorInvalidMaxSigners{}}
 	case 3:
-		return &FrostError{&FrostErrorInvalidKeyPackage{}}
+		return &FrostError{&FrostErrorInvalidCoefficients{}}
 	case 4:
-		return &FrostError{&FrostErrorInvalidSecretKey{}}
+		return &FrostError{&FrostErrorMalformedIdentifier{}}
 	case 5:
-		return &FrostError{&FrostErrorInvalidConfiguration{}}
+		return &FrostError{&FrostErrorDuplicatedIdentifier{}}
 	case 6:
-		return &FrostError{&FrostErrorDkgPart2IncorrectNumberOfCommitments{}}
-	case 7:
-		return &FrostError{&FrostErrorDkgPart2IncorrectNumberOfPackages{}}
-	case 8:
-		return &FrostError{&FrostErrorDkgPart3IncorrectRound1Packages{}}
-	case 9:
-		return &FrostError{&FrostErrorDkgPart3IncorrectNumberOfPackages{}}
-	case 10:
-		return &FrostError{&FrostErrorDkgPart3PackageSendersMismatch{}}
-	case 11:
 		return &FrostError{&FrostErrorUnknownIdentifier{}}
+	case 7:
+		return &FrostError{&FrostErrorIncorrectNumberOfIdentifiers{}}
+	case 8:
+		return &FrostError{&FrostErrorMalformedSigningKey{}}
+	case 9:
+		return &FrostError{&FrostErrorMalformedVerifyingKey{}}
+	case 10:
+		return &FrostError{&FrostErrorMalformedSignature{}}
+	case 11:
+		return &FrostError{&FrostErrorInvalidSignature{}}
 	case 12:
+		return &FrostError{&FrostErrorDuplicatedShares{}}
+	case 13:
+		return &FrostError{&FrostErrorIncorrectNumberOfShares{}}
+	case 14:
+		return &FrostError{&FrostErrorIdentityCommitment{}}
+	case 15:
+		return &FrostError{&FrostErrorMissingCommitment{}}
+	case 16:
+		return &FrostError{&FrostErrorIncorrectCommitment{}}
+	case 17:
+		return &FrostError{&FrostErrorIncorrectNumberOfCommitments{}}
+	case 18:
+		return &FrostError{&FrostErrorInvalidSignatureShare{
+			Culprit: FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		}}
+	case 19:
+		return &FrostError{&FrostErrorInvalidSecretShare{}}
+	case 20:
+		return &FrostError{&FrostErrorPackageNotFound{}}
+	case 21:
+		return &FrostError{&FrostErrorIncorrectNumberOfPackages{}}
+	case 22:
+		return &FrostError{&FrostErrorIncorrectPackage{}}
+	case 23:
+		return &FrostError{&FrostErrorDkgNotSupported{}}
+	case 24:
+		return &FrostError{&FrostErrorInvalidProofOfKnowledge{
+			Culprit: FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		}}
+	case 25:
+		return &FrostError{&FrostErrorFieldError{
+			Message: FfiConverterStringINSTANCE.Read(reader),
+		}}
+	case 26:
+		return &FrostError{&FrostErrorGroupError{
+			Message: FfiConverterStringINSTANCE.Read(reader),
+		}}
+	case 27:
+		return &FrostError{&FrostErrorInvalidCoefficient{}}
+	case 28:
+		return &FrostError{&FrostErrorIdentifierDerivationNotSupported{}}
+	case 29:
+		return &FrostError{&FrostErrorSerializationError{}}
+	case 30:
+		return &FrostError{&FrostErrorDeserializationError{}}
+	case 31:
+		return &FrostError{&FrostErrorDkgPart2IncorrectNumberOfCommitments{}}
+	case 32:
+		return &FrostError{&FrostErrorDkgPart2IncorrectNumberOfPackages{}}
+	case 33:
+		return &FrostError{&FrostErrorDkgPart3IncorrectRound1Packages{}}
+	case 34:
+		return &FrostError{&FrostErrorDkgPart3IncorrectNumberOfPackages{}}
+	case 35:
+		return &FrostError{&FrostErrorDkgPart3PackageSendersMismatch{}}
+	case 36:
+		return &FrostError{&FrostErrorInvalidKeyPackage{}}
+	case 37:
+		return &FrostError{&FrostErrorInvalidSecretKey{}}
+	case 38:
+		return &FrostError{&FrostErrorInvalidConfiguration{}}
+	case 39:
 		return &FrostError{&FrostErrorUnexpectedError{}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeFrostError.Read()", errorID))
@@ -2100,30 +2688,88 @@ func (c FfiConverterTypeFrostError) Read(reader io.Reader) error {
 
 func (c FfiConverterTypeFrostError) Write(writer io.Writer, value *FrostError) {
 	switch variantValue := value.err.(type) {
-	case *FrostErrorSerializationError:
+	case *FrostErrorInvalidMinSigners:
 		writeInt32(writer, 1)
-	case *FrostErrorDeserializationError:
+	case *FrostErrorInvalidMaxSigners:
 		writeInt32(writer, 2)
-	case *FrostErrorInvalidKeyPackage:
+	case *FrostErrorInvalidCoefficients:
 		writeInt32(writer, 3)
-	case *FrostErrorInvalidSecretKey:
+	case *FrostErrorMalformedIdentifier:
 		writeInt32(writer, 4)
-	case *FrostErrorInvalidConfiguration:
+	case *FrostErrorDuplicatedIdentifier:
 		writeInt32(writer, 5)
-	case *FrostErrorDkgPart2IncorrectNumberOfCommitments:
-		writeInt32(writer, 6)
-	case *FrostErrorDkgPart2IncorrectNumberOfPackages:
-		writeInt32(writer, 7)
-	case *FrostErrorDkgPart3IncorrectRound1Packages:
-		writeInt32(writer, 8)
-	case *FrostErrorDkgPart3IncorrectNumberOfPackages:
-		writeInt32(writer, 9)
-	case *FrostErrorDkgPart3PackageSendersMismatch:
-		writeInt32(writer, 10)
 	case *FrostErrorUnknownIdentifier:
+		writeInt32(writer, 6)
+	case *FrostErrorIncorrectNumberOfIdentifiers:
+		writeInt32(writer, 7)
+	case *FrostErrorMalformedSigningKey:
+		writeInt32(writer, 8)
+	case *FrostErrorMalformedVerifyingKey:
+		writeInt32(writer, 9)
+	case *FrostErrorMalformedSignature:
+		writeInt32(writer, 10)
+	case *FrostErrorInvalidSignature:
 		writeInt32(writer, 11)
-	case *FrostErrorUnexpectedError:
+	case *FrostErrorDuplicatedShares:
 		writeInt32(writer, 12)
+	case *FrostErrorIncorrectNumberOfShares:
+		writeInt32(writer, 13)
+	case *FrostErrorIdentityCommitment:
+		writeInt32(writer, 14)
+	case *FrostErrorMissingCommitment:
+		writeInt32(writer, 15)
+	case *FrostErrorIncorrectCommitment:
+		writeInt32(writer, 16)
+	case *FrostErrorIncorrectNumberOfCommitments:
+		writeInt32(writer, 17)
+	case *FrostErrorInvalidSignatureShare:
+		writeInt32(writer, 18)
+		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, variantValue.Culprit)
+	case *FrostErrorInvalidSecretShare:
+		writeInt32(writer, 19)
+	case *FrostErrorPackageNotFound:
+		writeInt32(writer, 20)
+	case *FrostErrorIncorrectNumberOfPackages:
+		writeInt32(writer, 21)
+	case *FrostErrorIncorrectPackage:
+		writeInt32(writer, 22)
+	case *FrostErrorDkgNotSupported:
+		writeInt32(writer, 23)
+	case *FrostErrorInvalidProofOfKnowledge:
+		writeInt32(writer, 24)
+		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, variantValue.Culprit)
+	case *FrostErrorFieldError:
+		writeInt32(writer, 25)
+		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
+	case *FrostErrorGroupError:
+		writeInt32(writer, 26)
+		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
+	case *FrostErrorInvalidCoefficient:
+		writeInt32(writer, 27)
+	case *FrostErrorIdentifierDerivationNotSupported:
+		writeInt32(writer, 28)
+	case *FrostErrorSerializationError:
+		writeInt32(writer, 29)
+	case *FrostErrorDeserializationError:
+		writeInt32(writer, 30)
+	case *FrostErrorDkgPart2IncorrectNumberOfCommitments:
+		writeInt32(writer, 31)
+	case *FrostErrorDkgPart2IncorrectNumberOfPackages:
+		writeInt32(writer, 32)
+	case *FrostErrorDkgPart3IncorrectRound1Packages:
+		writeInt32(writer, 33)
+	case *FrostErrorDkgPart3IncorrectNumberOfPackages:
+		writeInt32(writer, 34)
+	case *FrostErrorDkgPart3PackageSendersMismatch:
+		writeInt32(writer, 35)
+	case *FrostErrorInvalidKeyPackage:
+		writeInt32(writer, 36)
+	case *FrostErrorInvalidSecretKey:
+		writeInt32(writer, 37)
+	case *FrostErrorInvalidConfiguration:
+		writeInt32(writer, 38)
+	case *FrostErrorUnexpectedError:
+		writeInt32(writer, 39)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeFrostError.Write", value))
@@ -2898,7 +3544,7 @@ func Sign(signingPackage FrostSigningPackage, nonces FrostSigningNonces, keyPack
 }
 
 func TrustedDealerKeygenFrom(configuration Configuration) (TrustedKeyGeneration, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeConfigurationError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
 		return C.uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_from(FfiConverterTypeConfigurationINSTANCE.Lower(configuration), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
@@ -2910,7 +3556,7 @@ func TrustedDealerKeygenFrom(configuration Configuration) (TrustedKeyGeneration,
 }
 
 func TrustedDealerKeygenWithIdentifiers(configuration Configuration, participants ParticipantList) (TrustedKeyGeneration, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeConfigurationError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
 		return C.uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_with_identifiers(FfiConverterTypeConfigurationINSTANCE.Lower(configuration), FfiConverterTypeParticipantListINSTANCE.Lower(participants), _uniffiStatus)
 	})
 	if _uniffiErr != nil {

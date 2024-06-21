@@ -1,7 +1,10 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
+use frost_core::Ciphersuite;
+
+use frost_core as frost;
 #[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+type E = reddsa::frost::redpallas::PallasBlake2b512;
+#[cfg(not(feature = "redpallas"))]
+type E = frost_ed25519::Ed25519Sha512;
 
 #[cfg(not(feature = "redpallas"))]
 use frost_uniffi_sdk::{
@@ -17,20 +20,21 @@ use frost_uniffi_sdk::{
 use rand::rngs::ThreadRng;
 use std::collections::HashMap;
 
-pub fn key_package(
+#[allow(dead_code)] // this is only used on integration tests
+pub fn key_package<C: Ciphersuite>(
     shares: &HashMap<ParticipantIdentifier, FrostSecretKeyShare>,
 ) -> HashMap<ParticipantIdentifier, FrostKeyPackage> {
     let mut key_packages: HashMap<_, _> = HashMap::new();
 
     for (identifier, secret_share) in shares {
-        let key_package = secret_share.into_key_package().unwrap();
+        let key_package = secret_share.into_key_package::<C>().unwrap();
         key_packages.insert(identifier.clone(), key_package);
     }
 
     key_packages
 }
 
-pub fn round_1(
+pub fn round_1<C: Ciphersuite>(
     mut rng: &mut ThreadRng,
     key_packages: &HashMap<ParticipantIdentifier, FrostKeyPackage>,
 ) -> (
@@ -44,7 +48,7 @@ pub fn round_1(
 
     for (participant, key_package) in key_packages {
         let (nonces, commitments) = frost::round1::commit(
-            key_package.into_key_package().unwrap().signing_share(),
+            key_package.into_key_package::<E>().unwrap().signing_share(),
             &mut rng,
         );
         nonces_map.insert(

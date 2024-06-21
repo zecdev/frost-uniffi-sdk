@@ -4,6 +4,11 @@ use reddsa::frost::redpallas as frost;
 #[cfg(feature = "redpallas")]
 use crate::randomized::randomizer::FrostRandomizer;
 
+#[cfg(feature = "redpallas")]
+type E = reddsa::frost::redpallas::PallasBlake2b512;
+#[cfg(not(feature = "redpallas"))]
+type E = frost_ed25519::Ed25519Sha512;
+
 use crate::{
     coordinator::{CoordinationError, FrostSignature, FrostSigningPackage},
     participant::FrostSignatureShare,
@@ -35,7 +40,7 @@ pub fn aggregate(
                 .into_identifier()
                 .map_err(|_| CoordinationError::IdentifierDeserializationError)?,
             share
-                .to_signature_share()
+                .to_signature_share::<E>()
                 .map_err(|_| CoordinationError::SignatureShareDeserializationError)?,
         );
     }
@@ -46,7 +51,7 @@ pub fn aggregate(
 
     #[cfg(feature = "redpallas")]
     let randomizer = randomizer
-        .into_randomizer()
+        .into_randomizer::<E>()
         .map_err(|_| CoordinationError::InvalidRandomizer)?;
 
     frost::aggregate(

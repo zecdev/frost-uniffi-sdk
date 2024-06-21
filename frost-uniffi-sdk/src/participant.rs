@@ -1,13 +1,16 @@
-#[cfg(not(feature = "redpallas"))]
-use frost_ed25519 as frost;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core as frost;
 
 use frost::{
     round1::{SigningCommitments, SigningNonces},
     round2::SignatureShare,
-    Error, Identifier,
+    Ciphersuite, Error, Identifier,
 };
+
+#[cfg(feature = "redpallas")]
+type E = reddsa::frost::redpallas::PallasBlake2b512;
+#[cfg(not(feature = "redpallas"))]
+type E = frost_ed25519::Ed25519Sha512;
+
 use rand::thread_rng;
 use uniffi;
 
@@ -22,11 +25,13 @@ pub struct FrostSigningNonces {
 }
 
 impl FrostSigningNonces {
-    pub(super) fn to_signing_nonces(&self) -> Result<SigningNonces, Error> {
+    pub(super) fn to_signing_nonces<C: Ciphersuite>(&self) -> Result<SigningNonces<C>, Error<C>> {
         SigningNonces::deserialize(&self.data)
     }
 
-    pub fn from_nonces(nonces: SigningNonces) -> Result<FrostSigningNonces, Error> {
+    pub fn from_nonces<C: Ciphersuite>(
+        nonces: SigningNonces<C>,
+    ) -> Result<FrostSigningNonces, Error<C>> {
         let data = nonces.serialize()?;
         Ok(FrostSigningNonces { data })
     }
@@ -39,14 +44,14 @@ pub struct FrostSigningCommitments {
 }
 
 impl FrostSigningCommitments {
-    pub(crate) fn to_commitments(&self) -> Result<SigningCommitments, Error> {
+    pub(crate) fn to_commitments<C: Ciphersuite>(&self) -> Result<SigningCommitments<C>, Error<C>> {
         SigningCommitments::deserialize(&self.data)
     }
 
-    pub fn with_identifier_and_commitments(
-        identifier: Identifier,
-        commitments: SigningCommitments,
-    ) -> Result<FrostSigningCommitments, Error> {
+    pub fn with_identifier_and_commitments<C: Ciphersuite>(
+        identifier: Identifier<C>,
+        commitments: SigningCommitments<C>,
+    ) -> Result<FrostSigningCommitments, Error<C>> {
         Ok(FrostSigningCommitments {
             identifier: ParticipantIdentifier::from_identifier(identifier)?,
             data: commitments.serialize()?,
@@ -94,7 +99,7 @@ pub fn generate_nonces_and_commitments(
     let mut rng = thread_rng();
 
     let secret_share = secret_share
-        .to_secret_share()
+        .to_secret_share::<E>()
         .map_err(|_| Round1Error::InvalidKeyPackage)?;
 
     let _ = secret_share
@@ -122,21 +127,22 @@ pub struct FrostSignatureShare {
 }
 
 impl FrostSignatureShare {
-    pub fn to_signature_share(&self) -> Result<SignatureShare, Error> {
-        let bytes = self.data[0..32]
+    pub fn to_signature_share<C: Ciphersuite>(&self) -> Result<SignatureShare<E>, Error<E>> {
+        let bytes: [u8; 32] = self.data[0..32]
             .try_into()
             .map_err(|_| Error::DeserializationError)?;
 
-        SignatureShare::deserialize(bytes)
+        // TODO: Do not define the underlying curve inside the function
+        SignatureShare::<E>::deserialize(bytes)
     }
 
-    pub fn from_signature_share(
-        identifier: Identifier,
-        share: SignatureShare,
-    ) -> Result<FrostSignatureShare, Error> {
+    pub fn from_signature_share<C: Ciphersuite>(
+        identifier: Identifier<C>,
+        share: SignatureShare<C>,
+    ) -> Result<FrostSignatureShare, Error<C>> {
         Ok(FrostSignatureShare {
             identifier: ParticipantIdentifier::from_identifier(identifier)?,
-            data: share.serialize().to_vec(),
+            data: share.serialize().as_ref().to_vec(),
         })
     }
 }
@@ -149,7 +155,7 @@ pub fn sign(
     key_package: FrostKeyPackage,
 ) -> Result<FrostSignatureShare, Round2Error> {
     let signing_package = signing_package
-        .to_signing_package()
+        .to_signing_package::<E>()
         .map_err(|_| Round2Error::SigningPackageDeserializationError)?;
 
     let nonces = nonces

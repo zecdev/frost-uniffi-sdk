@@ -1,9 +1,12 @@
-use crate::{frost::Error, FrostError};
+use reddsa::frost::redpallas as frost;
+
+use crate::FrostError;
 use frost::round2::Randomizer;
 use frost::RandomizedParams;
-#[cfg(feature = "redpallas")]
-use reddsa::frost::redpallas as frost;
+use frost_core::{Ciphersuite, Error};
 use uniffi;
+
+type E = reddsa::frost::redpallas::PallasBlake2b512;
 
 #[cfg(feature = "redpallas")]
 #[derive(uniffi::Record)]
@@ -11,23 +14,23 @@ pub struct FrostRandomizer {
     data: Vec<u8>,
 }
 
+#[cfg(feature = "redpallas")]
 #[uniffi::export]
 pub fn from_hex_string(hex_string: String) -> Result<FrostRandomizer, FrostError> {
     let randomizer_hex_bytes =
         hex::decode(hex_string.trim()).map_err(|_| FrostError::DeserializationError)?;
 
-    let randomizer = frost::round2::Randomizer::deserialize(
-        &randomizer_hex_bytes
-            .try_into()
-            .map_err(|_| FrostError::UnknownIdentifier)?,
-    )
-    .map_err(|_| FrostError::DeserializationError)?;
+    let buf: [u8; 32] = randomizer_hex_bytes[0..32]
+        .try_into()
+        .map_err(|_| FrostError::DeserializationError)?;
 
-    FrostRandomizer::from_randomizer(randomizer).map_err(|_| FrostError::DeserializationError)
+    let randomizer = frost::round2::Randomizer::deserialize(&buf).map_err(FrostError::map_err)?;
+
+    FrostRandomizer::from_randomizer::<E>(randomizer).map_err(FrostError::map_err)
 }
 
 impl FrostRandomizer {
-    pub fn into_randomizer(&self) -> Result<Randomizer, Error> {
+    pub fn into_randomizer<C: Ciphersuite>(&self) -> Result<Randomizer, Error<E>> {
         let raw_randomizer = &self.data[0..32]
             .try_into()
             .map_err(|_| Error::DeserializationError)?;
@@ -35,7 +38,9 @@ impl FrostRandomizer {
         Randomizer::deserialize(raw_randomizer)
     }
 
-    pub fn from_randomizer(randomizer: Randomizer) -> Result<FrostRandomizer, Error> {
+    pub fn from_randomizer<C: Ciphersuite>(
+        randomizer: Randomizer,
+    ) -> Result<FrostRandomizer, Error<C>> {
         Ok(FrostRandomizer {
             data: randomizer.serialize().to_vec(),
         })
