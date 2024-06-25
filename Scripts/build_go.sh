@@ -1,3 +1,4 @@
 #!/bin/sh
 
-cargo build --package frost-uniffi-sdk --package uniffi-bindgen
+cargo build --package frost-uniffi-sdk --no-default-features
+cargo build --package uniffi-bindgen 

@@ -620,6 +620,70 @@ public func FfiConverterTypeDKGRound2SecretPackage_lower(_ value: DkgRound2Secre
 }
 
 
+public protocol FrostRandomizedParamsProtocol {
+    
+}
+
+public class FrostRandomizedParams: FrostRandomizedParamsProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_frostrandomizedparams(pointer, $0) }
+    }
+
+    
+
+    
+    
+}
+
+public struct FfiConverterTypeFrostRandomizedParams: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = FrostRandomizedParams
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostRandomizedParams {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: FrostRandomizedParams, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> FrostRandomizedParams {
+        return FrostRandomizedParams(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: FrostRandomizedParams) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeFrostRandomizedParams_lift(_ pointer: UnsafeMutableRawPointer) throws -> FrostRandomizedParams {
+    return try FfiConverterTypeFrostRandomizedParams.lift(pointer)
+}
+
+public func FfiConverterTypeFrostRandomizedParams_lower(_ value: FrostRandomizedParams) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeFrostRandomizedParams.lower(value)
+}
+
+
 public struct Configuration {
     public var minSigners: UInt16
     public var maxSigners: UInt16
@@ -1010,6 +1074,53 @@ public func FfiConverterTypeFrostPublicKeyPackage_lift(_ buf: RustBuffer) throws
 
 public func FfiConverterTypeFrostPublicKeyPackage_lower(_ value: FrostPublicKeyPackage) -> RustBuffer {
     return FfiConverterTypeFrostPublicKeyPackage.lower(value)
+}
+
+
+public struct FrostRandomizer {
+    public var data: Data
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(data: Data) {
+        self.data = data
+    }
+}
+
+
+extension FrostRandomizer: Equatable, Hashable {
+    public static func ==(lhs: FrostRandomizer, rhs: FrostRandomizer) -> Bool {
+        if lhs.data != rhs.data {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(data)
+    }
+}
+
+
+public struct FfiConverterTypeFrostRandomizer: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostRandomizer {
+        return try FrostRandomizer(
+            data: FfiConverterData.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FrostRandomizer, into buf: inout [UInt8]) {
+        FfiConverterData.write(value.data, into: &buf)
+    }
+}
+
+
+public func FfiConverterTypeFrostRandomizer_lift(_ buf: RustBuffer) throws -> FrostRandomizer {
+    return try FfiConverterTypeFrostRandomizer.lift(buf)
+}
+
+public func FfiConverterTypeFrostRandomizer_lower(_ value: FrostRandomizer) -> RustBuffer {
+    return FfiConverterTypeFrostRandomizer.lower(value)
 }
 
 
@@ -1590,6 +1701,7 @@ public enum CoordinationError {
     case SignatureShareDeserializationError
     case PublicKeyPackageDeserializationError
     case SignatureShareAggregationFailed(message: String)
+    case InvalidRandomizer
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeCoordinationError.lift(error)
@@ -1616,6 +1728,7 @@ public struct FfiConverterTypeCoordinationError: FfiConverterRustBuffer {
         case 7: return .SignatureShareAggregationFailed(
             message: try FfiConverterString.read(from: &buf)
             )
+        case 8: return .InvalidRandomizer
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -1656,6 +1769,10 @@ public struct FfiConverterTypeCoordinationError: FfiConverterRustBuffer {
             writeInt(&buf, Int32(7))
             FfiConverterString.write(message, into: &buf)
             
+        
+        case .InvalidRandomizer:
+            writeInt(&buf, Int32(8))
+        
         }
     }
 }
@@ -2076,6 +2193,7 @@ public enum Round2Error {
     case CommitmentSerializationError
     case SigningPackageDeserializationError
     case SigningFailed(message: String)
+    case InvalidRandomizer
 
     fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
         return try FfiConverterTypeRound2Error.lift(error)
@@ -2100,6 +2218,7 @@ public struct FfiConverterTypeRound2Error: FfiConverterRustBuffer {
         case 5: return .SigningFailed(
             message: try FfiConverterString.read(from: &buf)
             )
+        case 6: return .InvalidRandomizer
 
          default: throw UniffiInternalError.unexpectedEnumCase
         }
@@ -2132,6 +2251,10 @@ public struct FfiConverterTypeRound2Error: FfiConverterRustBuffer {
             writeInt(&buf, Int32(5))
             FfiConverterString.write(message, into: &buf)
             
+        
+        case .InvalidRandomizer:
+            writeInt(&buf, Int32(6))
+        
         }
     }
 }
@@ -2299,13 +2422,23 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeFrostSecre
     }
 }
 
-public func aggregate(signingPackage: FrostSigningPackage, signatureShares: [FrostSignatureShare], pubkeyPackage: FrostPublicKeyPackage) throws -> FrostSignature {
+public func aggregate(signingPackage: FrostSigningPackage, signatureShares: [FrostSignatureShare], pubkeyPackage: FrostPublicKeyPackage, randomizer: FrostRandomizer) throws -> FrostSignature {
     return try  FfiConverterTypeFrostSignature.lift(
         try rustCallWithError(FfiConverterTypeCoordinationError.lift) {
     uniffi_frost_uniffi_sdk_fn_func_aggregate(
         FfiConverterTypeFrostSigningPackage.lower(signingPackage),
         FfiConverterSequenceTypeFrostSignatureShare.lower(signatureShares),
-        FfiConverterTypeFrostPublicKeyPackage.lower(pubkeyPackage),$0)
+        FfiConverterTypeFrostPublicKeyPackage.lower(pubkeyPackage),
+        FfiConverterTypeFrostRandomizer.lower(randomizer),$0)
+}
+    )
+}
+
+public func fromHexString(hexString: String) throws -> FrostRandomizer {
+    return try  FfiConverterTypeFrostRandomizer.lift(
+        try rustCallWithError(FfiConverterTypeFrostError.lift) {
+    uniffi_frost_uniffi_sdk_fn_func_from_hex_string(
+        FfiConverterString.lower(hexString),$0)
 }
     )
 }
@@ -2361,13 +2494,33 @@ public func part3(secretPackage: DkgRound2SecretPackage, round1Packages: [Partic
     )
 }
 
-public func sign(signingPackage: FrostSigningPackage, nonces: FrostSigningNonces, keyPackage: FrostKeyPackage) throws -> FrostSignatureShare {
+public func randomizedParamsFromPublicKeyAndSigningPackage(publicKey: FrostPublicKeyPackage, signingPackage: FrostSigningPackage) throws -> FrostRandomizedParams {
+    return try  FfiConverterTypeFrostRandomizedParams.lift(
+        try rustCallWithError(FfiConverterTypeFrostError.lift) {
+    uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(
+        FfiConverterTypeFrostPublicKeyPackage.lower(publicKey),
+        FfiConverterTypeFrostSigningPackage.lower(signingPackage),$0)
+}
+    )
+}
+
+public func randomizerFromParams(randomizedParams: FrostRandomizedParams) throws -> FrostRandomizer {
+    return try  FfiConverterTypeFrostRandomizer.lift(
+        try rustCallWithError(FfiConverterTypeFrostError.lift) {
+    uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(
+        FfiConverterTypeFrostRandomizedParams.lower(randomizedParams),$0)
+}
+    )
+}
+
+public func sign(signingPackage: FrostSigningPackage, nonces: FrostSigningNonces, keyPackage: FrostKeyPackage, randomizer: FrostRandomizer) throws -> FrostSignatureShare {
     return try  FfiConverterTypeFrostSignatureShare.lift(
         try rustCallWithError(FfiConverterTypeRound2Error.lift) {
     uniffi_frost_uniffi_sdk_fn_func_sign(
         FfiConverterTypeFrostSigningPackage.lower(signingPackage),
         FfiConverterTypeFrostSigningNonces.lower(nonces),
-        FfiConverterTypeFrostKeyPackage.lower(keyPackage),$0)
+        FfiConverterTypeFrostKeyPackage.lower(keyPackage),
+        FfiConverterTypeFrostRandomizer.lower(randomizer),$0)
 }
     )
 }
@@ -2409,6 +2562,18 @@ public func verifyAndGetKeyPackageFrom(secretShare: FrostSecretKeyShare) throws 
     )
 }
 
+public func verifyRandomizedSignature(randomizer: FrostRandomizer, message: Message, signature: FrostSignature, pubkey: FrostPublicKeyPackage) throws {
+    try rustCallWithError(FfiConverterTypeFrostSignatureVerificationError.lift) {
+    uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(
+        FfiConverterTypeFrostRandomizer.lower(randomizer),
+        FfiConverterTypeMessage.lower(message),
+        FfiConverterTypeFrostSignature.lower(signature),
+        FfiConverterTypeFrostPublicKeyPackage.lower(pubkey),$0)
+}
+}
+
+
+
 public func verifySignature(message: Message, signature: FrostSignature, pubkey: FrostPublicKeyPackage) throws {
     try rustCallWithError(FfiConverterTypeFrostSignatureVerificationError.lift) {
     uniffi_frost_uniffi_sdk_fn_func_verify_signature(
@@ -2435,7 +2600,10 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_aggregate() != 46119) {
+    if (uniffi_frost_uniffi_sdk_checksum_func_aggregate() != 3424) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_func_from_hex_string() != 29801) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments() != 47101) {
@@ -2453,7 +2621,13 @@ private var initializationResult: InitializationResult {
     if (uniffi_frost_uniffi_sdk_checksum_func_part_3() != 31134) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_sign() != 48101) {
+    if (uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package() != 58556) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params() != 50217) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_func_sign() != 723) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from() != 43563) {
@@ -2466,6 +2640,9 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from() != 16387) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature() != 24114) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_frost_uniffi_sdk_checksum_func_verify_signature() != 13620) {

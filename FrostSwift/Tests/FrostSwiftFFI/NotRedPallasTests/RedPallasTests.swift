@@ -9,12 +9,9 @@ import Foundation
 import XCTest
 @testable import FrostSwiftFFI
 
-class NotRedPallasTests: XCTestCase {
-    func ignore_testTrustedDealerFromConfigWithSecret() throws {
-        let secret: [UInt8] = [
-            123, 28, 51, 211, 245, 41, 29, 133, 222, 102, 72, 51, 190, 177, 173, 70, 159, 127, 182, 2,
-            90, 14, 199, 139, 58, 121, 12, 110, 19, 169, 131, 4,
-        ]
+class RedPallasTests: XCTestCase {
+    func testTrustedDealerRandomizedSignatureFromConfig() throws {
+        let secret: [UInt8] = []
 
         let secretConfig = Configuration(minSigners: 2, maxSigners: 3, secret: Data(secret))
 
@@ -47,25 +44,29 @@ class NotRedPallasTests: XCTestCase {
             commitments.append(firstRoundCommitment.commitments)
         }
 
+
         // coordinator gathers all signing commitments and creates signing package
 
         let signingPackage = try newSigningPackage(message: message, commitments: commitments)
 
+        let randomizedParams = try randomizedParamsFromPublicKeyAndSigningPackage(publicKey: publicKey, signingPackage: signingPackage)
+
+        let randomizer = try randomizerFromParams(randomizedParams: randomizedParams)
         // Participant round 2. These people need to sign!
         // here each participant will sign the message with their own nonces and the signing
         // package provided by the coordinator
 
-//        let signatureShares = try keyPackages.map { participant, keyPackage in
-//            try sign(signingPackage: signingPackage, nonces: nonces[participant]!, keyPackage: keyPackage)
-//        }
+        let signatureShares = try keyPackages.map { participant, keyPackage in
+            try sign(signingPackage: signingPackage, nonces: nonces[participant]!, keyPackage: keyPackage, randomizer: randomizer)
+        }
 
         // Aggregators will aggregate: Coordinator gathers all the stuff and produces
         // a signature...
 
-//        let signature = try aggregate(signingPackage: signingPackage, signatureShares: signatureShares, pubkeyPackage: publicKey)
+        let signature = try aggregate(signingPackage: signingPackage, signatureShares: signatureShares, pubkeyPackage: publicKey, randomizer: randomizer)
 
         // a signature we can all agree on
 
-//        XCTAssertNoThrow(try verifySignature(message: message, signature: signature, pubkey: publicKey))
+        XCTAssertNoThrow(try verifyRandomizedSignature(randomizer: randomizer, message: message, signature: signature, pubkey: publicKey))
     }
 }
