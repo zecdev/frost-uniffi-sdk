@@ -2,7 +2,7 @@ package frost_uniffi_sdk
 
 import "testing"
 
-func TestTrustedDealerFromConfigWithSecret(t *testing.T) {
+func TestTrustedDealerRedPallas(t *testing.T) {
 	secret := []byte{}
 
 	// define the threshold config
@@ -68,12 +68,23 @@ func TestTrustedDealerFromConfigWithSecret(t *testing.T) {
 		t.Fatalf("Failed to create signing package: %v", err)
 	}
 
+	randomizedParams, err := RandomizedParamsFromPublicKeyAndSigningPackage(publicKey, signingPackage)
+
+	if err != nil {
+		t.Fatalf("Failed to derive randomized params from public key and signing package: %v", err)
+	}
+	randomizer, err := RandomizerFromParams(randomizedParams)
+
+	if err != nil {
+		t.Fatalf("Failed to create randomizer from randomized params: %v", err)
+	}
+
 	var signatureShares []FrostSignatureShare
 
 	// now, each participant has to generate a signaature from it's own nonce,
 	// key package, and the signing package.
 	for participant, keyPackage := range keyPackages {
-		signatureShare, err := Sign(signingPackage, nonces[participant], keyPackage)
+		signatureShare, err := Sign(signingPackage, nonces[participant], keyPackage, randomizer)
 		if err != nil {
 			t.Fatalf("Failed to sign: %v", err)
 		}
@@ -82,13 +93,13 @@ func TestTrustedDealerFromConfigWithSecret(t *testing.T) {
 
 	// the coordinator will receive the signatures produced by the t participants
 	// and aggregate them. This will produce a signature that will be verified
-	signature, err := Aggregate(signingPackage, signatureShares, publicKey)
+	signature, err := Aggregate(signingPackage, signatureShares, publicKey, randomizer)
 	if err != nil {
 		t.Fatalf("Failed to aggregate signature: %v", err)
 	}
 
 	// verify the signature
-	if err := VerifySignature(message, signature, publicKey); err != nil {
+	if err := VerifyRandomizedSignature(randomizer, message, signature, publicKey); err != nil {
 		t.Fatalf("Failed to verify signature: %v", err)
 	}
 }
