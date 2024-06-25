@@ -1,12 +1,63 @@
+use std::sync::Arc;
+
+use rand::thread_rng;
 use reddsa::frost::redpallas as frost;
 
-use crate::FrostError;
+use crate::{coordinator::FrostSigningPackage, FrostError, FrostPublicKeyPackage};
 use frost::round2::Randomizer;
 use frost::RandomizedParams;
 use frost_core::{Ciphersuite, Error};
 use uniffi;
 
 type E = reddsa::frost::redpallas::PallasBlake2b512;
+
+#[cfg(feature = "redpallas")]
+#[derive(uniffi::Object, Clone)]
+pub struct FrostRandomizedParams {
+    params: RandomizedParams,
+}
+
+impl FrostRandomizedParams {
+    fn new(
+        public_key_package: FrostPublicKeyPackage,
+        signing_package: FrostSigningPackage,
+    ) -> Result<FrostRandomizedParams, FrostError> {
+        let rng = thread_rng();
+        let pallas_signing_package = signing_package.to_signing_package().unwrap();
+        let randomized_params = RandomizedParams::new(
+            public_key_package
+                .into_public_key_package()
+                .unwrap()
+                .verifying_key(),
+            &pallas_signing_package,
+            rng,
+        )
+            .map_err(FrostError::map_err)?;
+
+        let params = FrostRandomizedParams {
+            params: randomized_params,
+        };
+
+        Ok(params)
+    }
+}
+
+#[uniffi::export]
+pub fn randomized_params_from_public_key_and_signing_package(
+    public_key: FrostPublicKeyPackage,
+    signing_package: FrostSigningPackage,
+) -> Result<Arc<FrostRandomizedParams>, FrostError> {
+    let r = FrostRandomizedParams::new(public_key, signing_package)?;
+
+    Ok(Arc::new(r))
+}
+
+#[uniffi::export]
+pub fn randomizer_from_params(randomized_params: Arc<FrostRandomizedParams>) -> Result<FrostRandomizer, FrostError> {
+    let randomizer = FrostRandomizer::from_randomizer::<E>(*randomized_params.params.randomizer())
+        .map_err(FrostError::map_err)?;
+    Ok(randomizer)
+}
 
 #[cfg(feature = "redpallas")]
 #[derive(uniffi::Record, Clone)]

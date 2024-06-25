@@ -11,4 +11,4 @@ pushd $BINDINGS_DIR
 LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}:$BINARIES_DIR" \
 	CGO_LDFLAGS="-lfrost_uniffi_sdk -L$BINARIES_DIR -lm -ldl" \
 	CGO_ENABLED=1 \
-	go test -v $BINDINGS_DIR/frost_go_ffi_test.go $BINDINGS_DIR/frost_uniffi_sdk.go 
+	go test -v $BINDINGS_DIR/frost_go_ffi_randomized_test.go $BINDINGS_DIR/frost_uniffi_sdk.go 

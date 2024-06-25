@@ -1,4 +1,4 @@
-name: Go Non-Randomized Ed25519 Build
+name: Go Randomized RedPallas Build
 
 on:
   push:
@@ -29,7 +29,7 @@ jobs:
       run: cargo install uniffi-bindgen-go --git https://github.com/NordSecurity/uniffi-bindgen-go --tag v0.2.1+v0.25.0
       
     - name: Build Rust library
-      run: cargo build
+      run: /bin/bash Scripts/build_randomized_go.sh
 
     - name: Generate Go Bindings
       run: uniffi-bindgen-go --library './target/debug/libfrost_uniffi_sdk.so' --out-dir .
@@ -39,4 +39,4 @@ jobs:
         go mod tidy
 
     - name: Test Bindings
-      run: /bin/bash Scripts/test_bindings.sh
+      run: /bin/bash Scripts/test_randomized_bindings.sh

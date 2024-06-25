@@ -40,11 +40,19 @@ and Chelsea Komlo from @ZcashFoundation.
 - Install MacOS and iOS targets `aarch64-apple-ios`, `86_64-apple-darwin`, 
 `aarch64-apple-darwin`
 
-### Build the bindings
+### Build and Test the bindings
 
 #### Go
+
+**Non randomized Ed255519 FROST**
 run `sh Scripts/build_go.sh`
 run `sh Scripts/build_testbindings.sh`
+run `sh Scripts/test_bindings.sh`
+**RedPallas Randomized FROST**
+
+run `sh Scripts/build_randomized_go.sh`
+run `sh Scripts/build_testbindings.sh`
+run `sh Scripts/test_randomized_bindings.sh`
 
 #### Swift
 run `sh Scripts/replace_remote_binary_with_local.sh`
