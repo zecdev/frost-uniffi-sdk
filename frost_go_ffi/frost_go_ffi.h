@@ -88,26 +88,30 @@ void uniffi_frost_uniffi_sdk_fn_free_dkground2secretpackage(
 	RustCallStatus* out_status
 );
 
-void uniffi_frost_uniffi_sdk_fn_free_frostrandomizedparams(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_aggregate(
 	RustBuffer signing_package,
 	RustBuffer signature_shares,
 	RustBuffer pubkey_package,
-	RustBuffer randomizer,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_from_hex_string(
-	RustBuffer hex_string,
 	RustCallStatus* out_status
 );
 
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(
-	RustBuffer secret_share,
+	RustBuffer key_package,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_json_string(
+	RustBuffer string,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_string(
+	RustBuffer string,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_uint16(
+	uint16_t unsigned_uint,
 	RustCallStatus* out_status
 );
 
@@ -137,22 +141,10 @@ RustBuffer uniffi_frost_uniffi_sdk_fn_func_part_3(
 	RustCallStatus* out_status
 );
 
-void* uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(
-	RustBuffer public_key,
-	RustBuffer signing_package,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(
-	void* randomized_params,
-	RustCallStatus* out_status
-);
-
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_sign(
 	RustBuffer signing_package,
 	RustBuffer nonces,
 	RustBuffer key_package,
-	RustBuffer randomizer,
 	RustCallStatus* out_status
 );
 
@@ -174,14 +166,6 @@ void uniffi_frost_uniffi_sdk_fn_func_validate_config(
 
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_verify_and_get_key_package_from(
 	RustBuffer secret_share,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(
-	RustBuffer randomizer,
-	RustBuffer message,
-	RustBuffer signature,
-	RustBuffer pubkey,
 	RustCallStatus* out_status
 );
 
@@ -495,11 +479,19 @@ uint16_t uniffi_frost_uniffi_sdk_checksum_func_aggregate(
 	RustCallStatus* out_status
 );
 
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_from_hex_string(
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments(
 	RustCallStatus* out_status
 );
 
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments(
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_json_string(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16(
 	RustCallStatus* out_status
 );
 
@@ -516,14 +508,6 @@ uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_2(
 );
 
 uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_3(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params(
 	RustCallStatus* out_status
 );
 
@@ -544,10 +528,6 @@ uint16_t uniffi_frost_uniffi_sdk_checksum_func_validate_config(
 );
 
 uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature(
 	RustCallStatus* out_status
 );
 
