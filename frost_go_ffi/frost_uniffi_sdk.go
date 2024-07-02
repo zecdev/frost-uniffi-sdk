@@ -348,27 +348,45 @@ func uniffiCheckChecksums() {
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_frost_uniffi_sdk_checksum_func_aggregate(uniffiStatus)
 		})
-		if checksum != 3424 {
+		if checksum != 46119 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_aggregate: UniFFI API checksum mismatch")
 		}
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_from_hex_string(uniffiStatus)
+			return C.uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments(uniffiStatus)
 		})
-		if checksum != 29801 {
+		if checksum != 1477 {
 			// If this happens try cleaning and rebuilding your project
-			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_from_hex_string: UniFFI API checksum mismatch")
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments: UniFFI API checksum mismatch")
 		}
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments(uniffiStatus)
+			return C.uniffi_frost_uniffi_sdk_checksum_func_identifier_from_json_string(uniffiStatus)
 		})
-		if checksum != 47101 {
+		if checksum != 56485 {
 			// If this happens try cleaning and rebuilding your project
-			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments: UniFFI API checksum mismatch")
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_identifier_from_json_string: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string(uniffiStatus)
+		})
+		if checksum != 3795 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16(uniffiStatus)
+		})
+		if checksum != 11722 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16: UniFFI API checksum mismatch")
 		}
 	}
 	{
@@ -409,27 +427,9 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package(uniffiStatus)
-		})
-		if checksum != 58556 {
-			// If this happens try cleaning and rebuilding your project
-			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package: UniFFI API checksum mismatch")
-		}
-	}
-	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params(uniffiStatus)
-		})
-		if checksum != 50217 {
-			// If this happens try cleaning and rebuilding your project
-			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params: UniFFI API checksum mismatch")
-		}
-	}
-	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_frost_uniffi_sdk_checksum_func_sign(uniffiStatus)
 		})
-		if checksum != 723 {
+		if checksum != 48101 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_sign: UniFFI API checksum mismatch")
 		}
@@ -468,15 +468,6 @@ func uniffiCheckChecksums() {
 		if checksum != 16387 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from: UniFFI API checksum mismatch")
-		}
-	}
-	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature(uniffiStatus)
-		})
-		if checksum != 24114 {
-			// If this happens try cleaning and rebuilding your project
-			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature: UniFFI API checksum mismatch")
 		}
 	}
 	{
@@ -855,54 +846,6 @@ func (_ FfiDestroyerDkgRound2SecretPackage) Destroy(value *DkgRound2SecretPackag
 	value.Destroy()
 }
 
-type FrostRandomizedParams struct {
-	ffiObject FfiObject
-}
-
-func (object *FrostRandomizedParams) Destroy() {
-	runtime.SetFinalizer(object, nil)
-	object.ffiObject.destroy()
-}
-
-type FfiConverterFrostRandomizedParams struct{}
-
-var FfiConverterFrostRandomizedParamsINSTANCE = FfiConverterFrostRandomizedParams{}
-
-func (c FfiConverterFrostRandomizedParams) Lift(pointer unsafe.Pointer) *FrostRandomizedParams {
-	result := &FrostRandomizedParams{
-		newFfiObject(
-			pointer,
-			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
-				C.uniffi_frost_uniffi_sdk_fn_free_frostrandomizedparams(pointer, status)
-			}),
-	}
-	runtime.SetFinalizer(result, (*FrostRandomizedParams).Destroy)
-	return result
-}
-
-func (c FfiConverterFrostRandomizedParams) Read(reader io.Reader) *FrostRandomizedParams {
-	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
-}
-
-func (c FfiConverterFrostRandomizedParams) Lower(value *FrostRandomizedParams) unsafe.Pointer {
-	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
-	// because the pointer will be decremented immediately after this function returns,
-	// and someone will be left holding onto a non-locked pointer.
-	pointer := value.ffiObject.incrementPointer("*FrostRandomizedParams")
-	defer value.ffiObject.decrementPointer()
-	return pointer
-}
-
-func (c FfiConverterFrostRandomizedParams) Write(writer io.Writer, value *FrostRandomizedParams) {
-	writeUint64(writer, uint64(uintptr(c.Lower(value))))
-}
-
-type FfiDestroyerFrostRandomizedParams struct{}
-
-func (_ FfiDestroyerFrostRandomizedParams) Destroy(value *FrostRandomizedParams) {
-	value.Destroy()
-}
-
 type Configuration struct {
 	MinSigners uint16
 	MaxSigners uint16
@@ -1108,12 +1051,12 @@ func (_ FfiDestroyerTypeFirstRoundCommitment) Destroy(value FirstRoundCommitment
 }
 
 type FrostKeyPackage struct {
-	Identifier string
+	Identifier ParticipantIdentifier
 	Data       []byte
 }
 
 func (r *FrostKeyPackage) Destroy() {
-	FfiDestroyerString{}.Destroy(r.Identifier)
+	FfiDestroyerTypeParticipantIdentifier{}.Destroy(r.Identifier)
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
@@ -1127,7 +1070,7 @@ func (c FfiConverterTypeFrostKeyPackage) Lift(rb RustBufferI) FrostKeyPackage {
 
 func (c FfiConverterTypeFrostKeyPackage) Read(reader io.Reader) FrostKeyPackage {
 	return FrostKeyPackage{
-		FfiConverterStringINSTANCE.Read(reader),
+		FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
@@ -1137,7 +1080,7 @@ func (c FfiConverterTypeFrostKeyPackage) Lower(value FrostKeyPackage) RustBuffer
 }
 
 func (c FfiConverterTypeFrostKeyPackage) Write(writer io.Writer, value FrostKeyPackage) {
-	FfiConverterStringINSTANCE.Write(writer, value.Identifier)
+	FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
@@ -1184,42 +1127,6 @@ func (c FfiConverterTypeFrostPublicKeyPackage) Write(writer io.Writer, value Fro
 type FfiDestroyerTypeFrostPublicKeyPackage struct{}
 
 func (_ FfiDestroyerTypeFrostPublicKeyPackage) Destroy(value FrostPublicKeyPackage) {
-	value.Destroy()
-}
-
-type FrostRandomizer struct {
-	Data []byte
-}
-
-func (r *FrostRandomizer) Destroy() {
-	FfiDestroyerBytes{}.Destroy(r.Data)
-}
-
-type FfiConverterTypeFrostRandomizer struct{}
-
-var FfiConverterTypeFrostRandomizerINSTANCE = FfiConverterTypeFrostRandomizer{}
-
-func (c FfiConverterTypeFrostRandomizer) Lift(rb RustBufferI) FrostRandomizer {
-	return LiftFromRustBuffer[FrostRandomizer](c, rb)
-}
-
-func (c FfiConverterTypeFrostRandomizer) Read(reader io.Reader) FrostRandomizer {
-	return FrostRandomizer{
-		FfiConverterBytesINSTANCE.Read(reader),
-	}
-}
-
-func (c FfiConverterTypeFrostRandomizer) Lower(value FrostRandomizer) RustBuffer {
-	return LowerIntoRustBuffer[FrostRandomizer](c, value)
-}
-
-func (c FfiConverterTypeFrostRandomizer) Write(writer io.Writer, value FrostRandomizer) {
-	FfiConverterBytesINSTANCE.Write(writer, value.Data)
-}
-
-type FfiDestroyerTypeFrostRandomizer struct{}
-
-func (_ FfiDestroyerTypeFrostRandomizer) Destroy(value FrostRandomizer) {
 	value.Destroy()
 }
 
@@ -1751,7 +1658,6 @@ var ErrCoordinationErrorSigningPackageSerializationError = fmt.Errorf("Coordinat
 var ErrCoordinationErrorSignatureShareDeserializationError = fmt.Errorf("CoordinationErrorSignatureShareDeserializationError")
 var ErrCoordinationErrorPublicKeyPackageDeserializationError = fmt.Errorf("CoordinationErrorPublicKeyPackageDeserializationError")
 var ErrCoordinationErrorSignatureShareAggregationFailed = fmt.Errorf("CoordinationErrorSignatureShareAggregationFailed")
-var ErrCoordinationErrorInvalidRandomizer = fmt.Errorf("CoordinationErrorInvalidRandomizer")
 
 // Variant structs
 type CoordinationErrorFailedToCreateSigningPackage struct {
@@ -1883,23 +1789,6 @@ func (self CoordinationErrorSignatureShareAggregationFailed) Is(target error) bo
 	return target == ErrCoordinationErrorSignatureShareAggregationFailed
 }
 
-type CoordinationErrorInvalidRandomizer struct {
-}
-
-func NewCoordinationErrorInvalidRandomizer() *CoordinationError {
-	return &CoordinationError{
-		err: &CoordinationErrorInvalidRandomizer{},
-	}
-}
-
-func (err CoordinationErrorInvalidRandomizer) Error() string {
-	return fmt.Sprint("InvalidRandomizer")
-}
-
-func (self CoordinationErrorInvalidRandomizer) Is(target error) bool {
-	return target == ErrCoordinationErrorInvalidRandomizer
-}
-
 type FfiConverterTypeCoordinationError struct{}
 
 var FfiConverterTypeCoordinationErrorINSTANCE = FfiConverterTypeCoordinationError{}
@@ -1932,8 +1821,6 @@ func (c FfiConverterTypeCoordinationError) Read(reader io.Reader) error {
 		return &CoordinationError{&CoordinationErrorSignatureShareAggregationFailed{
 			Message: FfiConverterStringINSTANCE.Read(reader),
 		}}
-	case 8:
-		return &CoordinationError{&CoordinationErrorInvalidRandomizer{}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeCoordinationError.Read()", errorID))
 	}
@@ -1956,8 +1843,6 @@ func (c FfiConverterTypeCoordinationError) Write(writer io.Writer, value *Coordi
 	case *CoordinationErrorSignatureShareAggregationFailed:
 		writeInt32(writer, 7)
 		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
-	case *CoordinationErrorInvalidRandomizer:
-		writeInt32(writer, 8)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeCoordinationError.Write", value))
@@ -3147,7 +3032,6 @@ var ErrRound2ErrorNonceSerializationError = fmt.Errorf("Round2ErrorNonceSerializ
 var ErrRound2ErrorCommitmentSerializationError = fmt.Errorf("Round2ErrorCommitmentSerializationError")
 var ErrRound2ErrorSigningPackageDeserializationError = fmt.Errorf("Round2ErrorSigningPackageDeserializationError")
 var ErrRound2ErrorSigningFailed = fmt.Errorf("Round2ErrorSigningFailed")
-var ErrRound2ErrorInvalidRandomizer = fmt.Errorf("Round2ErrorInvalidRandomizer")
 
 // Variant structs
 type Round2ErrorInvalidKeyPackage struct {
@@ -3245,23 +3129,6 @@ func (self Round2ErrorSigningFailed) Is(target error) bool {
 	return target == ErrRound2ErrorSigningFailed
 }
 
-type Round2ErrorInvalidRandomizer struct {
-}
-
-func NewRound2ErrorInvalidRandomizer() *Round2Error {
-	return &Round2Error{
-		err: &Round2ErrorInvalidRandomizer{},
-	}
-}
-
-func (err Round2ErrorInvalidRandomizer) Error() string {
-	return fmt.Sprint("InvalidRandomizer")
-}
-
-func (self Round2ErrorInvalidRandomizer) Is(target error) bool {
-	return target == ErrRound2ErrorInvalidRandomizer
-}
-
 type FfiConverterTypeRound2Error struct{}
 
 var FfiConverterTypeRound2ErrorINSTANCE = FfiConverterTypeRound2Error{}
@@ -3290,8 +3157,6 @@ func (c FfiConverterTypeRound2Error) Read(reader io.Reader) error {
 		return &Round2Error{&Round2ErrorSigningFailed{
 			Message: FfiConverterStringINSTANCE.Read(reader),
 		}}
-	case 6:
-		return &Round2Error{&Round2ErrorInvalidRandomizer{}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeRound2Error.Read()", errorID))
 	}
@@ -3310,11 +3175,46 @@ func (c FfiConverterTypeRound2Error) Write(writer io.Writer, value *Round2Error)
 	case *Round2ErrorSigningFailed:
 		writeInt32(writer, 5)
 		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
-	case *Round2ErrorInvalidRandomizer:
-		writeInt32(writer, 6)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeRound2Error.Write", value))
+	}
+}
+
+type FfiConverterOptionalTypeParticipantIdentifier struct{}
+
+var FfiConverterOptionalTypeParticipantIdentifierINSTANCE = FfiConverterOptionalTypeParticipantIdentifier{}
+
+func (c FfiConverterOptionalTypeParticipantIdentifier) Lift(rb RustBufferI) *ParticipantIdentifier {
+	return LiftFromRustBuffer[*ParticipantIdentifier](c, rb)
+}
+
+func (_ FfiConverterOptionalTypeParticipantIdentifier) Read(reader io.Reader) *ParticipantIdentifier {
+	if readInt8(reader) == 0 {
+		return nil
+	}
+	temp := FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader)
+	return &temp
+}
+
+func (c FfiConverterOptionalTypeParticipantIdentifier) Lower(value *ParticipantIdentifier) RustBuffer {
+	return LowerIntoRustBuffer[*ParticipantIdentifier](c, value)
+}
+
+func (_ FfiConverterOptionalTypeParticipantIdentifier) Write(writer io.Writer, value *ParticipantIdentifier) {
+	if value == nil {
+		writeInt8(writer, 0)
+	} else {
+		writeInt8(writer, 1)
+		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, *value)
+	}
+}
+
+type FfiDestroyerOptionalTypeParticipantIdentifier struct{}
+
+func (_ FfiDestroyerOptionalTypeParticipantIdentifier) Destroy(value *ParticipantIdentifier) {
+	if value != nil {
+		FfiDestroyerTypeParticipantIdentifier{}.Destroy(*value)
 	}
 }
 
@@ -3623,9 +3523,9 @@ func (_ FfiDestroyerMapTypeParticipantIdentifierTypeFrostSecretKeyShare) Destroy
 	}
 }
 
-func Aggregate(signingPackage FrostSigningPackage, signatureShares []FrostSignatureShare, pubkeyPackage FrostPublicKeyPackage, randomizer FrostRandomizer) (FrostSignature, error) {
+func Aggregate(signingPackage FrostSigningPackage, signatureShares []FrostSignatureShare, pubkeyPackage FrostPublicKeyPackage) (FrostSignature, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCoordinationError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_aggregate(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterSequenceTypeFrostSignatureShareINSTANCE.Lower(signatureShares), FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(pubkeyPackage), FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus)
+		return C.uniffi_frost_uniffi_sdk_fn_func_aggregate(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterSequenceTypeFrostSignatureShareINSTANCE.Lower(signatureShares), FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(pubkeyPackage), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostSignature
@@ -3635,27 +3535,45 @@ func Aggregate(signingPackage FrostSigningPackage, signatureShares []FrostSignat
 	}
 }
 
-func FromHexString(hexString string) (FrostRandomizer, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_from_hex_string(FfiConverterStringINSTANCE.Lower(hexString), _uniffiStatus)
-	})
-	if _uniffiErr != nil {
-		var _uniffiDefaultValue FrostRandomizer
-		return _uniffiDefaultValue, _uniffiErr
-	} else {
-		return FfiConverterTypeFrostRandomizerINSTANCE.Lift(_uniffiRV), _uniffiErr
-	}
-}
-
-func GenerateNoncesAndCommitments(secretShare FrostSecretKeyShare) (FirstRoundCommitment, error) {
+func GenerateNoncesAndCommitments(keyPackage FrostKeyPackage) (FirstRoundCommitment, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeRound1Error{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(FfiConverterTypeFrostSecretKeyShareINSTANCE.Lower(secretShare), _uniffiStatus)
+		return C.uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(FfiConverterTypeFrostKeyPackageINSTANCE.Lower(keyPackage), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FirstRoundCommitment
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterTypeFirstRoundCommitmentINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func IdentifierFromJsonString(string string) *ParticipantIdentifier {
+	return FfiConverterOptionalTypeParticipantIdentifierINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_identifier_from_json_string(FfiConverterStringINSTANCE.Lower(string), _uniffiStatus)
+	}))
+}
+
+func IdentifierFromString(string string) (ParticipantIdentifier, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_identifier_from_string(FfiConverterStringINSTANCE.Lower(string), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue ParticipantIdentifier
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeParticipantIdentifierINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func IdentifierFromUint16(unsignedUint uint16) (ParticipantIdentifier, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_identifier_from_uint16(FfiConverterUint16INSTANCE.Lower(unsignedUint), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue ParticipantIdentifier
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeParticipantIdentifierINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 
@@ -3707,33 +3625,9 @@ func Part3(secretPackage *DkgRound2SecretPackage, round1Packages map[Participant
 	}
 }
 
-func RandomizedParamsFromPublicKeyAndSigningPackage(publicKey FrostPublicKeyPackage, signingPackage FrostSigningPackage) (*FrostRandomizedParams, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(publicKey), FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), _uniffiStatus)
-	})
-	if _uniffiErr != nil {
-		var _uniffiDefaultValue *FrostRandomizedParams
-		return _uniffiDefaultValue, _uniffiErr
-	} else {
-		return FfiConverterFrostRandomizedParamsINSTANCE.Lift(_uniffiRV), _uniffiErr
-	}
-}
-
-func RandomizerFromParams(randomizedParams *FrostRandomizedParams) (FrostRandomizer, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(FfiConverterFrostRandomizedParamsINSTANCE.Lower(randomizedParams), _uniffiStatus)
-	})
-	if _uniffiErr != nil {
-		var _uniffiDefaultValue FrostRandomizer
-		return _uniffiDefaultValue, _uniffiErr
-	} else {
-		return FfiConverterTypeFrostRandomizerINSTANCE.Lift(_uniffiRV), _uniffiErr
-	}
-}
-
-func Sign(signingPackage FrostSigningPackage, nonces FrostSigningNonces, keyPackage FrostKeyPackage, randomizer FrostRandomizer) (FrostSignatureShare, error) {
+func Sign(signingPackage FrostSigningPackage, nonces FrostSigningNonces, keyPackage FrostKeyPackage) (FrostSignatureShare, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeRound2Error{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_sign(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterTypeFrostSigningNoncesINSTANCE.Lower(nonces), FfiConverterTypeFrostKeyPackageINSTANCE.Lower(keyPackage), FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus)
+		return C.uniffi_frost_uniffi_sdk_fn_func_sign(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterTypeFrostSigningNoncesINSTANCE.Lower(nonces), FfiConverterTypeFrostKeyPackageINSTANCE.Lower(keyPackage), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostSignatureShare
@@ -3785,14 +3679,6 @@ func VerifyAndGetKeyPackageFrom(secretShare FrostSecretKeyShare) (FrostKeyPackag
 	} else {
 		return FfiConverterTypeFrostKeyPackageINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
-}
-
-func VerifyRandomizedSignature(randomizer FrostRandomizer, message Message, signature FrostSignature, pubkey FrostPublicKeyPackage) error {
-	_, _uniffiErr := rustCallWithError(FfiConverterTypeFrostSignatureVerificationError{}, func(_uniffiStatus *C.RustCallStatus) bool {
-		C.uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), FfiConverterTypeMessageINSTANCE.Lower(message), FfiConverterTypeFrostSignatureINSTANCE.Lower(signature), FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(pubkey), _uniffiStatus)
-		return false
-	})
-	return _uniffiErr
 }
 
 func VerifySignature(message Message, signature FrostSignature, pubkey FrostPublicKeyPackage) error {

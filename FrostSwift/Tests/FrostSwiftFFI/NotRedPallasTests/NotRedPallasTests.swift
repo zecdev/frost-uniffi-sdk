@@ -1,3 +1,4 @@
+// swift-format-ignore-file
 //
 //  NotRedPallasTests.swift
 //
@@ -6,8 +7,8 @@
 //
 
 import Foundation
-import XCTest
 @testable import FrostSwiftFFI
+import XCTest
 
 class NotRedPallasTests: XCTestCase {
     func ignore_testTrustedDealerFromConfigWithSecret() throws {
@@ -26,14 +27,14 @@ class NotRedPallasTests: XCTestCase {
         let shares = keygen.secretShares
 
         // get key packages for participants
-        let keyPackages = try shares.map { (identifier, value) in
+        let keyPackages = try shares.map { identifier, value in
             let keyPackage = try verifyAndGetKeyPackageFrom(secretShare: value)
 
             return (identifier, keyPackage)
         }
 
         XCTAssertEqual(shares.count, 3)
-        XCTAssertEqual(publicKey.verifyingShares.count,3)
+        XCTAssertEqual(publicKey.verifyingShares.count, 3)
 
         // Participant Round 1
 
@@ -41,7 +42,8 @@ class NotRedPallasTests: XCTestCase {
         var commitments = [FrostSigningCommitments]()
 
         for (participant, secretShare) in shares {
-            let firstRoundCommitment = try generateNoncesAndCommitments(secretShare: secretShare)
+            let keyPackage = try verifyAndGetKeyPackageFrom(secretShare: secretShare)
+            let firstRoundCommitment = try generateNoncesAndCommitments(keyPackage: keyPackage)
 
             nonces[participant] = firstRoundCommitment.nonces
             commitments.append(firstRoundCommitment.commitments)

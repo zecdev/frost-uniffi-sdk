@@ -6,10 +6,10 @@ import Foundation
 // might be in a separate module, or it might be compiled inline into
 // this module. This is a bit of light hackery to work with both.
 #if canImport(frost_uniffi_sdkFFI)
-import frost_uniffi_sdkFFI
+    import frost_uniffi_sdkFFI
 #endif
 
-fileprivate extension RustBuffer {
+private extension RustBuffer {
     // Allocate a new buffer, copying the contents of a `UInt8` array.
     init(bytes: [UInt8]) {
         let rbuf = bytes.withUnsafeBufferPointer { ptr in
@@ -29,7 +29,7 @@ fileprivate extension RustBuffer {
     }
 }
 
-fileprivate extension ForeignBytes {
+private extension ForeignBytes {
     init(bufferPointer: UnsafeBufferPointer<UInt8>) {
         self.init(len: Int32(bufferPointer.count), data: bufferPointer.baseAddress)
     }
@@ -42,7 +42,7 @@ fileprivate extension ForeignBytes {
 // Helper classes/extensions that don't change.
 // Someday, this will be in a library of its own.
 
-fileprivate extension Data {
+private extension Data {
     init(rustBuffer: RustBuffer) {
         // TODO: This copies the buffer. Can we read directly from a
         // Rust buffer?
@@ -64,15 +64,15 @@ fileprivate extension Data {
 //
 // Instead, the read() method and these helper functions input a tuple of data
 
-fileprivate func createReader(data: Data) -> (data: Data, offset: Data.Index) {
+private func createReader(data: Data) -> (data: Data, offset: Data.Index) {
     (data: data, offset: 0)
 }
 
 // Reads an integer at the current offset, in big-endian order, and advances
 // the offset on success. Throws if reading the integer would move the
 // offset past the end of the buffer.
-fileprivate func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: Data.Index)) throws -> T {
-    let range = reader.offset..<reader.offset + MemoryLayout<T>.size
+private func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offset: Data.Index)) throws -> T {
+    let range = reader.offset ..< reader.offset + MemoryLayout<T>.size
     guard reader.data.count >= range.upperBound else {
         throw UniffiInternalError.bufferOverflow
     }
@@ -82,38 +82,38 @@ fileprivate func readInt<T: FixedWidthInteger>(_ reader: inout (data: Data, offs
         return value as! T
     }
     var value: T = 0
-    let _ = withUnsafeMutableBytes(of: &value, { reader.data.copyBytes(to: $0, from: range)})
+    _ = withUnsafeMutableBytes(of: &value) { reader.data.copyBytes(to: $0, from: range) }
     reader.offset = range.upperBound
     return value.bigEndian
 }
 
 // Reads an arbitrary number of bytes, to be used to read
 // raw bytes, this is useful when lifting strings
-fileprivate func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: Int) throws -> Array<UInt8> {
-    let range = reader.offset..<(reader.offset+count)
+private func readBytes(_ reader: inout (data: Data, offset: Data.Index), count: Int) throws -> [UInt8] {
+    let range = reader.offset ..< (reader.offset + count)
     guard reader.data.count >= range.upperBound else {
         throw UniffiInternalError.bufferOverflow
     }
     var value = [UInt8](repeating: 0, count: count)
-    value.withUnsafeMutableBufferPointer({ buffer in
+    value.withUnsafeMutableBufferPointer { buffer in
         reader.data.copyBytes(to: buffer, from: range)
-    })
+    }
     reader.offset = range.upperBound
     return value
 }
 
 // Reads a float at the current offset.
-fileprivate func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
-    return Float(bitPattern: try readInt(&reader))
+private func readFloat(_ reader: inout (data: Data, offset: Data.Index)) throws -> Float {
+    return try Float(bitPattern: readInt(&reader))
 }
 
 // Reads a float at the current offset.
-fileprivate func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
-    return Double(bitPattern: try readInt(&reader))
+private func readDouble(_ reader: inout (data: Data, offset: Data.Index)) throws -> Double {
+    return try Double(bitPattern: readInt(&reader))
 }
 
 // Indicates if the offset has reached the end of the buffer.
-fileprivate func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
+private func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Bool {
     return reader.offset < reader.data.count
 }
 
@@ -121,11 +121,11 @@ fileprivate func hasRemaining(_ reader: (data: Data, offset: Data.Index)) -> Boo
 // struct, but we use standalone functions instead in order to make external
 // types work.  See the above discussion on Readers for details.
 
-fileprivate func createWriter() -> [UInt8] {
+private func createWriter() -> [UInt8] {
     return []
 }
 
-fileprivate func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Sequence, S.Element == UInt8 {
+private func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: Sequence, S.Element == UInt8 {
     writer.append(contentsOf: byteArr)
 }
 
@@ -133,22 +133,22 @@ fileprivate func writeBytes<S>(_ writer: inout [UInt8], _ byteArr: S) where S: S
 //
 // Warning: make sure what you are trying to write
 // is in the correct type!
-fileprivate func writeInt<T: FixedWidthInteger>(_ writer: inout [UInt8], _ value: T) {
+private func writeInt<T: FixedWidthInteger>(_ writer: inout [UInt8], _ value: T) {
     var value = value.bigEndian
     withUnsafeBytes(of: &value) { writer.append(contentsOf: $0) }
 }
 
-fileprivate func writeFloat(_ writer: inout [UInt8], _ value: Float) {
+private func writeFloat(_ writer: inout [UInt8], _ value: Float) {
     writeInt(&writer, value.bitPattern)
 }
 
-fileprivate func writeDouble(_ writer: inout [UInt8], _ value: Double) {
+private func writeDouble(_ writer: inout [UInt8], _ value: Double) {
     writeInt(&writer, value.bitPattern)
 }
 
 // Protocol for types that transfer other types across the FFI. This is
 // analogous go the Rust trait of the same name.
-fileprivate protocol FfiConverter {
+private protocol FfiConverter {
     associatedtype FfiType
     associatedtype SwiftType
 
@@ -159,7 +159,7 @@ fileprivate protocol FfiConverter {
 }
 
 // Types conforming to `Primitive` pass themselves directly over the FFI.
-fileprivate protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType { }
+private protocol FfiConverterPrimitive: FfiConverter where FfiType == SwiftType {}
 
 extension FfiConverterPrimitive {
     public static func lift(_ value: FfiType) throws -> SwiftType {
@@ -173,7 +173,7 @@ extension FfiConverterPrimitive {
 
 // Types conforming to `FfiConverterRustBuffer` lift and lower into a `RustBuffer`.
 // Used for complex types where it's hard to write a custom lift/lower.
-fileprivate protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
+private protocol FfiConverterRustBuffer: FfiConverter where FfiType == RustBuffer {}
 
 extension FfiConverterRustBuffer {
     public static func lift(_ buf: RustBuffer) throws -> SwiftType {
@@ -187,14 +187,15 @@ extension FfiConverterRustBuffer {
     }
 
     public static func lower(_ value: SwiftType) -> RustBuffer {
-          var writer = createWriter()
-          write(value, into: &writer)
-          return RustBuffer(bytes: writer)
+        var writer = createWriter()
+        write(value, into: &writer)
+        return RustBuffer(bytes: writer)
     }
 }
+
 // An error type for FFI errors. These errors occur at the UniFFI level, not
 // the library level.
-fileprivate enum UniffiInternalError: LocalizedError {
+private enum UniffiInternalError: LocalizedError {
     case bufferOverflow
     case incompleteData
     case unexpectedOptionalTag
@@ -220,16 +221,16 @@ fileprivate enum UniffiInternalError: LocalizedError {
     }
 }
 
-fileprivate let CALL_SUCCESS: Int8 = 0
-fileprivate let CALL_ERROR: Int8 = 1
-fileprivate let CALL_PANIC: Int8 = 2
-fileprivate let CALL_CANCELLED: Int8 = 3
+private let CALL_SUCCESS: Int8 = 0
+private let CALL_ERROR: Int8 = 1
+private let CALL_PANIC: Int8 = 2
+private let CALL_CANCELLED: Int8 = 3
 
-fileprivate extension RustCallStatus {
+private extension RustCallStatus {
     init() {
         self.init(
             code: CALL_SUCCESS,
-            errorBuf: RustBuffer.init(
+            errorBuf: RustBuffer(
                 capacity: 0,
                 len: 0,
                 data: nil
@@ -244,7 +245,8 @@ private func rustCall<T>(_ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
 
 private func rustCallWithError<T>(
     _ errorHandler: @escaping (RustBuffer) throws -> Error,
-    _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T) throws -> T {
+    _ callback: (UnsafeMutablePointer<RustCallStatus>) -> T
+) throws -> T {
     try makeRustCall(callback, errorHandler: errorHandler)
 }
 
@@ -253,7 +255,7 @@ private func makeRustCall<T>(
     errorHandler: ((RustBuffer) throws -> Error)?
 ) throws -> T {
     uniffiEnsureInitialized()
-    var callStatus = RustCallStatus.init()
+    var callStatus = RustCallStatus()
     let returnedVal = callback(&callStatus)
     try uniffiCheckCallStatus(callStatus: callStatus, errorHandler: errorHandler)
     return returnedVal
@@ -264,40 +266,39 @@ private func uniffiCheckCallStatus(
     errorHandler: ((RustBuffer) throws -> Error)?
 ) throws {
     switch callStatus.code {
-        case CALL_SUCCESS:
-            return
+    case CALL_SUCCESS:
+        return
 
-        case CALL_ERROR:
-            if let errorHandler = errorHandler {
-                throw try errorHandler(callStatus.errorBuf)
-            } else {
-                callStatus.errorBuf.deallocate()
-                throw UniffiInternalError.unexpectedRustCallError
-            }
+    case CALL_ERROR:
+        if let errorHandler = errorHandler {
+            throw try errorHandler(callStatus.errorBuf)
+        } else {
+            callStatus.errorBuf.deallocate()
+            throw UniffiInternalError.unexpectedRustCallError
+        }
 
-        case CALL_PANIC:
-            // When the rust code sees a panic, it tries to construct a RustBuffer
-            // with the message.  But if that code panics, then it just sends back
-            // an empty buffer.
-            if callStatus.errorBuf.len > 0 {
-                throw UniffiInternalError.rustPanic(try FfiConverterString.lift(callStatus.errorBuf))
-            } else {
-                callStatus.errorBuf.deallocate()
-                throw UniffiInternalError.rustPanic("Rust panic")
-            }
+    case CALL_PANIC:
+        // When the rust code sees a panic, it tries to construct a RustBuffer
+        // with the message.  But if that code panics, then it just sends back
+        // an empty buffer.
+        if callStatus.errorBuf.len > 0 {
+            throw try UniffiInternalError.rustPanic(FfiConverterString.lift(callStatus.errorBuf))
+        } else {
+            callStatus.errorBuf.deallocate()
+            throw UniffiInternalError.rustPanic("Rust panic")
+        }
 
-        case CALL_CANCELLED:
-                throw CancellationError()
+    case CALL_CANCELLED:
+        throw CancellationError()
 
-        default:
-            throw UniffiInternalError.unexpectedRustCallStatusCode
+    default:
+        throw UniffiInternalError.unexpectedRustCallStatusCode
     }
 }
 
 // Public interface members begin here.
 
-
-fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
+private struct FfiConverterUInt16: FfiConverterPrimitive {
     typealias FfiType = UInt16
     typealias SwiftType = UInt16
 
@@ -310,7 +311,7 @@ fileprivate struct FfiConverterUInt16: FfiConverterPrimitive {
     }
 }
 
-fileprivate struct FfiConverterString: FfiConverter {
+private struct FfiConverterString: FfiConverter {
     typealias SwiftType = String
     typealias FfiType = RustBuffer
 
@@ -338,7 +339,7 @@ fileprivate struct FfiConverterString: FfiConverter {
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> String {
         let len: Int32 = try readInt(&buf)
-        return String(bytes: try readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
+        return try String(bytes: readBytes(&buf, count: Int(len)), encoding: String.Encoding.utf8)!
     }
 
     public static func write(_ value: String, into buf: inout [UInt8]) {
@@ -348,12 +349,12 @@ fileprivate struct FfiConverterString: FfiConverter {
     }
 }
 
-fileprivate struct FfiConverterData: FfiConverterRustBuffer {
+private struct FfiConverterData: FfiConverterRustBuffer {
     typealias SwiftType = Data
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Data {
         let len: Int32 = try readInt(&buf)
-        return Data(try readBytes(&buf, count: Int(len)))
+        return try Data(readBytes(&buf, count: Int(len)))
     }
 
     public static func write(_ value: Data, into buf: inout [UInt8]) {
@@ -363,10 +364,7 @@ fileprivate struct FfiConverterData: FfiConverterRustBuffer {
     }
 }
 
-
-public protocol DKGPart1ResultProtocol {
-    
-}
+public protocol DKGPart1ResultProtocol {}
 
 public class DkgPart1Result: DKGPart1ResultProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer
@@ -381,11 +379,6 @@ public class DkgPart1Result: DKGPart1ResultProtocol {
     deinit {
         try! rustCall { uniffi_frost_uniffi_sdk_fn_free_dkgpart1result(pointer, $0) }
     }
-
-    
-
-    
-    
 }
 
 public struct FfiConverterTypeDKGPart1Result: FfiConverter {
@@ -397,7 +390,7 @@ public struct FfiConverterTypeDKGPart1Result: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
         let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
+        if ptr == nil {
             throw UniffiInternalError.unexpectedNullPointer
         }
         return try lift(ptr!)
@@ -418,7 +411,6 @@ public struct FfiConverterTypeDKGPart1Result: FfiConverter {
     }
 }
 
-
 public func FfiConverterTypeDKGPart1Result_lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgPart1Result {
     return try FfiConverterTypeDKGPart1Result.lift(pointer)
 }
@@ -427,10 +419,7 @@ public func FfiConverterTypeDKGPart1Result_lower(_ value: DkgPart1Result) -> Uns
     return FfiConverterTypeDKGPart1Result.lower(value)
 }
 
-
-public protocol DKGPart2ResultProtocol {
-    
-}
+public protocol DKGPart2ResultProtocol {}
 
 public class DkgPart2Result: DKGPart2ResultProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer
@@ -445,11 +434,6 @@ public class DkgPart2Result: DKGPart2ResultProtocol {
     deinit {
         try! rustCall { uniffi_frost_uniffi_sdk_fn_free_dkgpart2result(pointer, $0) }
     }
-
-    
-
-    
-    
 }
 
 public struct FfiConverterTypeDKGPart2Result: FfiConverter {
@@ -461,7 +445,7 @@ public struct FfiConverterTypeDKGPart2Result: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
         let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
+        if ptr == nil {
             throw UniffiInternalError.unexpectedNullPointer
         }
         return try lift(ptr!)
@@ -482,7 +466,6 @@ public struct FfiConverterTypeDKGPart2Result: FfiConverter {
     }
 }
 
-
 public func FfiConverterTypeDKGPart2Result_lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgPart2Result {
     return try FfiConverterTypeDKGPart2Result.lift(pointer)
 }
@@ -491,10 +474,7 @@ public func FfiConverterTypeDKGPart2Result_lower(_ value: DkgPart2Result) -> Uns
     return FfiConverterTypeDKGPart2Result.lower(value)
 }
 
-
-public protocol DKGRound1SecretPackageProtocol {
-    
-}
+public protocol DKGRound1SecretPackageProtocol {}
 
 public class DkgRound1SecretPackage: DKGRound1SecretPackageProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer
@@ -509,11 +489,6 @@ public class DkgRound1SecretPackage: DKGRound1SecretPackageProtocol {
     deinit {
         try! rustCall { uniffi_frost_uniffi_sdk_fn_free_dkground1secretpackage(pointer, $0) }
     }
-
-    
-
-    
-    
 }
 
 public struct FfiConverterTypeDKGRound1SecretPackage: FfiConverter {
@@ -525,7 +500,7 @@ public struct FfiConverterTypeDKGRound1SecretPackage: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
         let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
+        if ptr == nil {
             throw UniffiInternalError.unexpectedNullPointer
         }
         return try lift(ptr!)
@@ -546,7 +521,6 @@ public struct FfiConverterTypeDKGRound1SecretPackage: FfiConverter {
     }
 }
 
-
 public func FfiConverterTypeDKGRound1SecretPackage_lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgRound1SecretPackage {
     return try FfiConverterTypeDKGRound1SecretPackage.lift(pointer)
 }
@@ -555,10 +529,7 @@ public func FfiConverterTypeDKGRound1SecretPackage_lower(_ value: DkgRound1Secre
     return FfiConverterTypeDKGRound1SecretPackage.lower(value)
 }
 
-
-public protocol DKGRound2SecretPackageProtocol {
-    
-}
+public protocol DKGRound2SecretPackageProtocol {}
 
 public class DkgRound2SecretPackage: DKGRound2SecretPackageProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer
@@ -573,11 +544,6 @@ public class DkgRound2SecretPackage: DKGRound2SecretPackageProtocol {
     deinit {
         try! rustCall { uniffi_frost_uniffi_sdk_fn_free_dkground2secretpackage(pointer, $0) }
     }
-
-    
-
-    
-    
 }
 
 public struct FfiConverterTypeDKGRound2SecretPackage: FfiConverter {
@@ -589,7 +555,7 @@ public struct FfiConverterTypeDKGRound2SecretPackage: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
         let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
+        if ptr == nil {
             throw UniffiInternalError.unexpectedNullPointer
         }
         return try lift(ptr!)
@@ -610,7 +576,6 @@ public struct FfiConverterTypeDKGRound2SecretPackage: FfiConverter {
     }
 }
 
-
 public func FfiConverterTypeDKGRound2SecretPackage_lift(_ pointer: UnsafeMutableRawPointer) throws -> DkgRound2SecretPackage {
     return try FfiConverterTypeDKGRound2SecretPackage.lift(pointer)
 }
@@ -619,10 +584,7 @@ public func FfiConverterTypeDKGRound2SecretPackage_lower(_ value: DkgRound2Secre
     return FfiConverterTypeDKGRound2SecretPackage.lower(value)
 }
 
-
-public protocol FrostRandomizedParamsProtocol {
-    
-}
+public protocol FrostRandomizedParamsProtocol {}
 
 public class FrostRandomizedParams: FrostRandomizedParamsProtocol {
     fileprivate let pointer: UnsafeMutableRawPointer
@@ -637,11 +599,6 @@ public class FrostRandomizedParams: FrostRandomizedParamsProtocol {
     deinit {
         try! rustCall { uniffi_frost_uniffi_sdk_fn_free_frostrandomizedparams(pointer, $0) }
     }
-
-    
-
-    
-    
 }
 
 public struct FfiConverterTypeFrostRandomizedParams: FfiConverter {
@@ -653,7 +610,7 @@ public struct FfiConverterTypeFrostRandomizedParams: FfiConverter {
         // The Rust code won't compile if a pointer won't fit in a UInt64.
         // We have to go via `UInt` because that's the thing that's the size of a pointer.
         let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
-        if (ptr == nil) {
+        if ptr == nil {
             throw UniffiInternalError.unexpectedNullPointer
         }
         return try lift(ptr!)
@@ -674,7 +631,6 @@ public struct FfiConverterTypeFrostRandomizedParams: FfiConverter {
     }
 }
 
-
 public func FfiConverterTypeFrostRandomizedParams_lift(_ pointer: UnsafeMutableRawPointer) throws -> FrostRandomizedParams {
     return try FfiConverterTypeFrostRandomizedParams.lift(pointer)
 }
@@ -682,7 +638,6 @@ public func FfiConverterTypeFrostRandomizedParams_lift(_ pointer: UnsafeMutableR
 public func FfiConverterTypeFrostRandomizedParams_lower(_ value: FrostRandomizedParams) -> UnsafeMutableRawPointer {
     return FfiConverterTypeFrostRandomizedParams.lower(value)
 }
-
 
 public struct Configuration {
     public var minSigners: UInt16
@@ -698,9 +653,8 @@ public struct Configuration {
     }
 }
 
-
 extension Configuration: Equatable, Hashable {
-    public static func ==(lhs: Configuration, rhs: Configuration) -> Bool {
+    public static func == (lhs: Configuration, rhs: Configuration) -> Bool {
         if lhs.minSigners != rhs.minSigners {
             return false
         }
@@ -720,12 +674,11 @@ extension Configuration: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeConfiguration: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Configuration {
         return try Configuration(
-            minSigners: FfiConverterUInt16.read(from: &buf), 
-            maxSigners: FfiConverterUInt16.read(from: &buf), 
+            minSigners: FfiConverterUInt16.read(from: &buf),
+            maxSigners: FfiConverterUInt16.read(from: &buf),
             secret: FfiConverterData.read(from: &buf)
         )
     }
@@ -737,7 +690,6 @@ public struct FfiConverterTypeConfiguration: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeConfiguration_lift(_ buf: RustBuffer) throws -> Configuration {
     return try FfiConverterTypeConfiguration.lift(buf)
 }
@@ -745,7 +697,6 @@ public func FfiConverterTypeConfiguration_lift(_ buf: RustBuffer) throws -> Conf
 public func FfiConverterTypeConfiguration_lower(_ value: Configuration) -> RustBuffer {
     return FfiConverterTypeConfiguration.lower(value)
 }
-
 
 public struct DkgPart3Result {
     public var publicKeyPackage: FrostPublicKeyPackage
@@ -759,9 +710,8 @@ public struct DkgPart3Result {
     }
 }
 
-
 extension DkgPart3Result: Equatable, Hashable {
-    public static func ==(lhs: DkgPart3Result, rhs: DkgPart3Result) -> Bool {
+    public static func == (lhs: DkgPart3Result, rhs: DkgPart3Result) -> Bool {
         if lhs.publicKeyPackage != rhs.publicKeyPackage {
             return false
         }
@@ -777,11 +727,10 @@ extension DkgPart3Result: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeDKGPart3Result: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgPart3Result {
         return try DkgPart3Result(
-            publicKeyPackage: FfiConverterTypeFrostPublicKeyPackage.read(from: &buf), 
+            publicKeyPackage: FfiConverterTypeFrostPublicKeyPackage.read(from: &buf),
             keyPackage: FfiConverterTypeFrostKeyPackage.read(from: &buf)
         )
     }
@@ -792,7 +741,6 @@ public struct FfiConverterTypeDKGPart3Result: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeDKGPart3Result_lift(_ buf: RustBuffer) throws -> DkgPart3Result {
     return try FfiConverterTypeDKGPart3Result.lift(buf)
 }
@@ -800,7 +748,6 @@ public func FfiConverterTypeDKGPart3Result_lift(_ buf: RustBuffer) throws -> Dkg
 public func FfiConverterTypeDKGPart3Result_lower(_ value: DkgPart3Result) -> RustBuffer {
     return FfiConverterTypeDKGPart3Result.lower(value)
 }
-
 
 public struct DkgRound1Package {
     public var identifier: ParticipantIdentifier
@@ -814,9 +761,8 @@ public struct DkgRound1Package {
     }
 }
 
-
 extension DkgRound1Package: Equatable, Hashable {
-    public static func ==(lhs: DkgRound1Package, rhs: DkgRound1Package) -> Bool {
+    public static func == (lhs: DkgRound1Package, rhs: DkgRound1Package) -> Bool {
         if lhs.identifier != rhs.identifier {
             return false
         }
@@ -832,11 +778,10 @@ extension DkgRound1Package: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeDKGRound1Package: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgRound1Package {
         return try DkgRound1Package(
-            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf), 
+            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf),
             data: FfiConverterData.read(from: &buf)
         )
     }
@@ -847,7 +792,6 @@ public struct FfiConverterTypeDKGRound1Package: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeDKGRound1Package_lift(_ buf: RustBuffer) throws -> DkgRound1Package {
     return try FfiConverterTypeDKGRound1Package.lift(buf)
 }
@@ -855,7 +799,6 @@ public func FfiConverterTypeDKGRound1Package_lift(_ buf: RustBuffer) throws -> D
 public func FfiConverterTypeDKGRound1Package_lower(_ value: DkgRound1Package) -> RustBuffer {
     return FfiConverterTypeDKGRound1Package.lower(value)
 }
-
 
 public struct DkgRound2Package {
     public var identifier: ParticipantIdentifier
@@ -869,9 +812,8 @@ public struct DkgRound2Package {
     }
 }
 
-
 extension DkgRound2Package: Equatable, Hashable {
-    public static func ==(lhs: DkgRound2Package, rhs: DkgRound2Package) -> Bool {
+    public static func == (lhs: DkgRound2Package, rhs: DkgRound2Package) -> Bool {
         if lhs.identifier != rhs.identifier {
             return false
         }
@@ -887,11 +829,10 @@ extension DkgRound2Package: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeDKGRound2Package: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> DkgRound2Package {
         return try DkgRound2Package(
-            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf), 
+            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf),
             data: FfiConverterData.read(from: &buf)
         )
     }
@@ -902,7 +843,6 @@ public struct FfiConverterTypeDKGRound2Package: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeDKGRound2Package_lift(_ buf: RustBuffer) throws -> DkgRound2Package {
     return try FfiConverterTypeDKGRound2Package.lift(buf)
 }
@@ -910,7 +850,6 @@ public func FfiConverterTypeDKGRound2Package_lift(_ buf: RustBuffer) throws -> D
 public func FfiConverterTypeDKGRound2Package_lower(_ value: DkgRound2Package) -> RustBuffer {
     return FfiConverterTypeDKGRound2Package.lower(value)
 }
-
 
 public struct FirstRoundCommitment {
     public var nonces: FrostSigningNonces
@@ -924,9 +863,8 @@ public struct FirstRoundCommitment {
     }
 }
 
-
 extension FirstRoundCommitment: Equatable, Hashable {
-    public static func ==(lhs: FirstRoundCommitment, rhs: FirstRoundCommitment) -> Bool {
+    public static func == (lhs: FirstRoundCommitment, rhs: FirstRoundCommitment) -> Bool {
         if lhs.nonces != rhs.nonces {
             return false
         }
@@ -942,11 +880,10 @@ extension FirstRoundCommitment: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeFirstRoundCommitment: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FirstRoundCommitment {
         return try FirstRoundCommitment(
-            nonces: FfiConverterTypeFrostSigningNonces.read(from: &buf), 
+            nonces: FfiConverterTypeFrostSigningNonces.read(from: &buf),
             commitments: FfiConverterTypeFrostSigningCommitments.read(from: &buf)
         )
     }
@@ -957,7 +894,6 @@ public struct FfiConverterTypeFirstRoundCommitment: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeFirstRoundCommitment_lift(_ buf: RustBuffer) throws -> FirstRoundCommitment {
     return try FfiConverterTypeFirstRoundCommitment.lift(buf)
 }
@@ -966,22 +902,20 @@ public func FfiConverterTypeFirstRoundCommitment_lower(_ value: FirstRoundCommit
     return FfiConverterTypeFirstRoundCommitment.lower(value)
 }
 
-
 public struct FrostKeyPackage {
-    public var identifier: String
+    public var identifier: ParticipantIdentifier
     public var data: Data
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(identifier: String, data: Data) {
+    public init(identifier: ParticipantIdentifier, data: Data) {
         self.identifier = identifier
         self.data = data
     }
 }
 
-
 extension FrostKeyPackage: Equatable, Hashable {
-    public static func ==(lhs: FrostKeyPackage, rhs: FrostKeyPackage) -> Bool {
+    public static func == (lhs: FrostKeyPackage, rhs: FrostKeyPackage) -> Bool {
         if lhs.identifier != rhs.identifier {
             return false
         }
@@ -997,21 +931,19 @@ extension FrostKeyPackage: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeFrostKeyPackage: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostKeyPackage {
         return try FrostKeyPackage(
-            identifier: FfiConverterString.read(from: &buf), 
+            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf),
             data: FfiConverterData.read(from: &buf)
         )
     }
 
     public static func write(_ value: FrostKeyPackage, into buf: inout [UInt8]) {
-        FfiConverterString.write(value.identifier, into: &buf)
+        FfiConverterTypeParticipantIdentifier.write(value.identifier, into: &buf)
         FfiConverterData.write(value.data, into: &buf)
     }
 }
-
 
 public func FfiConverterTypeFrostKeyPackage_lift(_ buf: RustBuffer) throws -> FrostKeyPackage {
     return try FfiConverterTypeFrostKeyPackage.lift(buf)
@@ -1020,7 +952,6 @@ public func FfiConverterTypeFrostKeyPackage_lift(_ buf: RustBuffer) throws -> Fr
 public func FfiConverterTypeFrostKeyPackage_lower(_ value: FrostKeyPackage) -> RustBuffer {
     return FfiConverterTypeFrostKeyPackage.lower(value)
 }
-
 
 public struct FrostPublicKeyPackage {
     public var verifyingShares: [ParticipantIdentifier: String]
@@ -1034,9 +965,8 @@ public struct FrostPublicKeyPackage {
     }
 }
 
-
 extension FrostPublicKeyPackage: Equatable, Hashable {
-    public static func ==(lhs: FrostPublicKeyPackage, rhs: FrostPublicKeyPackage) -> Bool {
+    public static func == (lhs: FrostPublicKeyPackage, rhs: FrostPublicKeyPackage) -> Bool {
         if lhs.verifyingShares != rhs.verifyingShares {
             return false
         }
@@ -1052,11 +982,10 @@ extension FrostPublicKeyPackage: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeFrostPublicKeyPackage: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostPublicKeyPackage {
         return try FrostPublicKeyPackage(
-            verifyingShares: FfiConverterDictionaryTypeParticipantIdentifierString.read(from: &buf), 
+            verifyingShares: FfiConverterDictionaryTypeParticipantIdentifierString.read(from: &buf),
             verifyingKey: FfiConverterString.read(from: &buf)
         )
     }
@@ -1067,7 +996,6 @@ public struct FfiConverterTypeFrostPublicKeyPackage: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeFrostPublicKeyPackage_lift(_ buf: RustBuffer) throws -> FrostPublicKeyPackage {
     return try FfiConverterTypeFrostPublicKeyPackage.lift(buf)
 }
@@ -1075,7 +1003,6 @@ public func FfiConverterTypeFrostPublicKeyPackage_lift(_ buf: RustBuffer) throws
 public func FfiConverterTypeFrostPublicKeyPackage_lower(_ value: FrostPublicKeyPackage) -> RustBuffer {
     return FfiConverterTypeFrostPublicKeyPackage.lower(value)
 }
-
 
 public struct FrostRandomizer {
     public var data: Data
@@ -1087,9 +1014,8 @@ public struct FrostRandomizer {
     }
 }
 
-
 extension FrostRandomizer: Equatable, Hashable {
-    public static func ==(lhs: FrostRandomizer, rhs: FrostRandomizer) -> Bool {
+    public static func == (lhs: FrostRandomizer, rhs: FrostRandomizer) -> Bool {
         if lhs.data != rhs.data {
             return false
         }
@@ -1100,7 +1026,6 @@ extension FrostRandomizer: Equatable, Hashable {
         hasher.combine(data)
     }
 }
-
 
 public struct FfiConverterTypeFrostRandomizer: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostRandomizer {
@@ -1114,7 +1039,6 @@ public struct FfiConverterTypeFrostRandomizer: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeFrostRandomizer_lift(_ buf: RustBuffer) throws -> FrostRandomizer {
     return try FfiConverterTypeFrostRandomizer.lift(buf)
 }
@@ -1122,7 +1046,6 @@ public func FfiConverterTypeFrostRandomizer_lift(_ buf: RustBuffer) throws -> Fr
 public func FfiConverterTypeFrostRandomizer_lower(_ value: FrostRandomizer) -> RustBuffer {
     return FfiConverterTypeFrostRandomizer.lower(value)
 }
-
 
 public struct FrostSecretKeyShare {
     public var identifier: ParticipantIdentifier
@@ -1136,9 +1059,8 @@ public struct FrostSecretKeyShare {
     }
 }
 
-
 extension FrostSecretKeyShare: Equatable, Hashable {
-    public static func ==(lhs: FrostSecretKeyShare, rhs: FrostSecretKeyShare) -> Bool {
+    public static func == (lhs: FrostSecretKeyShare, rhs: FrostSecretKeyShare) -> Bool {
         if lhs.identifier != rhs.identifier {
             return false
         }
@@ -1154,11 +1076,10 @@ extension FrostSecretKeyShare: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeFrostSecretKeyShare: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostSecretKeyShare {
         return try FrostSecretKeyShare(
-            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf), 
+            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf),
             data: FfiConverterData.read(from: &buf)
         )
     }
@@ -1169,7 +1090,6 @@ public struct FfiConverterTypeFrostSecretKeyShare: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeFrostSecretKeyShare_lift(_ buf: RustBuffer) throws -> FrostSecretKeyShare {
     return try FfiConverterTypeFrostSecretKeyShare.lift(buf)
 }
@@ -1177,7 +1097,6 @@ public func FfiConverterTypeFrostSecretKeyShare_lift(_ buf: RustBuffer) throws -
 public func FfiConverterTypeFrostSecretKeyShare_lower(_ value: FrostSecretKeyShare) -> RustBuffer {
     return FfiConverterTypeFrostSecretKeyShare.lower(value)
 }
-
 
 public struct FrostSignature {
     public var data: Data
@@ -1189,9 +1108,8 @@ public struct FrostSignature {
     }
 }
 
-
 extension FrostSignature: Equatable, Hashable {
-    public static func ==(lhs: FrostSignature, rhs: FrostSignature) -> Bool {
+    public static func == (lhs: FrostSignature, rhs: FrostSignature) -> Bool {
         if lhs.data != rhs.data {
             return false
         }
@@ -1202,7 +1120,6 @@ extension FrostSignature: Equatable, Hashable {
         hasher.combine(data)
     }
 }
-
 
 public struct FfiConverterTypeFrostSignature: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostSignature {
@@ -1216,7 +1133,6 @@ public struct FfiConverterTypeFrostSignature: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeFrostSignature_lift(_ buf: RustBuffer) throws -> FrostSignature {
     return try FfiConverterTypeFrostSignature.lift(buf)
 }
@@ -1224,7 +1140,6 @@ public func FfiConverterTypeFrostSignature_lift(_ buf: RustBuffer) throws -> Fro
 public func FfiConverterTypeFrostSignature_lower(_ value: FrostSignature) -> RustBuffer {
     return FfiConverterTypeFrostSignature.lower(value)
 }
-
 
 public struct FrostSignatureShare {
     public var identifier: ParticipantIdentifier
@@ -1238,9 +1153,8 @@ public struct FrostSignatureShare {
     }
 }
 
-
 extension FrostSignatureShare: Equatable, Hashable {
-    public static func ==(lhs: FrostSignatureShare, rhs: FrostSignatureShare) -> Bool {
+    public static func == (lhs: FrostSignatureShare, rhs: FrostSignatureShare) -> Bool {
         if lhs.identifier != rhs.identifier {
             return false
         }
@@ -1256,11 +1170,10 @@ extension FrostSignatureShare: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeFrostSignatureShare: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostSignatureShare {
         return try FrostSignatureShare(
-            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf), 
+            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf),
             data: FfiConverterData.read(from: &buf)
         )
     }
@@ -1271,7 +1184,6 @@ public struct FfiConverterTypeFrostSignatureShare: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeFrostSignatureShare_lift(_ buf: RustBuffer) throws -> FrostSignatureShare {
     return try FfiConverterTypeFrostSignatureShare.lift(buf)
 }
@@ -1279,7 +1191,6 @@ public func FfiConverterTypeFrostSignatureShare_lift(_ buf: RustBuffer) throws -
 public func FfiConverterTypeFrostSignatureShare_lower(_ value: FrostSignatureShare) -> RustBuffer {
     return FfiConverterTypeFrostSignatureShare.lower(value)
 }
-
 
 public struct FrostSigningCommitments {
     public var identifier: ParticipantIdentifier
@@ -1293,9 +1204,8 @@ public struct FrostSigningCommitments {
     }
 }
 
-
 extension FrostSigningCommitments: Equatable, Hashable {
-    public static func ==(lhs: FrostSigningCommitments, rhs: FrostSigningCommitments) -> Bool {
+    public static func == (lhs: FrostSigningCommitments, rhs: FrostSigningCommitments) -> Bool {
         if lhs.identifier != rhs.identifier {
             return false
         }
@@ -1311,11 +1221,10 @@ extension FrostSigningCommitments: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeFrostSigningCommitments: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostSigningCommitments {
         return try FrostSigningCommitments(
-            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf), 
+            identifier: FfiConverterTypeParticipantIdentifier.read(from: &buf),
             data: FfiConverterData.read(from: &buf)
         )
     }
@@ -1326,7 +1235,6 @@ public struct FfiConverterTypeFrostSigningCommitments: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeFrostSigningCommitments_lift(_ buf: RustBuffer) throws -> FrostSigningCommitments {
     return try FfiConverterTypeFrostSigningCommitments.lift(buf)
 }
@@ -1334,7 +1242,6 @@ public func FfiConverterTypeFrostSigningCommitments_lift(_ buf: RustBuffer) thro
 public func FfiConverterTypeFrostSigningCommitments_lower(_ value: FrostSigningCommitments) -> RustBuffer {
     return FfiConverterTypeFrostSigningCommitments.lower(value)
 }
-
 
 public struct FrostSigningNonces {
     public var data: Data
@@ -1346,9 +1253,8 @@ public struct FrostSigningNonces {
     }
 }
 
-
 extension FrostSigningNonces: Equatable, Hashable {
-    public static func ==(lhs: FrostSigningNonces, rhs: FrostSigningNonces) -> Bool {
+    public static func == (lhs: FrostSigningNonces, rhs: FrostSigningNonces) -> Bool {
         if lhs.data != rhs.data {
             return false
         }
@@ -1359,7 +1265,6 @@ extension FrostSigningNonces: Equatable, Hashable {
         hasher.combine(data)
     }
 }
-
 
 public struct FfiConverterTypeFrostSigningNonces: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostSigningNonces {
@@ -1373,7 +1278,6 @@ public struct FfiConverterTypeFrostSigningNonces: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeFrostSigningNonces_lift(_ buf: RustBuffer) throws -> FrostSigningNonces {
     return try FfiConverterTypeFrostSigningNonces.lift(buf)
 }
@@ -1381,7 +1285,6 @@ public func FfiConverterTypeFrostSigningNonces_lift(_ buf: RustBuffer) throws ->
 public func FfiConverterTypeFrostSigningNonces_lower(_ value: FrostSigningNonces) -> RustBuffer {
     return FfiConverterTypeFrostSigningNonces.lower(value)
 }
-
 
 public struct FrostSigningPackage {
     public var data: Data
@@ -1393,9 +1296,8 @@ public struct FrostSigningPackage {
     }
 }
 
-
 extension FrostSigningPackage: Equatable, Hashable {
-    public static func ==(lhs: FrostSigningPackage, rhs: FrostSigningPackage) -> Bool {
+    public static func == (lhs: FrostSigningPackage, rhs: FrostSigningPackage) -> Bool {
         if lhs.data != rhs.data {
             return false
         }
@@ -1406,7 +1308,6 @@ extension FrostSigningPackage: Equatable, Hashable {
         hasher.combine(data)
     }
 }
-
 
 public struct FfiConverterTypeFrostSigningPackage: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostSigningPackage {
@@ -1420,7 +1321,6 @@ public struct FfiConverterTypeFrostSigningPackage: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeFrostSigningPackage_lift(_ buf: RustBuffer) throws -> FrostSigningPackage {
     return try FfiConverterTypeFrostSigningPackage.lift(buf)
 }
@@ -1428,7 +1328,6 @@ public func FfiConverterTypeFrostSigningPackage_lift(_ buf: RustBuffer) throws -
 public func FfiConverterTypeFrostSigningPackage_lower(_ value: FrostSigningPackage) -> RustBuffer {
     return FfiConverterTypeFrostSigningPackage.lower(value)
 }
-
 
 public struct Message {
     public var data: Data
@@ -1440,9 +1339,8 @@ public struct Message {
     }
 }
 
-
 extension Message: Equatable, Hashable {
-    public static func ==(lhs: Message, rhs: Message) -> Bool {
+    public static func == (lhs: Message, rhs: Message) -> Bool {
         if lhs.data != rhs.data {
             return false
         }
@@ -1453,7 +1351,6 @@ extension Message: Equatable, Hashable {
         hasher.combine(data)
     }
 }
-
 
 public struct FfiConverterTypeMessage: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Message {
@@ -1467,7 +1364,6 @@ public struct FfiConverterTypeMessage: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeMessage_lift(_ buf: RustBuffer) throws -> Message {
     return try FfiConverterTypeMessage.lift(buf)
 }
@@ -1475,7 +1371,6 @@ public func FfiConverterTypeMessage_lift(_ buf: RustBuffer) throws -> Message {
 public func FfiConverterTypeMessage_lower(_ value: Message) -> RustBuffer {
     return FfiConverterTypeMessage.lower(value)
 }
-
 
 public struct ParticipantIdentifier {
     public var data: String
@@ -1487,9 +1382,8 @@ public struct ParticipantIdentifier {
     }
 }
 
-
 extension ParticipantIdentifier: Equatable, Hashable {
-    public static func ==(lhs: ParticipantIdentifier, rhs: ParticipantIdentifier) -> Bool {
+    public static func == (lhs: ParticipantIdentifier, rhs: ParticipantIdentifier) -> Bool {
         if lhs.data != rhs.data {
             return false
         }
@@ -1500,7 +1394,6 @@ extension ParticipantIdentifier: Equatable, Hashable {
         hasher.combine(data)
     }
 }
-
 
 public struct FfiConverterTypeParticipantIdentifier: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ParticipantIdentifier {
@@ -1514,7 +1407,6 @@ public struct FfiConverterTypeParticipantIdentifier: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeParticipantIdentifier_lift(_ buf: RustBuffer) throws -> ParticipantIdentifier {
     return try FfiConverterTypeParticipantIdentifier.lift(buf)
 }
@@ -1522,7 +1414,6 @@ public func FfiConverterTypeParticipantIdentifier_lift(_ buf: RustBuffer) throws
 public func FfiConverterTypeParticipantIdentifier_lower(_ value: ParticipantIdentifier) -> RustBuffer {
     return FfiConverterTypeParticipantIdentifier.lower(value)
 }
-
 
 public struct ParticipantList {
     public var identifiers: [ParticipantIdentifier]
@@ -1534,9 +1425,8 @@ public struct ParticipantList {
     }
 }
 
-
 extension ParticipantList: Equatable, Hashable {
-    public static func ==(lhs: ParticipantList, rhs: ParticipantList) -> Bool {
+    public static func == (lhs: ParticipantList, rhs: ParticipantList) -> Bool {
         if lhs.identifiers != rhs.identifiers {
             return false
         }
@@ -1547,7 +1437,6 @@ extension ParticipantList: Equatable, Hashable {
         hasher.combine(identifiers)
     }
 }
-
 
 public struct FfiConverterTypeParticipantList: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ParticipantList {
@@ -1561,7 +1450,6 @@ public struct FfiConverterTypeParticipantList: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeParticipantList_lift(_ buf: RustBuffer) throws -> ParticipantList {
     return try FfiConverterTypeParticipantList.lift(buf)
 }
@@ -1569,7 +1457,6 @@ public func FfiConverterTypeParticipantList_lift(_ buf: RustBuffer) throws -> Pa
 public func FfiConverterTypeParticipantList_lower(_ value: ParticipantList) -> RustBuffer {
     return FfiConverterTypeParticipantList.lower(value)
 }
-
 
 public struct TrustedKeyGeneration {
     public var secretShares: [ParticipantIdentifier: FrostSecretKeyShare]
@@ -1583,9 +1470,8 @@ public struct TrustedKeyGeneration {
     }
 }
 
-
 extension TrustedKeyGeneration: Equatable, Hashable {
-    public static func ==(lhs: TrustedKeyGeneration, rhs: TrustedKeyGeneration) -> Bool {
+    public static func == (lhs: TrustedKeyGeneration, rhs: TrustedKeyGeneration) -> Bool {
         if lhs.secretShares != rhs.secretShares {
             return false
         }
@@ -1601,11 +1487,10 @@ extension TrustedKeyGeneration: Equatable, Hashable {
     }
 }
 
-
 public struct FfiConverterTypeTrustedKeyGeneration: FfiConverterRustBuffer {
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> TrustedKeyGeneration {
         return try TrustedKeyGeneration(
-            secretShares: FfiConverterDictionaryTypeParticipantIdentifierTypeFrostSecretKeyShare.read(from: &buf), 
+            secretShares: FfiConverterDictionaryTypeParticipantIdentifierTypeFrostSecretKeyShare.read(from: &buf),
             publicKeyPackage: FfiConverterTypeFrostPublicKeyPackage.read(from: &buf)
         )
     }
@@ -1616,7 +1501,6 @@ public struct FfiConverterTypeTrustedKeyGeneration: FfiConverterRustBuffer {
     }
 }
 
-
 public func FfiConverterTypeTrustedKeyGeneration_lift(_ buf: RustBuffer) throws -> TrustedKeyGeneration {
     return try FfiConverterTypeTrustedKeyGeneration.lift(buf)
 }
@@ -1626,9 +1510,6 @@ public func FfiConverterTypeTrustedKeyGeneration_lower(_ value: TrustedKeyGenera
 }
 
 public enum ConfigurationError {
-
-    
-    
     case InvalidMaxSigners
     case InvalidMinSigners
     case InvalidIdentifier
@@ -1639,61 +1520,42 @@ public enum ConfigurationError {
     }
 }
 
-
 public struct FfiConverterTypeConfigurationError: FfiConverterRustBuffer {
     typealias SwiftType = ConfigurationError
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ConfigurationError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
-        
-
-        
         case 1: return .InvalidMaxSigners
         case 2: return .InvalidMinSigners
         case 3: return .InvalidIdentifier
         case 4: return .UnknownError
-
-         default: throw UniffiInternalError.unexpectedEnumCase
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: ConfigurationError, into buf: inout [UInt8]) {
         switch value {
-
-        
-
-        
-        
         case .InvalidMaxSigners:
             writeInt(&buf, Int32(1))
-        
-        
+
         case .InvalidMinSigners:
             writeInt(&buf, Int32(2))
-        
-        
+
         case .InvalidIdentifier:
             writeInt(&buf, Int32(3))
-        
-        
+
         case .UnknownError:
             writeInt(&buf, Int32(4))
-        
         }
     }
 }
 
-
 extension ConfigurationError: Equatable, Hashable {}
 
-extension ConfigurationError: Error { }
+extension ConfigurationError: Error {}
 
 public enum CoordinationError {
-
-    
-    
     case FailedToCreateSigningPackage
     case InvalidSigningCommitment
     case IdentifierDeserializationError
@@ -1708,84 +1570,61 @@ public enum CoordinationError {
     }
 }
 
-
 public struct FfiConverterTypeCoordinationError: FfiConverterRustBuffer {
     typealias SwiftType = CoordinationError
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> CoordinationError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
-        
-
-        
         case 1: return .FailedToCreateSigningPackage
         case 2: return .InvalidSigningCommitment
         case 3: return .IdentifierDeserializationError
         case 4: return .SigningPackageSerializationError
         case 5: return .SignatureShareDeserializationError
         case 6: return .PublicKeyPackageDeserializationError
-        case 7: return .SignatureShareAggregationFailed(
-            message: try FfiConverterString.read(from: &buf)
+        case 7: return try .SignatureShareAggregationFailed(
+                message: FfiConverterString.read(from: &buf)
             )
         case 8: return .InvalidRandomizer
-
-         default: throw UniffiInternalError.unexpectedEnumCase
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: CoordinationError, into buf: inout [UInt8]) {
         switch value {
-
-        
-
-        
-        
         case .FailedToCreateSigningPackage:
             writeInt(&buf, Int32(1))
-        
-        
+
         case .InvalidSigningCommitment:
             writeInt(&buf, Int32(2))
-        
-        
+
         case .IdentifierDeserializationError:
             writeInt(&buf, Int32(3))
-        
-        
+
         case .SigningPackageSerializationError:
             writeInt(&buf, Int32(4))
-        
-        
+
         case .SignatureShareDeserializationError:
             writeInt(&buf, Int32(5))
-        
-        
+
         case .PublicKeyPackageDeserializationError:
             writeInt(&buf, Int32(6))
-        
-        
+
         case let .SignatureShareAggregationFailed(message):
             writeInt(&buf, Int32(7))
             FfiConverterString.write(message, into: &buf)
-            
-        
+
         case .InvalidRandomizer:
             writeInt(&buf, Int32(8))
-        
         }
     }
 }
 
-
 extension CoordinationError: Equatable, Hashable {}
 
-extension CoordinationError: Error { }
+extension CoordinationError: Error {}
 
 public enum FrostError {
-
-    
-    
     case InvalidMinSigners
     case InvalidMaxSigners
     case InvalidCoefficients
@@ -1831,17 +1670,12 @@ public enum FrostError {
     }
 }
 
-
 public struct FfiConverterTypeFrostError: FfiConverterRustBuffer {
     typealias SwiftType = FrostError
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
-        
-
-        
         case 1: return .InvalidMinSigners
         case 2: return .InvalidMaxSigners
         case 3: return .InvalidCoefficients
@@ -1859,22 +1693,22 @@ public struct FfiConverterTypeFrostError: FfiConverterRustBuffer {
         case 15: return .MissingCommitment
         case 16: return .IncorrectCommitment
         case 17: return .IncorrectNumberOfCommitments
-        case 18: return .InvalidSignatureShare(
-            culprit: try FfiConverterTypeParticipantIdentifier.read(from: &buf)
+        case 18: return try .InvalidSignatureShare(
+                culprit: FfiConverterTypeParticipantIdentifier.read(from: &buf)
             )
         case 19: return .InvalidSecretShare
         case 20: return .PackageNotFound
         case 21: return .IncorrectNumberOfPackages
         case 22: return .IncorrectPackage
         case 23: return .DkgNotSupported
-        case 24: return .InvalidProofOfKnowledge(
-            culprit: try FfiConverterTypeParticipantIdentifier.read(from: &buf)
+        case 24: return try .InvalidProofOfKnowledge(
+                culprit: FfiConverterTypeParticipantIdentifier.read(from: &buf)
             )
-        case 25: return .FieldError(
-            message: try FfiConverterString.read(from: &buf)
+        case 25: return try .FieldError(
+                message: FfiConverterString.read(from: &buf)
             )
-        case 26: return .GroupError(
-            message: try FfiConverterString.read(from: &buf)
+        case 26: return try .GroupError(
+                message: FfiConverterString.read(from: &buf)
             )
         case 27: return .InvalidCoefficient
         case 28: return .IdentifierDerivationNotSupported
@@ -1889,190 +1723,141 @@ public struct FfiConverterTypeFrostError: FfiConverterRustBuffer {
         case 37: return .InvalidSecretKey
         case 38: return .InvalidConfiguration
         case 39: return .UnexpectedError
-
-         default: throw UniffiInternalError.unexpectedEnumCase
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: FrostError, into buf: inout [UInt8]) {
         switch value {
-
-        
-
-        
-        
         case .InvalidMinSigners:
             writeInt(&buf, Int32(1))
-        
-        
+
         case .InvalidMaxSigners:
             writeInt(&buf, Int32(2))
-        
-        
+
         case .InvalidCoefficients:
             writeInt(&buf, Int32(3))
-        
-        
+
         case .MalformedIdentifier:
             writeInt(&buf, Int32(4))
-        
-        
+
         case .DuplicatedIdentifier:
             writeInt(&buf, Int32(5))
-        
-        
+
         case .UnknownIdentifier:
             writeInt(&buf, Int32(6))
-        
-        
+
         case .IncorrectNumberOfIdentifiers:
             writeInt(&buf, Int32(7))
-        
-        
+
         case .MalformedSigningKey:
             writeInt(&buf, Int32(8))
-        
-        
+
         case .MalformedVerifyingKey:
             writeInt(&buf, Int32(9))
-        
-        
+
         case .MalformedSignature:
             writeInt(&buf, Int32(10))
-        
-        
+
         case .InvalidSignature:
             writeInt(&buf, Int32(11))
-        
-        
+
         case .DuplicatedShares:
             writeInt(&buf, Int32(12))
-        
-        
+
         case .IncorrectNumberOfShares:
             writeInt(&buf, Int32(13))
-        
-        
+
         case .IdentityCommitment:
             writeInt(&buf, Int32(14))
-        
-        
+
         case .MissingCommitment:
             writeInt(&buf, Int32(15))
-        
-        
+
         case .IncorrectCommitment:
             writeInt(&buf, Int32(16))
-        
-        
+
         case .IncorrectNumberOfCommitments:
             writeInt(&buf, Int32(17))
-        
-        
+
         case let .InvalidSignatureShare(culprit):
             writeInt(&buf, Int32(18))
             FfiConverterTypeParticipantIdentifier.write(culprit, into: &buf)
-            
-        
+
         case .InvalidSecretShare:
             writeInt(&buf, Int32(19))
-        
-        
+
         case .PackageNotFound:
             writeInt(&buf, Int32(20))
-        
-        
+
         case .IncorrectNumberOfPackages:
             writeInt(&buf, Int32(21))
-        
-        
+
         case .IncorrectPackage:
             writeInt(&buf, Int32(22))
-        
-        
+
         case .DkgNotSupported:
             writeInt(&buf, Int32(23))
-        
-        
+
         case let .InvalidProofOfKnowledge(culprit):
             writeInt(&buf, Int32(24))
             FfiConverterTypeParticipantIdentifier.write(culprit, into: &buf)
-            
-        
+
         case let .FieldError(message):
             writeInt(&buf, Int32(25))
             FfiConverterString.write(message, into: &buf)
-            
-        
+
         case let .GroupError(message):
             writeInt(&buf, Int32(26))
             FfiConverterString.write(message, into: &buf)
-            
-        
+
         case .InvalidCoefficient:
             writeInt(&buf, Int32(27))
-        
-        
+
         case .IdentifierDerivationNotSupported:
             writeInt(&buf, Int32(28))
-        
-        
+
         case .SerializationError:
             writeInt(&buf, Int32(29))
-        
-        
+
         case .DeserializationError:
             writeInt(&buf, Int32(30))
-        
-        
+
         case .DkgPart2IncorrectNumberOfCommitments:
             writeInt(&buf, Int32(31))
-        
-        
+
         case .DkgPart2IncorrectNumberOfPackages:
             writeInt(&buf, Int32(32))
-        
-        
+
         case .DkgPart3IncorrectRound1Packages:
             writeInt(&buf, Int32(33))
-        
-        
+
         case .DkgPart3IncorrectNumberOfPackages:
             writeInt(&buf, Int32(34))
-        
-        
+
         case .DkgPart3PackageSendersMismatch:
             writeInt(&buf, Int32(35))
-        
-        
+
         case .InvalidKeyPackage:
             writeInt(&buf, Int32(36))
-        
-        
+
         case .InvalidSecretKey:
             writeInt(&buf, Int32(37))
-        
-        
+
         case .InvalidConfiguration:
             writeInt(&buf, Int32(38))
-        
-        
+
         case .UnexpectedError:
             writeInt(&buf, Int32(39))
-        
         }
     }
 }
 
-
 extension FrostError: Equatable, Hashable {}
 
-extension FrostError: Error { }
+extension FrostError: Error {}
 
 public enum FrostSignatureVerificationError {
-
-    
-    
     case InvalidPublicKeyPackage
     case ValidationFailed(reason: String)
 
@@ -2081,54 +1866,39 @@ public enum FrostSignatureVerificationError {
     }
 }
 
-
 public struct FfiConverterTypeFrostSignatureVerificationError: FfiConverterRustBuffer {
     typealias SwiftType = FrostSignatureVerificationError
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FrostSignatureVerificationError {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
-        
-
-        
         case 1: return .InvalidPublicKeyPackage
-        case 2: return .ValidationFailed(
-            reason: try FfiConverterString.read(from: &buf)
+
+        case 2: return try .ValidationFailed(
+                reason: FfiConverterString.read(from: &buf)
             )
 
-         default: throw UniffiInternalError.unexpectedEnumCase
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: FrostSignatureVerificationError, into buf: inout [UInt8]) {
         switch value {
-
-        
-
-        
-        
         case .InvalidPublicKeyPackage:
             writeInt(&buf, Int32(1))
-        
-        
+
         case let .ValidationFailed(reason):
             writeInt(&buf, Int32(2))
             FfiConverterString.write(reason, into: &buf)
-            
         }
     }
 }
 
-
 extension FrostSignatureVerificationError: Equatable, Hashable {}
 
-extension FrostSignatureVerificationError: Error { }
+extension FrostSignatureVerificationError: Error {}
 
 public enum Round1Error {
-
-    
-    
     case InvalidKeyPackage
     case NonceSerializationError
     case CommitmentSerializationError
@@ -2138,56 +1908,38 @@ public enum Round1Error {
     }
 }
 
-
 public struct FfiConverterTypeRound1Error: FfiConverterRustBuffer {
     typealias SwiftType = Round1Error
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Round1Error {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
-        
-
-        
         case 1: return .InvalidKeyPackage
         case 2: return .NonceSerializationError
         case 3: return .CommitmentSerializationError
-
-         default: throw UniffiInternalError.unexpectedEnumCase
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: Round1Error, into buf: inout [UInt8]) {
         switch value {
-
-        
-
-        
-        
         case .InvalidKeyPackage:
             writeInt(&buf, Int32(1))
-        
-        
+
         case .NonceSerializationError:
             writeInt(&buf, Int32(2))
-        
-        
+
         case .CommitmentSerializationError:
             writeInt(&buf, Int32(3))
-        
         }
     }
 }
 
-
 extension Round1Error: Equatable, Hashable {}
 
-extension Round1Error: Error { }
+extension Round1Error: Error {}
 
 public enum Round2Error {
-
-    
-    
     case InvalidKeyPackage
     case NonceSerializationError
     case CommitmentSerializationError
@@ -2200,71 +1952,74 @@ public enum Round2Error {
     }
 }
 
-
 public struct FfiConverterTypeRound2Error: FfiConverterRustBuffer {
     typealias SwiftType = Round2Error
 
     public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Round2Error {
         let variant: Int32 = try readInt(&buf)
         switch variant {
-
-        
-
-        
         case 1: return .InvalidKeyPackage
         case 2: return .NonceSerializationError
         case 3: return .CommitmentSerializationError
         case 4: return .SigningPackageDeserializationError
-        case 5: return .SigningFailed(
-            message: try FfiConverterString.read(from: &buf)
+        case 5: return try .SigningFailed(
+                message: FfiConverterString.read(from: &buf)
             )
         case 6: return .InvalidRandomizer
-
-         default: throw UniffiInternalError.unexpectedEnumCase
+        default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
     public static func write(_ value: Round2Error, into buf: inout [UInt8]) {
         switch value {
-
-        
-
-        
-        
         case .InvalidKeyPackage:
             writeInt(&buf, Int32(1))
-        
-        
+
         case .NonceSerializationError:
             writeInt(&buf, Int32(2))
-        
-        
+
         case .CommitmentSerializationError:
             writeInt(&buf, Int32(3))
-        
-        
+
         case .SigningPackageDeserializationError:
             writeInt(&buf, Int32(4))
-        
-        
+
         case let .SigningFailed(message):
             writeInt(&buf, Int32(5))
             FfiConverterString.write(message, into: &buf)
-            
-        
+
         case .InvalidRandomizer:
             writeInt(&buf, Int32(6))
-        
         }
     }
 }
 
-
 extension Round2Error: Equatable, Hashable {}
 
-extension Round2Error: Error { }
+extension Round2Error: Error {}
 
-fileprivate struct FfiConverterSequenceTypeFrostSignatureShare: FfiConverterRustBuffer {
+private struct FfiConverterOptionTypeParticipantIdentifier: FfiConverterRustBuffer {
+    typealias SwiftType = ParticipantIdentifier?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterTypeParticipantIdentifier.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterTypeParticipantIdentifier.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+private struct FfiConverterSequenceTypeFrostSignatureShare: FfiConverterRustBuffer {
     typealias SwiftType = [FrostSignatureShare]
 
     public static func write(_ value: [FrostSignatureShare], into buf: inout [UInt8]) {
@@ -2280,13 +2035,13 @@ fileprivate struct FfiConverterSequenceTypeFrostSignatureShare: FfiConverterRust
         var seq = [FrostSignatureShare]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeFrostSignatureShare.read(from: &buf))
+            try seq.append(FfiConverterTypeFrostSignatureShare.read(from: &buf))
         }
         return seq
     }
 }
 
-fileprivate struct FfiConverterSequenceTypeFrostSigningCommitments: FfiConverterRustBuffer {
+private struct FfiConverterSequenceTypeFrostSigningCommitments: FfiConverterRustBuffer {
     typealias SwiftType = [FrostSigningCommitments]
 
     public static func write(_ value: [FrostSigningCommitments], into buf: inout [UInt8]) {
@@ -2302,13 +2057,13 @@ fileprivate struct FfiConverterSequenceTypeFrostSigningCommitments: FfiConverter
         var seq = [FrostSigningCommitments]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeFrostSigningCommitments.read(from: &buf))
+            try seq.append(FfiConverterTypeFrostSigningCommitments.read(from: &buf))
         }
         return seq
     }
 }
 
-fileprivate struct FfiConverterSequenceTypeParticipantIdentifier: FfiConverterRustBuffer {
+private struct FfiConverterSequenceTypeParticipantIdentifier: FfiConverterRustBuffer {
     typealias SwiftType = [ParticipantIdentifier]
 
     public static func write(_ value: [ParticipantIdentifier], into buf: inout [UInt8]) {
@@ -2324,13 +2079,13 @@ fileprivate struct FfiConverterSequenceTypeParticipantIdentifier: FfiConverterRu
         var seq = [ParticipantIdentifier]()
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
-            seq.append(try FfiConverterTypeParticipantIdentifier.read(from: &buf))
+            try seq.append(FfiConverterTypeParticipantIdentifier.read(from: &buf))
         }
         return seq
     }
 }
 
-fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierString: FfiConverterRustBuffer {
+private struct FfiConverterDictionaryTypeParticipantIdentifierString: FfiConverterRustBuffer {
     public static func write(_ value: [ParticipantIdentifier: String], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
@@ -2344,7 +2099,7 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierString: FfiCon
         let len: Int32 = try readInt(&buf)
         var dict = [ParticipantIdentifier: String]()
         dict.reserveCapacity(Int(len))
-        for _ in 0..<len {
+        for _ in 0 ..< len {
             let key = try FfiConverterTypeParticipantIdentifier.read(from: &buf)
             let value = try FfiConverterString.read(from: &buf)
             dict[key] = value
@@ -2353,7 +2108,7 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierString: FfiCon
     }
 }
 
-fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1Package: FfiConverterRustBuffer {
+private struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1Package: FfiConverterRustBuffer {
     public static func write(_ value: [ParticipantIdentifier: DkgRound1Package], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
@@ -2367,7 +2122,7 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1P
         let len: Int32 = try readInt(&buf)
         var dict = [ParticipantIdentifier: DkgRound1Package]()
         dict.reserveCapacity(Int(len))
-        for _ in 0..<len {
+        for _ in 0 ..< len {
             let key = try FfiConverterTypeParticipantIdentifier.read(from: &buf)
             let value = try FfiConverterTypeDKGRound1Package.read(from: &buf)
             dict[key] = value
@@ -2376,7 +2131,7 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1P
     }
 }
 
-fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound2Package: FfiConverterRustBuffer {
+private struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound2Package: FfiConverterRustBuffer {
     public static func write(_ value: [ParticipantIdentifier: DkgRound2Package], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
@@ -2390,7 +2145,7 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound2P
         let len: Int32 = try readInt(&buf)
         var dict = [ParticipantIdentifier: DkgRound2Package]()
         dict.reserveCapacity(Int(len))
-        for _ in 0..<len {
+        for _ in 0 ..< len {
             let key = try FfiConverterTypeParticipantIdentifier.read(from: &buf)
             let value = try FfiConverterTypeDKGRound2Package.read(from: &buf)
             dict[key] = value
@@ -2399,7 +2154,7 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound2P
     }
 }
 
-fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeFrostSecretKeyShare: FfiConverterRustBuffer {
+private struct FfiConverterDictionaryTypeParticipantIdentifierTypeFrostSecretKeyShare: FfiConverterRustBuffer {
     public static func write(_ value: [ParticipantIdentifier: FrostSecretKeyShare], into buf: inout [UInt8]) {
         let len = Int32(value.count)
         writeInt(&buf, len)
@@ -2413,7 +2168,7 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeFrostSecre
         let len: Int32 = try readInt(&buf)
         var dict = [ParticipantIdentifier: FrostSecretKeyShare]()
         dict.reserveCapacity(Int(len))
-        for _ in 0..<len {
+        for _ in 0 ..< len {
             let key = try FfiConverterTypeParticipantIdentifier.read(from: &buf)
             let value = try FfiConverterTypeFrostSecretKeyShare.read(from: &buf)
             dict[key] = value
@@ -2423,173 +2178,214 @@ fileprivate struct FfiConverterDictionaryTypeParticipantIdentifierTypeFrostSecre
 }
 
 public func aggregate(signingPackage: FrostSigningPackage, signatureShares: [FrostSignatureShare], pubkeyPackage: FrostPublicKeyPackage, randomizer: FrostRandomizer) throws -> FrostSignature {
-    return try  FfiConverterTypeFrostSignature.lift(
-        try rustCallWithError(FfiConverterTypeCoordinationError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_aggregate(
-        FfiConverterTypeFrostSigningPackage.lower(signingPackage),
-        FfiConverterSequenceTypeFrostSignatureShare.lower(signatureShares),
-        FfiConverterTypeFrostPublicKeyPackage.lower(pubkeyPackage),
-        FfiConverterTypeFrostRandomizer.lower(randomizer),$0)
-}
+    return try FfiConverterTypeFrostSignature.lift(
+        rustCallWithError(FfiConverterTypeCoordinationError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_aggregate(
+                FfiConverterTypeFrostSigningPackage.lower(signingPackage),
+                FfiConverterSequenceTypeFrostSignatureShare.lower(signatureShares),
+                FfiConverterTypeFrostPublicKeyPackage.lower(pubkeyPackage),
+                FfiConverterTypeFrostRandomizer.lower(randomizer), $0
+            )
+        }
     )
 }
 
 public func fromHexString(hexString: String) throws -> FrostRandomizer {
-    return try  FfiConverterTypeFrostRandomizer.lift(
-        try rustCallWithError(FfiConverterTypeFrostError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_from_hex_string(
-        FfiConverterString.lower(hexString),$0)
-}
+    return try FfiConverterTypeFrostRandomizer.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_from_hex_string(
+                FfiConverterString.lower(hexString), $0
+            )
+        }
     )
 }
 
-public func generateNoncesAndCommitments(secretShare: FrostSecretKeyShare) throws -> FirstRoundCommitment {
-    return try  FfiConverterTypeFirstRoundCommitment.lift(
-        try rustCallWithError(FfiConverterTypeRound1Error.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(
-        FfiConverterTypeFrostSecretKeyShare.lower(secretShare),$0)
+public func generateNoncesAndCommitments(keyPackage: FrostKeyPackage) throws -> FirstRoundCommitment {
+    return try FfiConverterTypeFirstRoundCommitment.lift(
+        rustCallWithError(FfiConverterTypeRound1Error.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(
+                FfiConverterTypeFrostKeyPackage.lower(keyPackage), $0
+            )
+        }
+    )
 }
+
+public func identifierFromJsonString(string: String) -> ParticipantIdentifier? {
+    return try! FfiConverterOptionTypeParticipantIdentifier.lift(
+        try! rustCall {
+            uniffi_frost_uniffi_sdk_fn_func_identifier_from_json_string(
+                FfiConverterString.lower(string), $0
+            )
+        }
+    )
+}
+
+public func identifierFromString(string: String) throws -> ParticipantIdentifier {
+    return try FfiConverterTypeParticipantIdentifier.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_identifier_from_string(
+                FfiConverterString.lower(string), $0
+            )
+        }
+    )
+}
+
+public func identifierFromUint16(unsignedUint: UInt16) throws -> ParticipantIdentifier {
+    return try FfiConverterTypeParticipantIdentifier.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_identifier_from_uint16(
+                FfiConverterUInt16.lower(unsignedUint), $0
+            )
+        }
     )
 }
 
 public func newSigningPackage(message: Message, commitments: [FrostSigningCommitments]) throws -> FrostSigningPackage {
-    return try  FfiConverterTypeFrostSigningPackage.lift(
-        try rustCallWithError(FfiConverterTypeCoordinationError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_new_signing_package(
-        FfiConverterTypeMessage.lower(message),
-        FfiConverterSequenceTypeFrostSigningCommitments.lower(commitments),$0)
-}
+    return try FfiConverterTypeFrostSigningPackage.lift(
+        rustCallWithError(FfiConverterTypeCoordinationError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_new_signing_package(
+                FfiConverterTypeMessage.lower(message),
+                FfiConverterSequenceTypeFrostSigningCommitments.lower(commitments), $0
+            )
+        }
     )
 }
 
 public func part1(participantIdentifier: ParticipantIdentifier, maxSigners: UInt16, minSigners: UInt16) throws -> DkgPart1Result {
-    return try  FfiConverterTypeDKGPart1Result.lift(
-        try rustCallWithError(FfiConverterTypeFrostError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_part_1(
-        FfiConverterTypeParticipantIdentifier.lower(participantIdentifier),
-        FfiConverterUInt16.lower(maxSigners),
-        FfiConverterUInt16.lower(minSigners),$0)
-}
+    return try FfiConverterTypeDKGPart1Result.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_part_1(
+                FfiConverterTypeParticipantIdentifier.lower(participantIdentifier),
+                FfiConverterUInt16.lower(maxSigners),
+                FfiConverterUInt16.lower(minSigners), $0
+            )
+        }
     )
 }
 
 public func part2(secretPackage: DkgRound1SecretPackage, round1Packages: [ParticipantIdentifier: DkgRound1Package]) throws -> DkgPart2Result {
-    return try  FfiConverterTypeDKGPart2Result.lift(
-        try rustCallWithError(FfiConverterTypeFrostError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_part_2(
-        FfiConverterTypeDKGRound1SecretPackage.lower(secretPackage),
-        FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1Package.lower(round1Packages),$0)
-}
+    return try FfiConverterTypeDKGPart2Result.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_part_2(
+                FfiConverterTypeDKGRound1SecretPackage.lower(secretPackage),
+                FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1Package.lower(round1Packages), $0
+            )
+        }
     )
 }
 
 public func part3(secretPackage: DkgRound2SecretPackage, round1Packages: [ParticipantIdentifier: DkgRound1Package], round2Packages: [ParticipantIdentifier: DkgRound2Package]) throws -> DkgPart3Result {
-    return try  FfiConverterTypeDKGPart3Result.lift(
-        try rustCallWithError(FfiConverterTypeFrostError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_part_3(
-        FfiConverterTypeDKGRound2SecretPackage.lower(secretPackage),
-        FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1Package.lower(round1Packages),
-        FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound2Package.lower(round2Packages),$0)
-}
+    return try FfiConverterTypeDKGPart3Result.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_part_3(
+                FfiConverterTypeDKGRound2SecretPackage.lower(secretPackage),
+                FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound1Package.lower(round1Packages),
+                FfiConverterDictionaryTypeParticipantIdentifierTypeDKGRound2Package.lower(round2Packages), $0
+            )
+        }
     )
 }
 
 public func randomizedParamsFromPublicKeyAndSigningPackage(publicKey: FrostPublicKeyPackage, signingPackage: FrostSigningPackage) throws -> FrostRandomizedParams {
-    return try  FfiConverterTypeFrostRandomizedParams.lift(
-        try rustCallWithError(FfiConverterTypeFrostError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(
-        FfiConverterTypeFrostPublicKeyPackage.lower(publicKey),
-        FfiConverterTypeFrostSigningPackage.lower(signingPackage),$0)
-}
+    return try FfiConverterTypeFrostRandomizedParams.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(
+                FfiConverterTypeFrostPublicKeyPackage.lower(publicKey),
+                FfiConverterTypeFrostSigningPackage.lower(signingPackage), $0
+            )
+        }
     )
 }
 
 public func randomizerFromParams(randomizedParams: FrostRandomizedParams) throws -> FrostRandomizer {
-    return try  FfiConverterTypeFrostRandomizer.lift(
-        try rustCallWithError(FfiConverterTypeFrostError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(
-        FfiConverterTypeFrostRandomizedParams.lower(randomizedParams),$0)
-}
+    return try FfiConverterTypeFrostRandomizer.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(
+                FfiConverterTypeFrostRandomizedParams.lower(randomizedParams), $0
+            )
+        }
     )
 }
 
 public func sign(signingPackage: FrostSigningPackage, nonces: FrostSigningNonces, keyPackage: FrostKeyPackage, randomizer: FrostRandomizer) throws -> FrostSignatureShare {
-    return try  FfiConverterTypeFrostSignatureShare.lift(
-        try rustCallWithError(FfiConverterTypeRound2Error.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_sign(
-        FfiConverterTypeFrostSigningPackage.lower(signingPackage),
-        FfiConverterTypeFrostSigningNonces.lower(nonces),
-        FfiConverterTypeFrostKeyPackage.lower(keyPackage),
-        FfiConverterTypeFrostRandomizer.lower(randomizer),$0)
-}
+    return try FfiConverterTypeFrostSignatureShare.lift(
+        rustCallWithError(FfiConverterTypeRound2Error.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_sign(
+                FfiConverterTypeFrostSigningPackage.lower(signingPackage),
+                FfiConverterTypeFrostSigningNonces.lower(nonces),
+                FfiConverterTypeFrostKeyPackage.lower(keyPackage),
+                FfiConverterTypeFrostRandomizer.lower(randomizer), $0
+            )
+        }
     )
 }
 
 public func trustedDealerKeygenFrom(configuration: Configuration) throws -> TrustedKeyGeneration {
-    return try  FfiConverterTypeTrustedKeyGeneration.lift(
-        try rustCallWithError(FfiConverterTypeFrostError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_from(
-        FfiConverterTypeConfiguration.lower(configuration),$0)
-}
+    return try FfiConverterTypeTrustedKeyGeneration.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_from(
+                FfiConverterTypeConfiguration.lower(configuration), $0
+            )
+        }
     )
 }
 
 public func trustedDealerKeygenWithIdentifiers(configuration: Configuration, participants: ParticipantList) throws -> TrustedKeyGeneration {
-    return try  FfiConverterTypeTrustedKeyGeneration.lift(
-        try rustCallWithError(FfiConverterTypeFrostError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_with_identifiers(
-        FfiConverterTypeConfiguration.lower(configuration),
-        FfiConverterTypeParticipantList.lower(participants),$0)
-}
+    return try FfiConverterTypeTrustedKeyGeneration.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_with_identifiers(
+                FfiConverterTypeConfiguration.lower(configuration),
+                FfiConverterTypeParticipantList.lower(participants), $0
+            )
+        }
     )
 }
 
 public func validateConfig(config: Configuration) throws {
     try rustCallWithError(FfiConverterTypeConfigurationError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_validate_config(
-        FfiConverterTypeConfiguration.lower(config),$0)
+        uniffi_frost_uniffi_sdk_fn_func_validate_config(
+            FfiConverterTypeConfiguration.lower(config), $0
+        )
+    }
 }
-}
-
-
 
 public func verifyAndGetKeyPackageFrom(secretShare: FrostSecretKeyShare) throws -> FrostKeyPackage {
-    return try  FfiConverterTypeFrostKeyPackage.lift(
-        try rustCallWithError(FfiConverterTypeFrostError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_verify_and_get_key_package_from(
-        FfiConverterTypeFrostSecretKeyShare.lower(secretShare),$0)
-}
+    return try FfiConverterTypeFrostKeyPackage.lift(
+        rustCallWithError(FfiConverterTypeFrostError.lift) {
+            uniffi_frost_uniffi_sdk_fn_func_verify_and_get_key_package_from(
+                FfiConverterTypeFrostSecretKeyShare.lower(secretShare), $0
+            )
+        }
     )
 }
 
 public func verifyRandomizedSignature(randomizer: FrostRandomizer, message: Message, signature: FrostSignature, pubkey: FrostPublicKeyPackage) throws {
     try rustCallWithError(FfiConverterTypeFrostSignatureVerificationError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(
-        FfiConverterTypeFrostRandomizer.lower(randomizer),
-        FfiConverterTypeMessage.lower(message),
-        FfiConverterTypeFrostSignature.lower(signature),
-        FfiConverterTypeFrostPublicKeyPackage.lower(pubkey),$0)
+        uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(
+            FfiConverterTypeFrostRandomizer.lower(randomizer),
+            FfiConverterTypeMessage.lower(message),
+            FfiConverterTypeFrostSignature.lower(signature),
+            FfiConverterTypeFrostPublicKeyPackage.lower(pubkey), $0
+        )
+    }
 }
-}
-
-
 
 public func verifySignature(message: Message, signature: FrostSignature, pubkey: FrostPublicKeyPackage) throws {
     try rustCallWithError(FfiConverterTypeFrostSignatureVerificationError.lift) {
-    uniffi_frost_uniffi_sdk_fn_func_verify_signature(
-        FfiConverterTypeMessage.lower(message),
-        FfiConverterTypeFrostSignature.lower(signature),
-        FfiConverterTypeFrostPublicKeyPackage.lower(pubkey),$0)
+        uniffi_frost_uniffi_sdk_fn_func_verify_signature(
+            FfiConverterTypeMessage.lower(message),
+            FfiConverterTypeFrostSignature.lower(signature),
+            FfiConverterTypeFrostPublicKeyPackage.lower(pubkey), $0
+        )
+    }
 }
-}
-
-
 
 private enum InitializationResult {
     case ok
     case contractVersionMismatch
     case apiChecksumMismatch
 }
+
 // Use a global variables to perform the versioning checks. Swift ensures that
 // the code inside is only computed once.
 private var initializationResult: InitializationResult {
@@ -2600,52 +2396,61 @@ private var initializationResult: InitializationResult {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_aggregate() != 3424) {
+    if uniffi_frost_uniffi_sdk_checksum_func_aggregate() != 3424 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_from_hex_string() != 29801) {
+    if uniffi_frost_uniffi_sdk_checksum_func_from_hex_string() != 29801 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments() != 47101) {
+    if uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments() != 1477 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_new_signing_package() != 50111) {
+    if uniffi_frost_uniffi_sdk_checksum_func_identifier_from_json_string() != 56485 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_part_1() != 7592) {
+    if uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string() != 3795 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_part_2() != 30136) {
+    if uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16() != 11722 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_part_3() != 31134) {
+    if uniffi_frost_uniffi_sdk_checksum_func_new_signing_package() != 50111 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package() != 58556) {
+    if uniffi_frost_uniffi_sdk_checksum_func_part_1() != 7592 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params() != 50217) {
+    if uniffi_frost_uniffi_sdk_checksum_func_part_2() != 30136 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_sign() != 723) {
+    if uniffi_frost_uniffi_sdk_checksum_func_part_3() != 31134 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from() != 43563) {
+    if uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package() != 58556 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers() != 49159) {
+    if uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params() != 50217 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_validate_config() != 26688) {
+    if uniffi_frost_uniffi_sdk_checksum_func_sign() != 723 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from() != 16387) {
+    if uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from() != 43563 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature() != 24114) {
+    if uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers() != 49159 {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_frost_uniffi_sdk_checksum_func_verify_signature() != 13620) {
+    if uniffi_frost_uniffi_sdk_checksum_func_validate_config() != 26688 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from() != 16387 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature() != 24114 {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if uniffi_frost_uniffi_sdk_checksum_func_verify_signature() != 13620 {
         return InitializationResult.apiChecksumMismatch
     }
 

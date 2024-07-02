@@ -1,13 +1,14 @@
+// swift-format-ignore-file
 //
-//  NotRedPallasTests.swift
+//  RedPallasTests.swift
 //
 //
 //  Created by Pacu on 23-05-2024.
 //
 
 import Foundation
-import XCTest
 @testable import FrostSwiftFFI
+import XCTest
 
 class RedPallasTests: XCTestCase {
     func testTrustedDealerRandomizedSignatureFromConfig() throws {
@@ -23,30 +24,28 @@ class RedPallasTests: XCTestCase {
         let shares = keygen.secretShares
 
         // get key packages for participants
-        let keyPackages = try shares.map { (identifier, value) in
+        let keyPackages = try shares.map { identifier, value in
             let keyPackage = try verifyAndGetKeyPackageFrom(secretShare: value)
 
             return (identifier, keyPackage)
         }
 
         XCTAssertEqual(shares.count, 3)
-        XCTAssertEqual(publicKey.verifyingShares.count,3)
+        XCTAssertEqual(publicKey.verifyingShares.count, 3)
 
         // Participant Round 1
-
         var nonces = [ParticipantIdentifier: FrostSigningNonces]()
         var commitments = [FrostSigningCommitments]()
 
         for (participant, secretShare) in shares {
-            let firstRoundCommitment = try generateNoncesAndCommitments(secretShare: secretShare)
+            let keyPackage = try verifyAndGetKeyPackageFrom(secretShare: secretShare)
+            let firstRoundCommitment = try generateNoncesAndCommitments(keyPackage: keyPackage)
 
             nonces[participant] = firstRoundCommitment.nonces
             commitments.append(firstRoundCommitment.commitments)
         }
 
-
         // coordinator gathers all signing commitments and creates signing package
-
         let signingPackage = try newSigningPackage(message: message, commitments: commitments)
 
         let randomizedParams = try randomizedParamsFromPublicKeyAndSigningPackage(publicKey: publicKey, signingPackage: signingPackage)
@@ -66,7 +65,6 @@ class RedPallasTests: XCTestCase {
         let signature = try aggregate(signingPackage: signingPackage, signatureShares: signatureShares, pubkeyPackage: publicKey, randomizer: randomizer)
 
         // a signature we can all agree on
-
         XCTAssertNoThrow(try verifyRandomizedSignature(randomizer: randomizer, message: message, signature: signature, pubkey: publicKey))
     }
 }
