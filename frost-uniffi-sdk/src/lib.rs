@@ -2,13 +2,13 @@
 type E = frost_ed25519::Ed25519Sha512;
 #[cfg(feature = "redpallas")]
 type E = reddsa::frost::redpallas::PallasBlake2b512;
-
 pub mod coordinator;
 pub mod dkg;
 pub mod error;
 pub mod participant;
 #[cfg(feature = "redpallas")]
 pub mod randomized;
+pub mod serialization;
 pub mod trusted_dealer;
 use crate::trusted_dealer::{trusted_dealer_keygen, trusted_dealer_keygen_from_configuration};
 
@@ -423,24 +423,18 @@ pub fn identifier_from_json_string(string: String) -> Option<ParticipantIdentifi
 
 #[uniffi::export]
 pub fn identifier_from_string(string: String) -> Result<ParticipantIdentifier, FrostError> {
-    let identifier = Identifier::<E>::derive(string.as_bytes())
-        .map_err(FrostError::map_err)?;
+    let identifier = Identifier::<E>::derive(string.as_bytes()).map_err(FrostError::map_err)?;
 
-    let participant = ParticipantIdentifier::from_identifier(identifier)
-        .map_err(FrostError::map_err)?;
-    Ok(
-        participant
-    )
+    let participant =
+        ParticipantIdentifier::from_identifier(identifier).map_err(FrostError::map_err)?;
+    Ok(participant)
 }
 
 #[uniffi::export]
 pub fn identifier_from_uint16(unsigned_uint: u16) -> Result<ParticipantIdentifier, FrostError> {
-    let identifier = Identifier::<E>::try_from(unsigned_uint)
-        .map_err(FrostError::map_err)?;
+    let identifier = Identifier::<E>::try_from(unsigned_uint).map_err(FrostError::map_err)?;
 
-    let participant = ParticipantIdentifier::from_identifier(identifier)
-        .map_err(FrostError::map_err)?;
-    Ok(
-        participant
-    )
+    let participant =
+        ParticipantIdentifier::from_identifier(identifier).map_err(FrostError::map_err)?;
+    Ok(participant)
 }

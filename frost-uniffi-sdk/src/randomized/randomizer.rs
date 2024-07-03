@@ -32,7 +32,7 @@ impl FrostRandomizedParams {
             &pallas_signing_package,
             rng,
         )
-            .map_err(FrostError::map_err)?;
+        .map_err(FrostError::map_err)?;
 
         let params = FrostRandomizedParams {
             params: randomized_params,
@@ -53,7 +53,9 @@ pub fn randomized_params_from_public_key_and_signing_package(
 }
 
 #[uniffi::export]
-pub fn randomizer_from_params(randomized_params: Arc<FrostRandomizedParams>) -> Result<FrostRandomizer, FrostError> {
+pub fn randomizer_from_params(
+    randomized_params: Arc<FrostRandomizedParams>,
+) -> Result<FrostRandomizer, FrostError> {
     let randomizer = FrostRandomizer::from_randomizer::<E>(*randomized_params.params.randomizer())
         .map_err(FrostError::map_err)?;
     Ok(randomizer)
