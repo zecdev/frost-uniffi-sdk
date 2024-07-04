@@ -25,7 +25,7 @@ pub struct FrostSigningNonces {
 }
 
 impl FrostSigningNonces {
-    pub(super) fn to_signing_nonces<C: Ciphersuite>(&self) -> Result<SigningNonces<C>, Error<C>> {
+    pub fn to_signing_nonces<C: Ciphersuite>(&self) -> Result<SigningNonces<C>, Error<C>> {
         SigningNonces::deserialize(&self.data)
     }
 
@@ -37,14 +37,14 @@ impl FrostSigningNonces {
     }
 }
 
-#[derive(uniffi::Record)]
+#[derive(uniffi::Record, Clone)]
 pub struct FrostSigningCommitments {
     pub identifier: ParticipantIdentifier,
     pub data: Vec<u8>,
 }
 
 impl FrostSigningCommitments {
-    pub(crate) fn to_commitments<C: Ciphersuite>(&self) -> Result<SigningCommitments<C>, Error<C>> {
+    pub fn to_commitments<C: Ciphersuite>(&self) -> Result<SigningCommitments<C>, Error<C>> {
         SigningCommitments::deserialize(&self.data)
     }
 
@@ -98,7 +98,8 @@ pub fn generate_nonces_and_commitments(
 ) -> Result<FirstRoundCommitment, Round1Error> {
     let mut rng = thread_rng();
 
-    let key_package = key_package.into_key_package::<E>()
+    let key_package = key_package
+        .into_key_package::<E>()
         .map_err(|_| Round1Error::InvalidKeyPackage)?;
 
     let signing_share = key_package.signing_share();
