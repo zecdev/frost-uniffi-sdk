@@ -16,7 +16,9 @@ let package = Package(
             targets: ["FrostSwiftFFI"]
         )
     ],
-    dependencies: [ ],
+    dependencies: [
+        .package(url: "https://github.com/krzyzanowskim/CryptoSwift", from: "1.8.3")
+    ],
     targets: [
         .target(
             name: "FrostSwift",
@@ -33,13 +35,24 @@ let package = Package(
         ),
         .testTarget(
             name: "NotRedPallasTests",
-            dependencies: ["FrostSwiftFFI"],
+            dependencies: [
+                "FrostSwiftFFI",
+            ],
             path: "FrostSwift/Tests/FrostSwiftFFI"
         ),
         .testTarget(
             name: "FrostTests",
             dependencies: ["FrostSwift"],
             path: "FrostSwift/Tests/FrostSwift"
+        ),
+        .testTarget(
+            name: "OrchardSwiftFFITests",
+            dependencies: [
+                "FrostSwift",
+                "FrostSwiftFFI",
+                "CryptoSwift"
+            ],
+            path: "FrostSwift/Tests/OrchardSwiftFFI"
         )
     ]
 )

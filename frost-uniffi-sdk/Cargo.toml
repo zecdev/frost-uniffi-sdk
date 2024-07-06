@@ -19,8 +19,21 @@ serde_json = { workspace = true }
 rand = { workspace = true }
 hex = { workspace = true }
 
+# Zcash dependencies
+orchard = { git = "https://github.com/pacu/orchard", rev = "d0d6d2c1ab141d503725d0691e9f4318797558f6", features = ["unstable-frost"] }
+zcash_primitives = { git = "https://github.com/pacu/librustzcash", rev = "be8444bde5494bfd3d3ab03953f5ef31ba976c4e" }
+zcash_protocol = { git = "https://github.com/pacu/librustzcash", rev = "be8444bde5494bfd3d3ab03953f5ef31ba976c4e" }
+zcash_keys = { git = "https://github.com/pacu/librustzcash", rev = "be8444bde5494bfd3d3ab03953f5ef31ba976c4e", features = ["orchard", "unstable-frost"] }
+zip32 = "0.1"
+zcash_address = { git = "https://github.com/pacu/librustzcash", rev = "be8444bde5494bfd3d3ab03953f5ef31ba976c4e" }
+
+# Other dependencies
+bip0039 = "0.11"
+
+
 [features]
 redpallas = []
+regtest = []
 default = ["redpallas"]
 
 [build-dependencies]

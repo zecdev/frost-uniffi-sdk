@@ -348,9 +348,27 @@ func uniffiCheckChecksums() {
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_frost_uniffi_sdk_checksum_func_aggregate(uniffiStatus)
 		})
-		if checksum != 46119 {
+		if checksum != 3424 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_aggregate: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_commitment_to_json(uniffiStatus)
+		})
+		if checksum != 12818 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_commitment_to_json: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_from_hex_string(uniffiStatus)
+		})
+		if checksum != 29801 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_from_hex_string: UniFFI API checksum mismatch")
 		}
 	}
 	{
@@ -391,6 +409,60 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_commitment(uniffiStatus)
+		})
+		if checksum != 62453 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_commitment: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_key_package(uniffiStatus)
+		})
+		if checksum != 58769 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_key_package: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_public_key_package(uniffiStatus)
+		})
+		if checksum != 8036 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_public_key_package: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_randomizer(uniffiStatus)
+		})
+		if checksum != 47111 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_randomizer: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_signature_share(uniffiStatus)
+		})
+		if checksum != 62549 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_signature_share: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_key_package_to_json(uniffiStatus)
+		})
+		if checksum != 11157 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_key_package_to_json: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_frost_uniffi_sdk_checksum_func_new_signing_package(uniffiStatus)
 		})
 		if checksum != 50111 {
@@ -427,11 +499,56 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_public_key_package_to_json(uniffiStatus)
+		})
+		if checksum != 20437 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_public_key_package_to_json: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package(uniffiStatus)
+		})
+		if checksum != 58556 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params(uniffiStatus)
+		})
+		if checksum != 50217 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_randomizer_to_json(uniffiStatus)
+		})
+		if checksum != 23719 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_randomizer_to_json: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_frost_uniffi_sdk_checksum_func_sign(uniffiStatus)
 		})
-		if checksum != 48101 {
+		if checksum != 723 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_sign: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_signature_share_package_to_json(uniffiStatus)
+		})
+		if checksum != 2249 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_signature_share_package_to_json: UniFFI API checksum mismatch")
 		}
 	}
 	{
@@ -472,11 +589,173 @@ func uniffiCheckChecksums() {
 	}
 	{
 		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature(uniffiStatus)
+		})
+		if checksum != 24114 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
 			return C.uniffi_frost_uniffi_sdk_checksum_func_verify_signature(uniffiStatus)
 		})
 		if checksum != 13620 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_verify_signature: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardaddress_string_encoded(uniffiStatus)
+		})
+		if checksum != 38758 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardaddress_string_encoded: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardcommitivkrandomness_to_bytes(uniffiStatus)
+		})
+		if checksum != 54004 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardcommitivkrandomness_to_bytes: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_ak(uniffiStatus)
+		})
+		if checksum != 1900 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_ak: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_derive_address(uniffiStatus)
+		})
+		if checksum != 26015 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_derive_address: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_encode(uniffiStatus)
+		})
+		if checksum != 34271 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_encode: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_nk(uniffiStatus)
+		})
+		if checksum != 33472 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_nk: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_rivk(uniffiStatus)
+		})
+		if checksum != 25054 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_rivk: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardnullifierderivingkey_to_bytes(uniffiStatus)
+		})
+		if checksum != 8783 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardnullifierderivingkey_to_bytes: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardspendvalidatingkey_to_bytes(uniffiStatus)
+		})
+		if checksum != 10051 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardspendvalidatingkey_to_bytes: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardaddress_new_from_string(uniffiStatus)
+		})
+		if checksum != 64287 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardaddress_new_from_string: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardcommitivkrandomness_new(uniffiStatus)
+		})
+		if checksum != 55160 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardcommitivkrandomness_new: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_decode(uniffiStatus)
+		})
+		if checksum != 6758 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_decode: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_checked_parts(uniffiStatus)
+		})
+		if checksum != 19481 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_checked_parts: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(uniffiStatus)
+		})
+		if checksum != 62836 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_validating_key_and_seed: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardkeyparts_random(uniffiStatus)
+		})
+		if checksum != 3046 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardkeyparts_random: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardnullifierderivingkey_new(uniffiStatus)
+		})
+		if checksum != 15347 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardnullifierderivingkey_new: UniFFI API checksum mismatch")
+		}
+	}
+	{
+		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardspendvalidatingkey_from_bytes(uniffiStatus)
+		})
+		if checksum != 63121 {
+			// If this happens try cleaning and rebuilding your project
+			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardspendvalidatingkey_from_bytes: UniFFI API checksum mismatch")
 		}
 	}
 }
@@ -846,6 +1125,531 @@ func (_ FfiDestroyerDkgRound2SecretPackage) Destroy(value *DkgRound2SecretPackag
 	value.Destroy()
 }
 
+type FrostRandomizedParams struct {
+	ffiObject FfiObject
+}
+
+func (object *FrostRandomizedParams) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterFrostRandomizedParams struct{}
+
+var FfiConverterFrostRandomizedParamsINSTANCE = FfiConverterFrostRandomizedParams{}
+
+func (c FfiConverterFrostRandomizedParams) Lift(pointer unsafe.Pointer) *FrostRandomizedParams {
+	result := &FrostRandomizedParams{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_frostrandomizedparams(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*FrostRandomizedParams).Destroy)
+	return result
+}
+
+func (c FfiConverterFrostRandomizedParams) Read(reader io.Reader) *FrostRandomizedParams {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterFrostRandomizedParams) Lower(value *FrostRandomizedParams) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*FrostRandomizedParams")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterFrostRandomizedParams) Write(writer io.Writer, value *FrostRandomizedParams) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerFrostRandomizedParams struct{}
+
+func (_ FfiDestroyerFrostRandomizedParams) Destroy(value *FrostRandomizedParams) {
+	value.Destroy()
+}
+
+type OrchardAddress struct {
+	ffiObject FfiObject
+}
+
+func OrchardAddressNewFromString(string string) (*OrchardAddress, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardaddress_new_from_string(FfiConverterStringINSTANCE.Lower(string), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *OrchardAddress
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterOrchardAddressINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func (_self *OrchardAddress) StringEncoded() string {
+	_pointer := _self.ffiObject.incrementPointer("*OrchardAddress")
+	defer _self.ffiObject.decrementPointer()
+	return FfiConverterStringINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_method_orchardaddress_string_encoded(
+			_pointer, _uniffiStatus)
+	}))
+}
+
+func (object *OrchardAddress) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterOrchardAddress struct{}
+
+var FfiConverterOrchardAddressINSTANCE = FfiConverterOrchardAddress{}
+
+func (c FfiConverterOrchardAddress) Lift(pointer unsafe.Pointer) *OrchardAddress {
+	result := &OrchardAddress{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_orchardaddress(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*OrchardAddress).Destroy)
+	return result
+}
+
+func (c FfiConverterOrchardAddress) Read(reader io.Reader) *OrchardAddress {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterOrchardAddress) Lower(value *OrchardAddress) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*OrchardAddress")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterOrchardAddress) Write(writer io.Writer, value *OrchardAddress) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerOrchardAddress struct{}
+
+func (_ FfiDestroyerOrchardAddress) Destroy(value *OrchardAddress) {
+	value.Destroy()
+}
+
+type OrchardCommitIvkRandomness struct {
+	ffiObject FfiObject
+}
+
+func NewOrchardCommitIvkRandomness(bytes []byte) (*OrchardCommitIvkRandomness, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardcommitivkrandomness_new(FfiConverterBytesINSTANCE.Lower(bytes), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *OrchardCommitIvkRandomness
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterOrchardCommitIvkRandomnessINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func (_self *OrchardCommitIvkRandomness) ToBytes() []byte {
+	_pointer := _self.ffiObject.incrementPointer("*OrchardCommitIvkRandomness")
+	defer _self.ffiObject.decrementPointer()
+	return FfiConverterBytesINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_method_orchardcommitivkrandomness_to_bytes(
+			_pointer, _uniffiStatus)
+	}))
+}
+
+func (object *OrchardCommitIvkRandomness) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterOrchardCommitIvkRandomness struct{}
+
+var FfiConverterOrchardCommitIvkRandomnessINSTANCE = FfiConverterOrchardCommitIvkRandomness{}
+
+func (c FfiConverterOrchardCommitIvkRandomness) Lift(pointer unsafe.Pointer) *OrchardCommitIvkRandomness {
+	result := &OrchardCommitIvkRandomness{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_orchardcommitivkrandomness(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*OrchardCommitIvkRandomness).Destroy)
+	return result
+}
+
+func (c FfiConverterOrchardCommitIvkRandomness) Read(reader io.Reader) *OrchardCommitIvkRandomness {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterOrchardCommitIvkRandomness) Lower(value *OrchardCommitIvkRandomness) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*OrchardCommitIvkRandomness")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterOrchardCommitIvkRandomness) Write(writer io.Writer, value *OrchardCommitIvkRandomness) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerOrchardCommitIvkRandomness struct{}
+
+func (_ FfiDestroyerOrchardCommitIvkRandomness) Destroy(value *OrchardCommitIvkRandomness) {
+	value.Destroy()
+}
+
+type OrchardFullViewingKey struct {
+	ffiObject FfiObject
+}
+
+func OrchardFullViewingKeyDecode(stringEnconded string, network ZcashNetwork) (*OrchardFullViewingKey, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_decode(FfiConverterStringINSTANCE.Lower(stringEnconded), FfiConverterTypeZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *OrchardFullViewingKey
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterOrchardFullViewingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func OrchardFullViewingKeyNewFromCheckedParts(ak *OrchardSpendValidatingKey, nk *OrchardNullifierDerivingKey, rivk *OrchardCommitIvkRandomness, network ZcashNetwork) (*OrchardFullViewingKey, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_checked_parts(FfiConverterOrchardSpendValidatingKeyINSTANCE.Lower(ak), FfiConverterOrchardNullifierDerivingKeyINSTANCE.Lower(nk), FfiConverterOrchardCommitIvkRandomnessINSTANCE.Lower(rivk), FfiConverterTypeZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *OrchardFullViewingKey
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterOrchardFullViewingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func OrchardFullViewingKeyNewFromValidatingKeyAndSeed(validatingKey *OrchardSpendValidatingKey, zip32Seed []byte, network ZcashNetwork) (*OrchardFullViewingKey, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(FfiConverterOrchardSpendValidatingKeyINSTANCE.Lower(validatingKey), FfiConverterBytesINSTANCE.Lower(zip32Seed), FfiConverterTypeZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *OrchardFullViewingKey
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterOrchardFullViewingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func (_self *OrchardFullViewingKey) Ak() *OrchardSpendValidatingKey {
+	_pointer := _self.ffiObject.incrementPointer("*OrchardFullViewingKey")
+	defer _self.ffiObject.decrementPointer()
+	return FfiConverterOrchardSpendValidatingKeyINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_ak(
+			_pointer, _uniffiStatus)
+	}))
+}
+
+func (_self *OrchardFullViewingKey) DeriveAddress() (*OrchardAddress, error) {
+	_pointer := _self.ffiObject.incrementPointer("*OrchardFullViewingKey")
+	defer _self.ffiObject.decrementPointer()
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_derive_address(
+			_pointer, _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *OrchardAddress
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterOrchardAddressINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func (_self *OrchardFullViewingKey) Encode() (string, error) {
+	_pointer := _self.ffiObject.incrementPointer("*OrchardFullViewingKey")
+	defer _self.ffiObject.decrementPointer()
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_encode(
+			_pointer, _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func (_self *OrchardFullViewingKey) Nk() *OrchardNullifierDerivingKey {
+	_pointer := _self.ffiObject.incrementPointer("*OrchardFullViewingKey")
+	defer _self.ffiObject.decrementPointer()
+	return FfiConverterOrchardNullifierDerivingKeyINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_nk(
+			_pointer, _uniffiStatus)
+	}))
+}
+
+func (_self *OrchardFullViewingKey) Rivk() *OrchardCommitIvkRandomness {
+	_pointer := _self.ffiObject.incrementPointer("*OrchardFullViewingKey")
+	defer _self.ffiObject.decrementPointer()
+	return FfiConverterOrchardCommitIvkRandomnessINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_rivk(
+			_pointer, _uniffiStatus)
+	}))
+}
+
+func (object *OrchardFullViewingKey) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterOrchardFullViewingKey struct{}
+
+var FfiConverterOrchardFullViewingKeyINSTANCE = FfiConverterOrchardFullViewingKey{}
+
+func (c FfiConverterOrchardFullViewingKey) Lift(pointer unsafe.Pointer) *OrchardFullViewingKey {
+	result := &OrchardFullViewingKey{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_orchardfullviewingkey(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*OrchardFullViewingKey).Destroy)
+	return result
+}
+
+func (c FfiConverterOrchardFullViewingKey) Read(reader io.Reader) *OrchardFullViewingKey {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterOrchardFullViewingKey) Lower(value *OrchardFullViewingKey) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*OrchardFullViewingKey")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterOrchardFullViewingKey) Write(writer io.Writer, value *OrchardFullViewingKey) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerOrchardFullViewingKey struct{}
+
+func (_ FfiDestroyerOrchardFullViewingKey) Destroy(value *OrchardFullViewingKey) {
+	value.Destroy()
+}
+
+type OrchardKeyParts struct {
+	ffiObject FfiObject
+}
+
+func OrchardKeyPartsRandom(network ZcashNetwork) (*OrchardKeyParts, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardkeyparts_random(FfiConverterTypeZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *OrchardKeyParts
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterOrchardKeyPartsINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func (object *OrchardKeyParts) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterOrchardKeyParts struct{}
+
+var FfiConverterOrchardKeyPartsINSTANCE = FfiConverterOrchardKeyParts{}
+
+func (c FfiConverterOrchardKeyParts) Lift(pointer unsafe.Pointer) *OrchardKeyParts {
+	result := &OrchardKeyParts{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_orchardkeyparts(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*OrchardKeyParts).Destroy)
+	return result
+}
+
+func (c FfiConverterOrchardKeyParts) Read(reader io.Reader) *OrchardKeyParts {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterOrchardKeyParts) Lower(value *OrchardKeyParts) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*OrchardKeyParts")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterOrchardKeyParts) Write(writer io.Writer, value *OrchardKeyParts) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerOrchardKeyParts struct{}
+
+func (_ FfiDestroyerOrchardKeyParts) Destroy(value *OrchardKeyParts) {
+	value.Destroy()
+}
+
+type OrchardNullifierDerivingKey struct {
+	ffiObject FfiObject
+}
+
+func NewOrchardNullifierDerivingKey(bytes []byte) (*OrchardNullifierDerivingKey, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardnullifierderivingkey_new(FfiConverterBytesINSTANCE.Lower(bytes), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *OrchardNullifierDerivingKey
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterOrchardNullifierDerivingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func (_self *OrchardNullifierDerivingKey) ToBytes() []byte {
+	_pointer := _self.ffiObject.incrementPointer("*OrchardNullifierDerivingKey")
+	defer _self.ffiObject.decrementPointer()
+	return FfiConverterBytesINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_method_orchardnullifierderivingkey_to_bytes(
+			_pointer, _uniffiStatus)
+	}))
+}
+
+func (object *OrchardNullifierDerivingKey) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterOrchardNullifierDerivingKey struct{}
+
+var FfiConverterOrchardNullifierDerivingKeyINSTANCE = FfiConverterOrchardNullifierDerivingKey{}
+
+func (c FfiConverterOrchardNullifierDerivingKey) Lift(pointer unsafe.Pointer) *OrchardNullifierDerivingKey {
+	result := &OrchardNullifierDerivingKey{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_orchardnullifierderivingkey(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*OrchardNullifierDerivingKey).Destroy)
+	return result
+}
+
+func (c FfiConverterOrchardNullifierDerivingKey) Read(reader io.Reader) *OrchardNullifierDerivingKey {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterOrchardNullifierDerivingKey) Lower(value *OrchardNullifierDerivingKey) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*OrchardNullifierDerivingKey")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterOrchardNullifierDerivingKey) Write(writer io.Writer, value *OrchardNullifierDerivingKey) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerOrchardNullifierDerivingKey struct{}
+
+func (_ FfiDestroyerOrchardNullifierDerivingKey) Destroy(value *OrchardNullifierDerivingKey) {
+	value.Destroy()
+}
+
+type OrchardSpendValidatingKey struct {
+	ffiObject FfiObject
+}
+
+func OrchardSpendValidatingKeyFromBytes(bytes []byte) (*OrchardSpendValidatingKey, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardspendvalidatingkey_from_bytes(FfiConverterBytesINSTANCE.Lower(bytes), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *OrchardSpendValidatingKey
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterOrchardSpendValidatingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func (_self *OrchardSpendValidatingKey) ToBytes() []byte {
+	_pointer := _self.ffiObject.incrementPointer("*OrchardSpendValidatingKey")
+	defer _self.ffiObject.decrementPointer()
+	return FfiConverterBytesINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_method_orchardspendvalidatingkey_to_bytes(
+			_pointer, _uniffiStatus)
+	}))
+}
+
+func (object *OrchardSpendValidatingKey) Destroy() {
+	runtime.SetFinalizer(object, nil)
+	object.ffiObject.destroy()
+}
+
+type FfiConverterOrchardSpendValidatingKey struct{}
+
+var FfiConverterOrchardSpendValidatingKeyINSTANCE = FfiConverterOrchardSpendValidatingKey{}
+
+func (c FfiConverterOrchardSpendValidatingKey) Lift(pointer unsafe.Pointer) *OrchardSpendValidatingKey {
+	result := &OrchardSpendValidatingKey{
+		newFfiObject(
+			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
+				C.uniffi_frost_uniffi_sdk_fn_free_orchardspendvalidatingkey(pointer, status)
+			}),
+	}
+	runtime.SetFinalizer(result, (*OrchardSpendValidatingKey).Destroy)
+	return result
+}
+
+func (c FfiConverterOrchardSpendValidatingKey) Read(reader io.Reader) *OrchardSpendValidatingKey {
+	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
+}
+
+func (c FfiConverterOrchardSpendValidatingKey) Lower(value *OrchardSpendValidatingKey) unsafe.Pointer {
+	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
+	// because the pointer will be decremented immediately after this function returns,
+	// and someone will be left holding onto a non-locked pointer.
+	pointer := value.ffiObject.incrementPointer("*OrchardSpendValidatingKey")
+	defer value.ffiObject.decrementPointer()
+	return pointer
+}
+
+func (c FfiConverterOrchardSpendValidatingKey) Write(writer io.Writer, value *OrchardSpendValidatingKey) {
+	writeUint64(writer, uint64(uintptr(c.Lower(value))))
+}
+
+type FfiDestroyerOrchardSpendValidatingKey struct{}
+
+func (_ FfiDestroyerOrchardSpendValidatingKey) Destroy(value *OrchardSpendValidatingKey) {
+	value.Destroy()
+}
+
 type Configuration struct {
 	MinSigners uint16
 	MaxSigners uint16
@@ -1127,6 +1931,42 @@ func (c FfiConverterTypeFrostPublicKeyPackage) Write(writer io.Writer, value Fro
 type FfiDestroyerTypeFrostPublicKeyPackage struct{}
 
 func (_ FfiDestroyerTypeFrostPublicKeyPackage) Destroy(value FrostPublicKeyPackage) {
+	value.Destroy()
+}
+
+type FrostRandomizer struct {
+	Data []byte
+}
+
+func (r *FrostRandomizer) Destroy() {
+	FfiDestroyerBytes{}.Destroy(r.Data)
+}
+
+type FfiConverterTypeFrostRandomizer struct{}
+
+var FfiConverterTypeFrostRandomizerINSTANCE = FfiConverterTypeFrostRandomizer{}
+
+func (c FfiConverterTypeFrostRandomizer) Lift(rb RustBufferI) FrostRandomizer {
+	return LiftFromRustBuffer[FrostRandomizer](c, rb)
+}
+
+func (c FfiConverterTypeFrostRandomizer) Read(reader io.Reader) FrostRandomizer {
+	return FrostRandomizer{
+		FfiConverterBytesINSTANCE.Read(reader),
+	}
+}
+
+func (c FfiConverterTypeFrostRandomizer) Lower(value FrostRandomizer) RustBuffer {
+	return LowerIntoRustBuffer[FrostRandomizer](c, value)
+}
+
+func (c FfiConverterTypeFrostRandomizer) Write(writer io.Writer, value FrostRandomizer) {
+	FfiConverterBytesINSTANCE.Write(writer, value.Data)
+}
+
+type FfiDestroyerTypeFrostRandomizer struct{}
+
+func (_ FfiDestroyerTypeFrostRandomizer) Destroy(value FrostRandomizer) {
 	value.Destroy()
 }
 
@@ -1658,6 +2498,7 @@ var ErrCoordinationErrorSigningPackageSerializationError = fmt.Errorf("Coordinat
 var ErrCoordinationErrorSignatureShareDeserializationError = fmt.Errorf("CoordinationErrorSignatureShareDeserializationError")
 var ErrCoordinationErrorPublicKeyPackageDeserializationError = fmt.Errorf("CoordinationErrorPublicKeyPackageDeserializationError")
 var ErrCoordinationErrorSignatureShareAggregationFailed = fmt.Errorf("CoordinationErrorSignatureShareAggregationFailed")
+var ErrCoordinationErrorInvalidRandomizer = fmt.Errorf("CoordinationErrorInvalidRandomizer")
 
 // Variant structs
 type CoordinationErrorFailedToCreateSigningPackage struct {
@@ -1789,6 +2630,23 @@ func (self CoordinationErrorSignatureShareAggregationFailed) Is(target error) bo
 	return target == ErrCoordinationErrorSignatureShareAggregationFailed
 }
 
+type CoordinationErrorInvalidRandomizer struct {
+}
+
+func NewCoordinationErrorInvalidRandomizer() *CoordinationError {
+	return &CoordinationError{
+		err: &CoordinationErrorInvalidRandomizer{},
+	}
+}
+
+func (err CoordinationErrorInvalidRandomizer) Error() string {
+	return fmt.Sprint("InvalidRandomizer")
+}
+
+func (self CoordinationErrorInvalidRandomizer) Is(target error) bool {
+	return target == ErrCoordinationErrorInvalidRandomizer
+}
+
 type FfiConverterTypeCoordinationError struct{}
 
 var FfiConverterTypeCoordinationErrorINSTANCE = FfiConverterTypeCoordinationError{}
@@ -1821,6 +2679,8 @@ func (c FfiConverterTypeCoordinationError) Read(reader io.Reader) error {
 		return &CoordinationError{&CoordinationErrorSignatureShareAggregationFailed{
 			Message: FfiConverterStringINSTANCE.Read(reader),
 		}}
+	case 8:
+		return &CoordinationError{&CoordinationErrorInvalidRandomizer{}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeCoordinationError.Read()", errorID))
 	}
@@ -1843,6 +2703,8 @@ func (c FfiConverterTypeCoordinationError) Write(writer io.Writer, value *Coordi
 	case *CoordinationErrorSignatureShareAggregationFailed:
 		writeInt32(writer, 7)
 		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
+	case *CoordinationErrorInvalidRandomizer:
+		writeInt32(writer, 8)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeCoordinationError.Write", value))
@@ -2904,6 +3766,164 @@ func (c FfiConverterTypeFrostSignatureVerificationError) Write(writer io.Writer,
 	}
 }
 
+type OrchardKeyError struct {
+	err error
+}
+
+func (err OrchardKeyError) Error() string {
+	return fmt.Sprintf("OrchardKeyError: %s", err.err.Error())
+}
+
+func (err OrchardKeyError) Unwrap() error {
+	return err.err
+}
+
+// Err* are used for checking error type with `errors.Is`
+var ErrOrchardKeyErrorKeyDerivationError = fmt.Errorf("OrchardKeyErrorKeyDerivationError")
+var ErrOrchardKeyErrorSerializationError = fmt.Errorf("OrchardKeyErrorSerializationError")
+var ErrOrchardKeyErrorDeserializationError = fmt.Errorf("OrchardKeyErrorDeserializationError")
+var ErrOrchardKeyErrorOtherError = fmt.Errorf("OrchardKeyErrorOtherError")
+
+// Variant structs
+type OrchardKeyErrorKeyDerivationError struct {
+	Message string
+}
+
+func NewOrchardKeyErrorKeyDerivationError(
+	message string,
+) *OrchardKeyError {
+	return &OrchardKeyError{
+		err: &OrchardKeyErrorKeyDerivationError{
+			Message: message,
+		},
+	}
+}
+
+func (err OrchardKeyErrorKeyDerivationError) Error() string {
+	return fmt.Sprint("KeyDerivationError",
+		": ",
+
+		"Message=",
+		err.Message,
+	)
+}
+
+func (self OrchardKeyErrorKeyDerivationError) Is(target error) bool {
+	return target == ErrOrchardKeyErrorKeyDerivationError
+}
+
+type OrchardKeyErrorSerializationError struct {
+}
+
+func NewOrchardKeyErrorSerializationError() *OrchardKeyError {
+	return &OrchardKeyError{
+		err: &OrchardKeyErrorSerializationError{},
+	}
+}
+
+func (err OrchardKeyErrorSerializationError) Error() string {
+	return fmt.Sprint("SerializationError")
+}
+
+func (self OrchardKeyErrorSerializationError) Is(target error) bool {
+	return target == ErrOrchardKeyErrorSerializationError
+}
+
+type OrchardKeyErrorDeserializationError struct {
+}
+
+func NewOrchardKeyErrorDeserializationError() *OrchardKeyError {
+	return &OrchardKeyError{
+		err: &OrchardKeyErrorDeserializationError{},
+	}
+}
+
+func (err OrchardKeyErrorDeserializationError) Error() string {
+	return fmt.Sprint("DeserializationError")
+}
+
+func (self OrchardKeyErrorDeserializationError) Is(target error) bool {
+	return target == ErrOrchardKeyErrorDeserializationError
+}
+
+type OrchardKeyErrorOtherError struct {
+	ErrorMessage string
+}
+
+func NewOrchardKeyErrorOtherError(
+	errorMessage string,
+) *OrchardKeyError {
+	return &OrchardKeyError{
+		err: &OrchardKeyErrorOtherError{
+			ErrorMessage: errorMessage,
+		},
+	}
+}
+
+func (err OrchardKeyErrorOtherError) Error() string {
+	return fmt.Sprint("OtherError",
+		": ",
+
+		"ErrorMessage=",
+		err.ErrorMessage,
+	)
+}
+
+func (self OrchardKeyErrorOtherError) Is(target error) bool {
+	return target == ErrOrchardKeyErrorOtherError
+}
+
+type FfiConverterTypeOrchardKeyError struct{}
+
+var FfiConverterTypeOrchardKeyErrorINSTANCE = FfiConverterTypeOrchardKeyError{}
+
+func (c FfiConverterTypeOrchardKeyError) Lift(eb RustBufferI) error {
+	return LiftFromRustBuffer[error](c, eb)
+}
+
+func (c FfiConverterTypeOrchardKeyError) Lower(value *OrchardKeyError) RustBuffer {
+	return LowerIntoRustBuffer[*OrchardKeyError](c, value)
+}
+
+func (c FfiConverterTypeOrchardKeyError) Read(reader io.Reader) error {
+	errorID := readUint32(reader)
+
+	switch errorID {
+	case 1:
+		return &OrchardKeyError{&OrchardKeyErrorKeyDerivationError{
+			Message: FfiConverterStringINSTANCE.Read(reader),
+		}}
+	case 2:
+		return &OrchardKeyError{&OrchardKeyErrorSerializationError{}}
+	case 3:
+		return &OrchardKeyError{&OrchardKeyErrorDeserializationError{}}
+	case 4:
+		return &OrchardKeyError{&OrchardKeyErrorOtherError{
+			ErrorMessage: FfiConverterStringINSTANCE.Read(reader),
+		}}
+	default:
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeOrchardKeyError.Read()", errorID))
+	}
+}
+
+func (c FfiConverterTypeOrchardKeyError) Write(writer io.Writer, value *OrchardKeyError) {
+	switch variantValue := value.err.(type) {
+	case *OrchardKeyErrorKeyDerivationError:
+		writeInt32(writer, 1)
+		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
+	case *OrchardKeyErrorSerializationError:
+		writeInt32(writer, 2)
+	case *OrchardKeyErrorDeserializationError:
+		writeInt32(writer, 3)
+	case *OrchardKeyErrorOtherError:
+		writeInt32(writer, 4)
+		FfiConverterStringINSTANCE.Write(writer, variantValue.ErrorMessage)
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeOrchardKeyError.Write", value))
+	}
+}
+
 type Round1Error struct {
 	err error
 }
@@ -3032,6 +4052,7 @@ var ErrRound2ErrorNonceSerializationError = fmt.Errorf("Round2ErrorNonceSerializ
 var ErrRound2ErrorCommitmentSerializationError = fmt.Errorf("Round2ErrorCommitmentSerializationError")
 var ErrRound2ErrorSigningPackageDeserializationError = fmt.Errorf("Round2ErrorSigningPackageDeserializationError")
 var ErrRound2ErrorSigningFailed = fmt.Errorf("Round2ErrorSigningFailed")
+var ErrRound2ErrorInvalidRandomizer = fmt.Errorf("Round2ErrorInvalidRandomizer")
 
 // Variant structs
 type Round2ErrorInvalidKeyPackage struct {
@@ -3129,6 +4150,23 @@ func (self Round2ErrorSigningFailed) Is(target error) bool {
 	return target == ErrRound2ErrorSigningFailed
 }
 
+type Round2ErrorInvalidRandomizer struct {
+}
+
+func NewRound2ErrorInvalidRandomizer() *Round2Error {
+	return &Round2Error{
+		err: &Round2ErrorInvalidRandomizer{},
+	}
+}
+
+func (err Round2ErrorInvalidRandomizer) Error() string {
+	return fmt.Sprint("InvalidRandomizer")
+}
+
+func (self Round2ErrorInvalidRandomizer) Is(target error) bool {
+	return target == ErrRound2ErrorInvalidRandomizer
+}
+
 type FfiConverterTypeRound2Error struct{}
 
 var FfiConverterTypeRound2ErrorINSTANCE = FfiConverterTypeRound2Error{}
@@ -3157,6 +4195,8 @@ func (c FfiConverterTypeRound2Error) Read(reader io.Reader) error {
 		return &Round2Error{&Round2ErrorSigningFailed{
 			Message: FfiConverterStringINSTANCE.Read(reader),
 		}}
+	case 6:
+		return &Round2Error{&Round2ErrorInvalidRandomizer{}}
 	default:
 		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeRound2Error.Read()", errorID))
 	}
@@ -3175,10 +4215,44 @@ func (c FfiConverterTypeRound2Error) Write(writer io.Writer, value *Round2Error)
 	case *Round2ErrorSigningFailed:
 		writeInt32(writer, 5)
 		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
+	case *Round2ErrorInvalidRandomizer:
+		writeInt32(writer, 6)
 	default:
 		_ = variantValue
 		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeRound2Error.Write", value))
 	}
+}
+
+type ZcashNetwork uint
+
+const (
+	ZcashNetworkMainnet ZcashNetwork = 1
+	ZcashNetworkTestnet ZcashNetwork = 2
+)
+
+type FfiConverterTypeZcashNetwork struct{}
+
+var FfiConverterTypeZcashNetworkINSTANCE = FfiConverterTypeZcashNetwork{}
+
+func (c FfiConverterTypeZcashNetwork) Lift(rb RustBufferI) ZcashNetwork {
+	return LiftFromRustBuffer[ZcashNetwork](c, rb)
+}
+
+func (c FfiConverterTypeZcashNetwork) Lower(value ZcashNetwork) RustBuffer {
+	return LowerIntoRustBuffer[ZcashNetwork](c, value)
+}
+func (FfiConverterTypeZcashNetwork) Read(reader io.Reader) ZcashNetwork {
+	id := readInt32(reader)
+	return ZcashNetwork(id)
+}
+
+func (FfiConverterTypeZcashNetwork) Write(writer io.Writer, value ZcashNetwork) {
+	writeInt32(writer, int32(value))
+}
+
+type FfiDestroyerTypeZcashNetwork struct{}
+
+func (_ FfiDestroyerTypeZcashNetwork) Destroy(value ZcashNetwork) {
 }
 
 type FfiConverterOptionalTypeParticipantIdentifier struct{}
@@ -3523,15 +4597,39 @@ func (_ FfiDestroyerMapTypeParticipantIdentifierTypeFrostSecretKeyShare) Destroy
 	}
 }
 
-func Aggregate(signingPackage FrostSigningPackage, signatureShares []FrostSignatureShare, pubkeyPackage FrostPublicKeyPackage) (FrostSignature, error) {
+func Aggregate(signingPackage FrostSigningPackage, signatureShares []FrostSignatureShare, pubkeyPackage FrostPublicKeyPackage, randomizer FrostRandomizer) (FrostSignature, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCoordinationError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_aggregate(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterSequenceTypeFrostSignatureShareINSTANCE.Lower(signatureShares), FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(pubkeyPackage), _uniffiStatus)
+		return C.uniffi_frost_uniffi_sdk_fn_func_aggregate(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterSequenceTypeFrostSignatureShareINSTANCE.Lower(signatureShares), FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(pubkeyPackage), FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostSignature
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterTypeFrostSignatureINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func CommitmentToJson(commitment FrostSigningCommitments) (string, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_commitment_to_json(FfiConverterTypeFrostSigningCommitmentsINSTANCE.Lower(commitment), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func FromHexString(hexString string) (FrostRandomizer, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_from_hex_string(FfiConverterStringINSTANCE.Lower(hexString), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue FrostRandomizer
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeFrostRandomizerINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 
@@ -3574,6 +4672,78 @@ func IdentifierFromUint16(unsignedUint uint16) (ParticipantIdentifier, error) {
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterTypeParticipantIdentifierINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func JsonToCommitment(commitmentJson string, identifier ParticipantIdentifier) (FrostSigningCommitments, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_commitment(FfiConverterStringINSTANCE.Lower(commitmentJson), FfiConverterTypeParticipantIdentifierINSTANCE.Lower(identifier), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue FrostSigningCommitments
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeFrostSigningCommitmentsINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func JsonToKeyPackage(keyPackageJson string) (FrostKeyPackage, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_key_package(FfiConverterStringINSTANCE.Lower(keyPackageJson), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue FrostKeyPackage
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeFrostKeyPackageINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func JsonToPublicKeyPackage(publicKeyPackageJson string) (FrostPublicKeyPackage, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_public_key_package(FfiConverterStringINSTANCE.Lower(publicKeyPackageJson), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue FrostPublicKeyPackage
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func JsonToRandomizer(randomizerJson string) (FrostRandomizer, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_randomizer(FfiConverterStringINSTANCE.Lower(randomizerJson), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue FrostRandomizer
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeFrostRandomizerINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func JsonToSignatureShare(signatureShareJson string, identifier ParticipantIdentifier) (FrostSignatureShare, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_signature_share(FfiConverterStringINSTANCE.Lower(signatureShareJson), FfiConverterTypeParticipantIdentifierINSTANCE.Lower(identifier), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue FrostSignatureShare
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeFrostSignatureShareINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func KeyPackageToJson(keyPackage FrostKeyPackage) (string, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_key_package_to_json(FfiConverterTypeFrostKeyPackageINSTANCE.Lower(keyPackage), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 
@@ -3625,15 +4795,75 @@ func Part3(secretPackage *DkgRound2SecretPackage, round1Packages map[Participant
 	}
 }
 
-func Sign(signingPackage FrostSigningPackage, nonces FrostSigningNonces, keyPackage FrostKeyPackage) (FrostSignatureShare, error) {
+func PublicKeyPackageToJson(publicKeyPackage FrostPublicKeyPackage) (string, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_public_key_package_to_json(FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(publicKeyPackage), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func RandomizedParamsFromPublicKeyAndSigningPackage(publicKey FrostPublicKeyPackage, signingPackage FrostSigningPackage) (*FrostRandomizedParams, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(publicKey), FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue *FrostRandomizedParams
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterFrostRandomizedParamsINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func RandomizerFromParams(randomizedParams *FrostRandomizedParams) (FrostRandomizer, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(FfiConverterFrostRandomizedParamsINSTANCE.Lower(randomizedParams), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue FrostRandomizer
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterTypeFrostRandomizerINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func RandomizerToJson(randomizer FrostRandomizer) (string, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_randomizer_to_json(FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func Sign(signingPackage FrostSigningPackage, nonces FrostSigningNonces, keyPackage FrostKeyPackage, randomizer FrostRandomizer) (FrostSignatureShare, error) {
 	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeRound2Error{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_sign(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterTypeFrostSigningNoncesINSTANCE.Lower(nonces), FfiConverterTypeFrostKeyPackageINSTANCE.Lower(keyPackage), _uniffiStatus)
+		return C.uniffi_frost_uniffi_sdk_fn_func_sign(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterTypeFrostSigningNoncesINSTANCE.Lower(nonces), FfiConverterTypeFrostKeyPackageINSTANCE.Lower(keyPackage), FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostSignatureShare
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
 		return FfiConverterTypeFrostSignatureShareINSTANCE.Lift(_uniffiRV), _uniffiErr
+	}
+}
+
+func SignatureSharePackageToJson(signatureShare FrostSignatureShare) (string, error) {
+	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return C.uniffi_frost_uniffi_sdk_fn_func_signature_share_package_to_json(FfiConverterTypeFrostSignatureShareINSTANCE.Lower(signatureShare), _uniffiStatus)
+	})
+	if _uniffiErr != nil {
+		var _uniffiDefaultValue string
+		return _uniffiDefaultValue, _uniffiErr
+	} else {
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
 }
 
@@ -3679,6 +4909,14 @@ func VerifyAndGetKeyPackageFrom(secretShare FrostSecretKeyShare) (FrostKeyPackag
 	} else {
 		return FfiConverterTypeFrostKeyPackageINSTANCE.Lift(_uniffiRV), _uniffiErr
 	}
+}
+
+func VerifyRandomizedSignature(randomizer FrostRandomizer, message Message, signature FrostSignature, pubkey FrostPublicKeyPackage) error {
+	_, _uniffiErr := rustCallWithError(FfiConverterTypeFrostSignatureVerificationError{}, func(_uniffiStatus *C.RustCallStatus) bool {
+		C.uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), FfiConverterTypeMessageINSTANCE.Lower(message), FfiConverterTypeFrostSignatureINSTANCE.Lower(signature), FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(pubkey), _uniffiStatus)
+		return false
+	})
+	return _uniffiErr
 }
 
 func VerifySignature(message Message, signature FrostSignature, pubkey FrostPublicKeyPackage) error {

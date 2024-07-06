@@ -34,6 +34,7 @@ pub fn key_package<C: Ciphersuite>(
     key_packages
 }
 
+#[cfg(test)]
 pub fn round_1<C: Ciphersuite>(
     mut rng: &mut ThreadRng,
     key_packages: &HashMap<ParticipantIdentifier, FrostKeyPackage>,
