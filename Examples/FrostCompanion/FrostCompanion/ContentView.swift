@@ -6,19 +6,38 @@
 //
 
 import SwiftUI
-
+import ComposableArchitecture
 struct ContentView: View {
+    let store: StoreOf<MainScreenFeature>
     var body: some View {
-        VStack {
-            Image(systemName: "snow")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, FROST!")
+        NavigationStack {
+            VStack {
+                Image(systemName: "snow")
+                    .imageScale(.large)
+                    .foregroundStyle(.tint)
+                
+                Text("Who are you?")
+                VStack {
+                    Button("Participant") {
+                        store.send(.participantTapped)
+                    }
+                    
+                    Button("Coordinator") {
+                        store.send(.coordinatorTapped)
+                    }
+                }
+            }
+            .padding()
         }
-        .padding()
+        .navigationTitle("Hello, FROST! ❄️")
     }
+    
 }
 
 #Preview {
-    ContentView()
+    ContentView(
+        store: Store(initialState: MainScreenFeature.State()){
+            MainScreenFeature()
+        }
+    )
 }

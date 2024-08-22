@@ -6,12 +6,16 @@
 //
 
 import SwiftUI
-
+import ComposableArchitecture
 @main
 struct FrostCompanionApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(
+                store: Store(initialState: MainScreenFeature.State()){
+                    MainScreenFeature()
+                }
+            )
         }
     }
 }
