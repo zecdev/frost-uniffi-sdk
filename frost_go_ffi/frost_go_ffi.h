@@ -88,10 +88,147 @@ void uniffi_frost_uniffi_sdk_fn_free_dkground2secretpackage(
 	RustCallStatus* out_status
 );
 
+void uniffi_frost_uniffi_sdk_fn_free_frostrandomizedparams(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_free_orchardaddress(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardaddress_new_from_string(
+	RustBuffer string,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardaddress_string_encoded(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_free_orchardcommitivkrandomness(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardcommitivkrandomness_new(
+	RustBuffer bytes,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardcommitivkrandomness_to_bytes(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_free_orchardfullviewingkey(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_decode(
+	RustBuffer string_enconded,
+	RustBuffer network,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_checked_parts(
+	void* ak,
+	void* nk,
+	void* rivk,
+	RustBuffer network,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(
+	void* validating_key,
+	RustBuffer zip_32_seed,
+	RustBuffer network,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_ak(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_derive_address(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_encode(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_nk(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_rivk(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_free_orchardkeyparts(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardkeyparts_random(
+	RustBuffer network,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_free_orchardnullifierderivingkey(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardnullifierderivingkey_new(
+	RustBuffer bytes,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardnullifierderivingkey_to_bytes(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_free_orchardspendvalidatingkey(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardspendvalidatingkey_from_bytes(
+	RustBuffer bytes,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardspendvalidatingkey_to_bytes(
+	void* ptr,
+	RustCallStatus* out_status
+);
+
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_aggregate(
 	RustBuffer signing_package,
 	RustBuffer signature_shares,
 	RustBuffer pubkey_package,
+	RustBuffer randomizer,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_commitment_to_json(
+	RustBuffer commitment,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_from_hex_string(
+	RustBuffer hex_string,
 	RustCallStatus* out_status
 );
 
@@ -112,6 +249,38 @@ RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_string(
 
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_uint16(
 	uint16_t unsigned_uint,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_commitment(
+	RustBuffer commitment_json,
+	RustBuffer identifier,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_key_package(
+	RustBuffer key_package_json,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_public_key_package(
+	RustBuffer public_key_package_json,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_randomizer(
+	RustBuffer randomizer_json,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_signature_share(
+	RustBuffer signature_share_json,
+	RustBuffer identifier,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_key_package_to_json(
+	RustBuffer key_package,
 	RustCallStatus* out_status
 );
 
@@ -141,10 +310,37 @@ RustBuffer uniffi_frost_uniffi_sdk_fn_func_part_3(
 	RustCallStatus* out_status
 );
 
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_public_key_package_to_json(
+	RustBuffer public_key_package,
+	RustCallStatus* out_status
+);
+
+void* uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(
+	RustBuffer public_key,
+	RustBuffer signing_package,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(
+	void* randomized_params,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_randomizer_to_json(
+	RustBuffer randomizer,
+	RustCallStatus* out_status
+);
+
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_sign(
 	RustBuffer signing_package,
 	RustBuffer nonces,
 	RustBuffer key_package,
+	RustBuffer randomizer,
+	RustCallStatus* out_status
+);
+
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_signature_share_package_to_json(
+	RustBuffer signature_share,
 	RustCallStatus* out_status
 );
 
@@ -166,6 +362,14 @@ void uniffi_frost_uniffi_sdk_fn_func_validate_config(
 
 RustBuffer uniffi_frost_uniffi_sdk_fn_func_verify_and_get_key_package_from(
 	RustBuffer secret_share,
+	RustCallStatus* out_status
+);
+
+void uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(
+	RustBuffer randomizer,
+	RustBuffer message,
+	RustBuffer signature,
+	RustBuffer pubkey,
 	RustCallStatus* out_status
 );
 
@@ -479,6 +683,14 @@ uint16_t uniffi_frost_uniffi_sdk_checksum_func_aggregate(
 	RustCallStatus* out_status
 );
 
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_commitment_to_json(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_from_hex_string(
+	RustCallStatus* out_status
+);
+
 uint16_t uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments(
 	RustCallStatus* out_status
 );
@@ -492,6 +704,30 @@ uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string(
 );
 
 uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_commitment(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_key_package(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_public_key_package(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_randomizer(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_signature_share(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_key_package_to_json(
 	RustCallStatus* out_status
 );
 
@@ -511,7 +747,27 @@ uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_3(
 	RustCallStatus* out_status
 );
 
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_public_key_package_to_json(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomizer_to_json(
+	RustCallStatus* out_status
+);
+
 uint16_t uniffi_frost_uniffi_sdk_checksum_func_sign(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_signature_share_package_to_json(
 	RustCallStatus* out_status
 );
 
@@ -531,7 +787,79 @@ uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from(
 	RustCallStatus* out_status
 );
 
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature(
+	RustCallStatus* out_status
+);
+
 uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_signature(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardaddress_string_encoded(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardcommitivkrandomness_to_bytes(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_ak(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_derive_address(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_encode(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_nk(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_rivk(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardnullifierderivingkey_to_bytes(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardspendvalidatingkey_to_bytes(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardaddress_new_from_string(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardcommitivkrandomness_new(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_decode(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_checked_parts(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardkeyparts_random(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardnullifierderivingkey_new(
+	RustCallStatus* out_status
+);
+
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardspendvalidatingkey_from_bytes(
 	RustCallStatus* out_status
 );
 

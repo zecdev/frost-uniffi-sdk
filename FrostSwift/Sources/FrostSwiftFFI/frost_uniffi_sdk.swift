@@ -684,6 +684,568 @@ public func FfiConverterTypeFrostRandomizedParams_lower(_ value: FrostRandomized
 }
 
 
+public protocol OrchardAddressProtocol {
+    func stringEncoded()   -> String
+    
+}
+
+public class OrchardAddress: OrchardAddressProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_orchardaddress(pointer, $0) }
+    }
+
+    
+
+    public static func newFromString(string: String) throws -> OrchardAddress {
+        return OrchardAddress(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_constructor_orchardaddress_new_from_string(
+        FfiConverterString.lower(string),$0)
+})
+    }
+
+    
+
+    
+    
+
+    public func stringEncoded()  -> String {
+        return try!  FfiConverterString.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_frost_uniffi_sdk_fn_method_orchardaddress_string_encoded(self.pointer, $0
+    )
+}
+        )
+    }
+}
+
+public struct FfiConverterTypeOrchardAddress: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = OrchardAddress
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OrchardAddress {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: OrchardAddress, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardAddress {
+        return OrchardAddress(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: OrchardAddress) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeOrchardAddress_lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardAddress {
+    return try FfiConverterTypeOrchardAddress.lift(pointer)
+}
+
+public func FfiConverterTypeOrchardAddress_lower(_ value: OrchardAddress) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOrchardAddress.lower(value)
+}
+
+
+public protocol OrchardCommitIvkRandomnessProtocol {
+    func toBytes()   -> Data
+    
+}
+
+public class OrchardCommitIvkRandomness: OrchardCommitIvkRandomnessProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+    public convenience init(bytes: Data) throws {
+        self.init(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_constructor_orchardcommitivkrandomness_new(
+        FfiConverterData.lower(bytes),$0)
+})
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_orchardcommitivkrandomness(pointer, $0) }
+    }
+
+    
+
+    
+    
+
+    public func toBytes()  -> Data {
+        return try!  FfiConverterData.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_frost_uniffi_sdk_fn_method_orchardcommitivkrandomness_to_bytes(self.pointer, $0
+    )
+}
+        )
+    }
+}
+
+public struct FfiConverterTypeOrchardCommitIvkRandomness: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = OrchardCommitIvkRandomness
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OrchardCommitIvkRandomness {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: OrchardCommitIvkRandomness, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardCommitIvkRandomness {
+        return OrchardCommitIvkRandomness(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: OrchardCommitIvkRandomness) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeOrchardCommitIvkRandomness_lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardCommitIvkRandomness {
+    return try FfiConverterTypeOrchardCommitIvkRandomness.lift(pointer)
+}
+
+public func FfiConverterTypeOrchardCommitIvkRandomness_lower(_ value: OrchardCommitIvkRandomness) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOrchardCommitIvkRandomness.lower(value)
+}
+
+
+public protocol OrchardFullViewingKeyProtocol {
+    func ak()   -> OrchardSpendValidatingKey
+    func deriveAddress()  throws -> OrchardAddress
+    func encode()  throws -> String
+    func nk()   -> OrchardNullifierDerivingKey
+    func rivk()   -> OrchardCommitIvkRandomness
+    
+}
+
+public class OrchardFullViewingKey: OrchardFullViewingKeyProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_orchardfullviewingkey(pointer, $0) }
+    }
+
+    
+
+    public static func decode(stringEnconded: String, network: ZcashNetwork) throws -> OrchardFullViewingKey {
+        return OrchardFullViewingKey(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_decode(
+        FfiConverterString.lower(stringEnconded),
+        FfiConverterTypeZcashNetwork.lower(network),$0)
+})
+    }
+
+    
+
+    public static func newFromCheckedParts(ak: OrchardSpendValidatingKey, nk: OrchardNullifierDerivingKey, rivk: OrchardCommitIvkRandomness, network: ZcashNetwork) throws -> OrchardFullViewingKey {
+        return OrchardFullViewingKey(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_checked_parts(
+        FfiConverterTypeOrchardSpendValidatingKey.lower(ak),
+        FfiConverterTypeOrchardNullifierDerivingKey.lower(nk),
+        FfiConverterTypeOrchardCommitIvkRandomness.lower(rivk),
+        FfiConverterTypeZcashNetwork.lower(network),$0)
+})
+    }
+
+    
+
+    public static func newFromValidatingKeyAndSeed(validatingKey: OrchardSpendValidatingKey, zip32Seed: Data, network: ZcashNetwork) throws -> OrchardFullViewingKey {
+        return OrchardFullViewingKey(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(
+        FfiConverterTypeOrchardSpendValidatingKey.lower(validatingKey),
+        FfiConverterData.lower(zip32Seed),
+        FfiConverterTypeZcashNetwork.lower(network),$0)
+})
+    }
+
+    
+
+    
+    
+
+    public func ak()  -> OrchardSpendValidatingKey {
+        return try!  FfiConverterTypeOrchardSpendValidatingKey.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_ak(self.pointer, $0
+    )
+}
+        )
+    }
+
+    public func deriveAddress() throws -> OrchardAddress {
+        return try  FfiConverterTypeOrchardAddress.lift(
+            try 
+    rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_derive_address(self.pointer, $0
+    )
+}
+        )
+    }
+
+    public func encode() throws -> String {
+        return try  FfiConverterString.lift(
+            try 
+    rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_encode(self.pointer, $0
+    )
+}
+        )
+    }
+
+    public func nk()  -> OrchardNullifierDerivingKey {
+        return try!  FfiConverterTypeOrchardNullifierDerivingKey.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_nk(self.pointer, $0
+    )
+}
+        )
+    }
+
+    public func rivk()  -> OrchardCommitIvkRandomness {
+        return try!  FfiConverterTypeOrchardCommitIvkRandomness.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_rivk(self.pointer, $0
+    )
+}
+        )
+    }
+}
+
+public struct FfiConverterTypeOrchardFullViewingKey: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = OrchardFullViewingKey
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OrchardFullViewingKey {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: OrchardFullViewingKey, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardFullViewingKey {
+        return OrchardFullViewingKey(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: OrchardFullViewingKey) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeOrchardFullViewingKey_lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardFullViewingKey {
+    return try FfiConverterTypeOrchardFullViewingKey.lift(pointer)
+}
+
+public func FfiConverterTypeOrchardFullViewingKey_lower(_ value: OrchardFullViewingKey) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOrchardFullViewingKey.lower(value)
+}
+
+
+public protocol OrchardKeyPartsProtocol {
+    
+}
+
+public class OrchardKeyParts: OrchardKeyPartsProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_orchardkeyparts(pointer, $0) }
+    }
+
+    
+
+    public static func random(network: ZcashNetwork) throws -> OrchardKeyParts {
+        return OrchardKeyParts(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_constructor_orchardkeyparts_random(
+        FfiConverterTypeZcashNetwork.lower(network),$0)
+})
+    }
+
+    
+
+    
+    
+}
+
+public struct FfiConverterTypeOrchardKeyParts: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = OrchardKeyParts
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OrchardKeyParts {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: OrchardKeyParts, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardKeyParts {
+        return OrchardKeyParts(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: OrchardKeyParts) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeOrchardKeyParts_lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardKeyParts {
+    return try FfiConverterTypeOrchardKeyParts.lift(pointer)
+}
+
+public func FfiConverterTypeOrchardKeyParts_lower(_ value: OrchardKeyParts) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOrchardKeyParts.lower(value)
+}
+
+
+public protocol OrchardNullifierDerivingKeyProtocol {
+    func toBytes()   -> Data
+    
+}
+
+public class OrchardNullifierDerivingKey: OrchardNullifierDerivingKeyProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+    public convenience init(bytes: Data) throws {
+        self.init(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_constructor_orchardnullifierderivingkey_new(
+        FfiConverterData.lower(bytes),$0)
+})
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_orchardnullifierderivingkey(pointer, $0) }
+    }
+
+    
+
+    
+    
+
+    public func toBytes()  -> Data {
+        return try!  FfiConverterData.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_frost_uniffi_sdk_fn_method_orchardnullifierderivingkey_to_bytes(self.pointer, $0
+    )
+}
+        )
+    }
+}
+
+public struct FfiConverterTypeOrchardNullifierDerivingKey: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = OrchardNullifierDerivingKey
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OrchardNullifierDerivingKey {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: OrchardNullifierDerivingKey, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardNullifierDerivingKey {
+        return OrchardNullifierDerivingKey(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: OrchardNullifierDerivingKey) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeOrchardNullifierDerivingKey_lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardNullifierDerivingKey {
+    return try FfiConverterTypeOrchardNullifierDerivingKey.lift(pointer)
+}
+
+public func FfiConverterTypeOrchardNullifierDerivingKey_lower(_ value: OrchardNullifierDerivingKey) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOrchardNullifierDerivingKey.lower(value)
+}
+
+
+public protocol OrchardSpendValidatingKeyProtocol {
+    func toBytes()   -> Data
+    
+}
+
+public class OrchardSpendValidatingKey: OrchardSpendValidatingKeyProtocol {
+    fileprivate let pointer: UnsafeMutableRawPointer
+
+    // TODO: We'd like this to be `private` but for Swifty reasons,
+    // we can't implement `FfiConverter` without making this `required` and we can't
+    // make it `required` without making it `public`.
+    required init(unsafeFromRawPointer pointer: UnsafeMutableRawPointer) {
+        self.pointer = pointer
+    }
+
+    deinit {
+        try! rustCall { uniffi_frost_uniffi_sdk_fn_free_orchardspendvalidatingkey(pointer, $0) }
+    }
+
+    
+
+    public static func fromBytes(bytes: Data) throws -> OrchardSpendValidatingKey {
+        return OrchardSpendValidatingKey(unsafeFromRawPointer: try rustCallWithError(FfiConverterTypeOrchardKeyError.lift) {
+    uniffi_frost_uniffi_sdk_fn_constructor_orchardspendvalidatingkey_from_bytes(
+        FfiConverterData.lower(bytes),$0)
+})
+    }
+
+    
+
+    
+    
+
+    public func toBytes()  -> Data {
+        return try!  FfiConverterData.lift(
+            try! 
+    rustCall() {
+    
+    uniffi_frost_uniffi_sdk_fn_method_orchardspendvalidatingkey_to_bytes(self.pointer, $0
+    )
+}
+        )
+    }
+}
+
+public struct FfiConverterTypeOrchardSpendValidatingKey: FfiConverter {
+    typealias FfiType = UnsafeMutableRawPointer
+    typealias SwiftType = OrchardSpendValidatingKey
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OrchardSpendValidatingKey {
+        let v: UInt64 = try readInt(&buf)
+        // The Rust code won't compile if a pointer won't fit in a UInt64.
+        // We have to go via `UInt` because that's the thing that's the size of a pointer.
+        let ptr = UnsafeMutableRawPointer(bitPattern: UInt(truncatingIfNeeded: v))
+        if (ptr == nil) {
+            throw UniffiInternalError.unexpectedNullPointer
+        }
+        return try lift(ptr!)
+    }
+
+    public static func write(_ value: OrchardSpendValidatingKey, into buf: inout [UInt8]) {
+        // This fiddling is because `Int` is the thing that's the same size as a pointer.
+        // The Rust code won't compile if a pointer won't fit in a `UInt64`.
+        writeInt(&buf, UInt64(bitPattern: Int64(Int(bitPattern: lower(value)))))
+    }
+
+    public static func lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardSpendValidatingKey {
+        return OrchardSpendValidatingKey(unsafeFromRawPointer: pointer)
+    }
+
+    public static func lower(_ value: OrchardSpendValidatingKey) -> UnsafeMutableRawPointer {
+        return value.pointer
+    }
+}
+
+
+public func FfiConverterTypeOrchardSpendValidatingKey_lift(_ pointer: UnsafeMutableRawPointer) throws -> OrchardSpendValidatingKey {
+    return try FfiConverterTypeOrchardSpendValidatingKey.lift(pointer)
+}
+
+public func FfiConverterTypeOrchardSpendValidatingKey_lower(_ value: OrchardSpendValidatingKey) -> UnsafeMutableRawPointer {
+    return FfiConverterTypeOrchardSpendValidatingKey.lower(value)
+}
+
+
 public struct Configuration {
     public var minSigners: UInt16
     public var maxSigners: UInt16
@@ -2125,6 +2687,77 @@ extension FrostSignatureVerificationError: Equatable, Hashable {}
 
 extension FrostSignatureVerificationError: Error { }
 
+public enum OrchardKeyError {
+
+    
+    
+    case KeyDerivationError(message: String)
+    case SerializationError
+    case DeserializationError
+    case OtherError(errorMessage: String)
+
+    fileprivate static func uniffiErrorHandler(_ error: RustBuffer) throws -> Error {
+        return try FfiConverterTypeOrchardKeyError.lift(error)
+    }
+}
+
+
+public struct FfiConverterTypeOrchardKeyError: FfiConverterRustBuffer {
+    typealias SwiftType = OrchardKeyError
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> OrchardKeyError {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+
+        
+
+        
+        case 1: return .KeyDerivationError(
+            message: try FfiConverterString.read(from: &buf)
+            )
+        case 2: return .SerializationError
+        case 3: return .DeserializationError
+        case 4: return .OtherError(
+            errorMessage: try FfiConverterString.read(from: &buf)
+            )
+
+         default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: OrchardKeyError, into buf: inout [UInt8]) {
+        switch value {
+
+        
+
+        
+        
+        case let .KeyDerivationError(message):
+            writeInt(&buf, Int32(1))
+            FfiConverterString.write(message, into: &buf)
+            
+        
+        case .SerializationError:
+            writeInt(&buf, Int32(2))
+        
+        
+        case .DeserializationError:
+            writeInt(&buf, Int32(3))
+        
+        
+        case let .OtherError(errorMessage):
+            writeInt(&buf, Int32(4))
+            FfiConverterString.write(errorMessage, into: &buf)
+            
+        }
+    }
+}
+
+
+extension OrchardKeyError: Equatable, Hashable {}
+
+extension OrchardKeyError: Error { }
+
 public enum Round1Error {
 
     
@@ -2263,6 +2896,58 @@ public struct FfiConverterTypeRound2Error: FfiConverterRustBuffer {
 extension Round2Error: Equatable, Hashable {}
 
 extension Round2Error: Error { }
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+public enum ZcashNetwork {
+    
+    case mainnet
+    case testnet
+}
+
+public struct FfiConverterTypeZcashNetwork: FfiConverterRustBuffer {
+    typealias SwiftType = ZcashNetwork
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ZcashNetwork {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .mainnet
+        
+        case 2: return .testnet
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: ZcashNetwork, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .mainnet:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .testnet:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+public func FfiConverterTypeZcashNetwork_lift(_ buf: RustBuffer) throws -> ZcashNetwork {
+    return try FfiConverterTypeZcashNetwork.lift(buf)
+}
+
+public func FfiConverterTypeZcashNetwork_lower(_ value: ZcashNetwork) -> RustBuffer {
+    return FfiConverterTypeZcashNetwork.lower(value)
+}
+
+
+extension ZcashNetwork: Equatable, Hashable {}
+
+
 
 fileprivate struct FfiConverterOptionTypeParticipantIdentifier: FfiConverterRustBuffer {
     typealias SwiftType = ParticipantIdentifier?
@@ -2825,6 +3510,57 @@ private var initializationResult: InitializationResult {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_frost_uniffi_sdk_checksum_func_verify_signature() != 13620) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_method_orchardaddress_string_encoded() != 38758) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_method_orchardcommitivkrandomness_to_bytes() != 54004) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_ak() != 1900) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_derive_address() != 26015) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_encode() != 34271) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_nk() != 33472) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_rivk() != 25054) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_method_orchardnullifierderivingkey_to_bytes() != 8783) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_method_orchardspendvalidatingkey_to_bytes() != 10051) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_constructor_orchardaddress_new_from_string() != 64287) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_constructor_orchardcommitivkrandomness_new() != 55160) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_decode() != 6758) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_checked_parts() != 19481) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_validating_key_and_seed() != 62836) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_constructor_orchardkeyparts_random() != 3046) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_constructor_orchardnullifierderivingkey_new() != 15347) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_frost_uniffi_sdk_checksum_constructor_orchardspendvalidatingkey_from_bytes() != 63121) {
         return InitializationResult.apiChecksumMismatch
     }
 

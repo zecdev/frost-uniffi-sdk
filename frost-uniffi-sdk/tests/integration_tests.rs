@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod helpers;
 
 use frost_uniffi_sdk::{
@@ -13,7 +14,7 @@ use frost_uniffi_sdk::coordinator::aggregate;
 
 #[cfg(not(feature = "redpallas"))]
 use helpers::round_2;
-
+#[cfg(not(feature = "redpallas"))]
 type E = frost_ed25519::Ed25519Sha512;
 #[cfg(not(feature = "redpallas"))]
 #[test]
