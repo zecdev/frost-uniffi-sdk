@@ -21,6 +21,8 @@
 		0DDAB7B42C7691D3009FA521 /* ParticipantImportFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDAB7B32C7691D3009FA521 /* ParticipantImportFeature.swift */; };
 		0DDAB7B82C769345009FA521 /* Model.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDAB7B72C769345009FA521 /* Model.swift */; };
 		0DDAB7BB2C76A5A4009FA521 /* ParticipantImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDAB7BA2C76A5A4009FA521 /* ParticipantImportView.swift */; };
+		0DFAD1382C7F4B8B00072EF7 /* ParticipantDetailFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFAD1372C7F4B8B00072EF7 /* ParticipantDetailFeature.swift */; };
+		0DFAD13A2C7F4CDB00072EF7 /* ParticipantDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFAD1392C7F4CDB00072EF7 /* ParticipantDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +59,8 @@
 		0DDAB7B32C7691D3009FA521 /* ParticipantImportFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantImportFeature.swift; sourceTree = "<group>"; };
 		0DDAB7B72C769345009FA521 /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model.swift; sourceTree = "<group>"; };
 		0DDAB7BA2C76A5A4009FA521 /* ParticipantImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantImportView.swift; sourceTree = "<group>"; };
+		0DFAD1372C7F4B8B00072EF7 /* ParticipantDetailFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantDetailFeature.swift; sourceTree = "<group>"; };
+		0DFAD1392C7F4CDB00072EF7 /* ParticipantDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -152,6 +156,8 @@
 			children = (
 				0DDAB7B32C7691D3009FA521 /* ParticipantImportFeature.swift */,
 				0DDAB7BA2C76A5A4009FA521 /* ParticipantImportView.swift */,
+				0DFAD1372C7F4B8B00072EF7 /* ParticipantDetailFeature.swift */,
+				0DFAD1392C7F4CDB00072EF7 /* ParticipantDetailView.swift */,
 			);
 			path = Participant;
 			sourceTree = "<group>";
@@ -305,7 +311,9 @@
 				0DDAB7B82C769345009FA521 /* Model.swift in Sources */,
 				0DDAB7B42C7691D3009FA521 /* ParticipantImportFeature.swift in Sources */,
 				0D50A3432C0E6ED200B921E1 /* MainScreenView.swift in Sources */,
+				0DFAD13A2C7F4CDB00072EF7 /* ParticipantDetailView.swift in Sources */,
 				0D50A3412C0E6ED200B921E1 /* FrostCompanionApp.swift in Sources */,
+				0DFAD1382C7F4B8B00072EF7 /* ParticipantDetailFeature.swift in Sources */,
 				0DDAB7B12C7683A6009FA521 /* MainScreenReducer.swift in Sources */,
 				0DDAB7BB2C76A5A4009FA521 /* ParticipantImportView.swift in Sources */,
 			);
