@@ -32,3 +32,10 @@ extension JSONKeyShare {
                 """
     )
 }
+
+
+struct FROSTScheme {
+    let maxParticipants: Int
+    let minParticipants: Int
+    let keyShares: [String : JSONKeyShare]
+}

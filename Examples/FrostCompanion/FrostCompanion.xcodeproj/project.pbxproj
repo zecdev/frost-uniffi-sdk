@@ -23,6 +23,8 @@
 		0DDAB7BB2C76A5A4009FA521 /* ParticipantImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDAB7BA2C76A5A4009FA521 /* ParticipantImportView.swift */; };
 		0DFAD1382C7F4B8B00072EF7 /* ParticipantDetailFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFAD1372C7F4B8B00072EF7 /* ParticipantDetailFeature.swift */; };
 		0DFAD13A2C7F4CDB00072EF7 /* ParticipantDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFAD1392C7F4CDB00072EF7 /* ParticipantDetailView.swift */; };
+		0DFAD13D2C7F517200072EF7 /* TrustedDealerFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFAD13C2C7F517200072EF7 /* TrustedDealerFeature.swift */; };
+		0DFAD13F2C7F523900072EF7 /* NewTrustedDealerSchemeFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFAD13E2C7F523900072EF7 /* NewTrustedDealerSchemeFeature.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +63,8 @@
 		0DDAB7BA2C76A5A4009FA521 /* ParticipantImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantImportView.swift; sourceTree = "<group>"; };
 		0DFAD1372C7F4B8B00072EF7 /* ParticipantDetailFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantDetailFeature.swift; sourceTree = "<group>"; };
 		0DFAD1392C7F4CDB00072EF7 /* ParticipantDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantDetailView.swift; sourceTree = "<group>"; };
+		0DFAD13C2C7F517200072EF7 /* TrustedDealerFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrustedDealerFeature.swift; sourceTree = "<group>"; };
+		0DFAD13E2C7F523900072EF7 /* NewTrustedDealerSchemeFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewTrustedDealerSchemeFeature.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +117,7 @@
 		0D50A33F2C0E6ED200B921E1 /* FrostCompanion */ = {
 			isa = PBXGroup;
 			children = (
+				0DFAD13B2C7F514300072EF7 /* Coordinator */,
 				0DDAB7B62C76931F009FA521 /* Model */,
 				0DDAB7B22C7689E8009FA521 /* Participant */,
 				0D50A3402C0E6ED200B921E1 /* FrostCompanionApp.swift */,
@@ -168,6 +173,15 @@
 				0DDAB7B72C769345009FA521 /* Model.swift */,
 			);
 			path = Model;
+			sourceTree = "<group>";
+		};
+		0DFAD13B2C7F514300072EF7 /* Coordinator */ = {
+			isa = PBXGroup;
+			children = (
+				0DFAD13C2C7F517200072EF7 /* TrustedDealerFeature.swift */,
+				0DFAD13E2C7F523900072EF7 /* NewTrustedDealerSchemeFeature.swift */,
+			);
+			path = Coordinator;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -315,7 +329,9 @@
 				0D50A3412C0E6ED200B921E1 /* FrostCompanionApp.swift in Sources */,
 				0DFAD1382C7F4B8B00072EF7 /* ParticipantDetailFeature.swift in Sources */,
 				0DDAB7B12C7683A6009FA521 /* MainScreenReducer.swift in Sources */,
+				0DFAD13D2C7F517200072EF7 /* TrustedDealerFeature.swift in Sources */,
 				0DDAB7BB2C76A5A4009FA521 /* ParticipantImportView.swift in Sources */,
+				0DFAD13F2C7F523900072EF7 /* NewTrustedDealerSchemeFeature.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
