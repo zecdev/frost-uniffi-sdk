@@ -11,7 +11,7 @@ import ComposableArchitecture
 struct FrostCompanionApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView(
+            MainScreenView(
                 store: Store(initialState: MainScreenFeature.State()){
                     MainScreenFeature()
                 }

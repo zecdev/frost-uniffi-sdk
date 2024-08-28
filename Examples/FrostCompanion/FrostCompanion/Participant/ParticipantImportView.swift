@@ -9,7 +9,7 @@ import SwiftUI
 import ComposableArchitecture
 
 struct ParticipantImportView: View {
-    @Bindable var store: StoreOf<ParticipantReducer>
+    @Bindable var store: StoreOf<ParticipantImportFeature>
     var body: some View {
         Form {
             Text("Paste your key-package.json contents")
@@ -45,7 +45,7 @@ struct ParticipantImportView: View {
 
 #Preview {
     ParticipantImportView(store: Store(
-        initialState: ParticipantReducer.State(
+        initialState: ParticipantImportFeature.State(
             keyShare: JSONKeyShare(
                 raw: 
                         """
@@ -65,7 +65,7 @@ struct ParticipantImportView: View {
             )
         )
     ) {
-        ParticipantReducer()
+        ParticipantImportFeature()
     }
     )
     .padding()

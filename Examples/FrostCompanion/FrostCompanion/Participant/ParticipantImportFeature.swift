@@ -9,7 +9,7 @@ import Foundation
 import ComposableArchitecture
 
 @Reducer
-struct ParticipantReducer {
+struct ParticipantImportFeature {
     @ObservableState
     struct State: Equatable {
         var keyShare: JSONKeyShare = .empty

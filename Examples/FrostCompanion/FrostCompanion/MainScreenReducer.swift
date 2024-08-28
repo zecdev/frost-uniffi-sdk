@@ -13,13 +13,15 @@ import ComposableArchitecture
 struct MainScreenFeature {
     @ObservableState
     struct State: Equatable {
-        @Presents var participant: ParticipantReducer.State?
+        @Presents var destination: Destination.State?
+        var path = StackState<ParticipantImportFeature.State>()
     }
     
     enum Action {
         case coordinatorTapped
         case participantTapped
-        case importKeyShare(PresentationAction<ParticipantReducer.Action>)
+        case destination(PresentationAction<Destination.Action>)
+        case path(StackAction<ParticipantImportFeature.State, ParticipantImportFeature.Action>)
     }
     
     var body: some ReducerOf<Self> {
@@ -29,22 +31,36 @@ struct MainScreenFeature {
                 return .none
                 
             case .participantTapped:
-                state.participant = ParticipantReducer.State(
+                state.destination = .participant(ParticipantImportFeature.State(
                     keyShare: JSONKeyShare.empty
-                )
+                ))
                 return .none
         
-            case .importKeyShare(.presented(.delegate(.keyShareImported(let keyShare)))):
+            case .destination(.presented(.participant(.delegate(.keyShareImported(let keyShare))))):
                 debugPrint(keyShare)
                 return .none
 
-            case .importKeyShare:
+            case .destination:
                 return .none
-       
+            case .path:
+                return .none
+
             }
         }
-        .ifLet(\.$participant, action: \.importKeyShare) {
-            ParticipantReducer()
+//        .ifLet(\.$destination, action: \.destination) {
+//            Destination.participant(ParticipantReducer())
+//        }
+        .forEach(\.path, action: \.path)  {
+            ParticipantImportFeature()
         }
+    }
+}
+
+
+extension MainScreenFeature {
+
+    @Reducer(state: .equatable)
+    enum Destination {
+        case participant(ParticipantImportFeature)
     }
 }

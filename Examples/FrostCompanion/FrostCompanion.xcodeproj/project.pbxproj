@@ -8,16 +8,17 @@
 
 /* Begin PBXBuildFile section */
 		0D50A3412C0E6ED200B921E1 /* FrostCompanionApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D50A3402C0E6ED200B921E1 /* FrostCompanionApp.swift */; };
-		0D50A3432C0E6ED200B921E1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D50A3422C0E6ED200B921E1 /* ContentView.swift */; };
+		0D50A3432C0E6ED200B921E1 /* MainScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D50A3422C0E6ED200B921E1 /* MainScreenView.swift */; };
 		0D50A3452C0E6ED300B921E1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0D50A3442C0E6ED300B921E1 /* Assets.xcassets */; };
 		0D50A3492C0E6ED300B921E1 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0D50A3482C0E6ED300B921E1 /* Preview Assets.xcassets */; };
 		0D50A3532C0E6ED300B921E1 /* FrostCompanionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D50A3522C0E6ED300B921E1 /* FrostCompanionTests.swift */; };
 		0D50A35D2C0E6ED300B921E1 /* FrostCompanionUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D50A35C2C0E6ED300B921E1 /* FrostCompanionUITests.swift */; };
 		0D50A35F2C0E6ED300B921E1 /* FrostCompanionUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D50A35E2C0E6ED300B921E1 /* FrostCompanionUITestsLaunchTests.swift */; };
 		0D50A36D2C0E701500B921E1 /* FrostSwiftFFI in Frameworks */ = {isa = PBXBuildFile; productRef = 0D50A36C2C0E701500B921E1 /* FrostSwiftFFI */; };
+		0DB77E062C78F9ED0011DDCB /* ParticipanFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DB77E052C78F9ED0011DDCB /* ParticipanFeatureTests.swift */; };
 		0DDAB7AF2C768320009FA521 /* ComposableArchitecture in Frameworks */ = {isa = PBXBuildFile; productRef = 0DDAB7AE2C768320009FA521 /* ComposableArchitecture */; };
 		0DDAB7B12C7683A6009FA521 /* MainScreenReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDAB7B02C7683A6009FA521 /* MainScreenReducer.swift */; };
-		0DDAB7B42C7691D3009FA521 /* ParticipantReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDAB7B32C7691D3009FA521 /* ParticipantReducer.swift */; };
+		0DDAB7B42C7691D3009FA521 /* ParticipantImportFeature.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDAB7B32C7691D3009FA521 /* ParticipantImportFeature.swift */; };
 		0DDAB7B82C769345009FA521 /* Model.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDAB7B72C769345009FA521 /* Model.swift */; };
 		0DDAB7BB2C76A5A4009FA521 /* ParticipantImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DDAB7BA2C76A5A4009FA521 /* ParticipantImportView.swift */; };
 /* End PBXBuildFile section */
@@ -42,7 +43,7 @@
 /* Begin PBXFileReference section */
 		0D50A33D2C0E6ED200B921E1 /* FrostCompanion.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FrostCompanion.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0D50A3402C0E6ED200B921E1 /* FrostCompanionApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrostCompanionApp.swift; sourceTree = "<group>"; };
-		0D50A3422C0E6ED200B921E1 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		0D50A3422C0E6ED200B921E1 /* MainScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreenView.swift; sourceTree = "<group>"; };
 		0D50A3442C0E6ED300B921E1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0D50A3462C0E6ED300B921E1 /* FrostCompanion.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FrostCompanion.entitlements; sourceTree = "<group>"; };
 		0D50A3482C0E6ED300B921E1 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
@@ -51,8 +52,9 @@
 		0D50A3582C0E6ED300B921E1 /* FrostCompanionUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FrostCompanionUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0D50A35C2C0E6ED300B921E1 /* FrostCompanionUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrostCompanionUITests.swift; sourceTree = "<group>"; };
 		0D50A35E2C0E6ED300B921E1 /* FrostCompanionUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrostCompanionUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		0DB77E052C78F9ED0011DDCB /* ParticipanFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipanFeatureTests.swift; sourceTree = "<group>"; };
 		0DDAB7B02C7683A6009FA521 /* MainScreenReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreenReducer.swift; sourceTree = "<group>"; };
-		0DDAB7B32C7691D3009FA521 /* ParticipantReducer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantReducer.swift; sourceTree = "<group>"; };
+		0DDAB7B32C7691D3009FA521 /* ParticipantImportFeature.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantImportFeature.swift; sourceTree = "<group>"; };
 		0DDAB7B72C769345009FA521 /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model.swift; sourceTree = "<group>"; };
 		0DDAB7BA2C76A5A4009FA521 /* ParticipantImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticipantImportView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -110,7 +112,7 @@
 				0DDAB7B62C76931F009FA521 /* Model */,
 				0DDAB7B22C7689E8009FA521 /* Participant */,
 				0D50A3402C0E6ED200B921E1 /* FrostCompanionApp.swift */,
-				0D50A3422C0E6ED200B921E1 /* ContentView.swift */,
+				0D50A3422C0E6ED200B921E1 /* MainScreenView.swift */,
 				0D50A3442C0E6ED300B921E1 /* Assets.xcassets */,
 				0D50A3462C0E6ED300B921E1 /* FrostCompanion.entitlements */,
 				0D50A3472C0E6ED300B921E1 /* Preview Content */,
@@ -131,6 +133,7 @@
 			isa = PBXGroup;
 			children = (
 				0D50A3522C0E6ED300B921E1 /* FrostCompanionTests.swift */,
+				0DB77E052C78F9ED0011DDCB /* ParticipanFeatureTests.swift */,
 			);
 			path = FrostCompanionTests;
 			sourceTree = "<group>";
@@ -147,7 +150,7 @@
 		0DDAB7B22C7689E8009FA521 /* Participant */ = {
 			isa = PBXGroup;
 			children = (
-				0DDAB7B32C7691D3009FA521 /* ParticipantReducer.swift */,
+				0DDAB7B32C7691D3009FA521 /* ParticipantImportFeature.swift */,
 				0DDAB7BA2C76A5A4009FA521 /* ParticipantImportView.swift */,
 			);
 			path = Participant;
@@ -300,8 +303,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				0DDAB7B82C769345009FA521 /* Model.swift in Sources */,
-				0DDAB7B42C7691D3009FA521 /* ParticipantReducer.swift in Sources */,
-				0D50A3432C0E6ED200B921E1 /* ContentView.swift in Sources */,
+				0DDAB7B42C7691D3009FA521 /* ParticipantImportFeature.swift in Sources */,
+				0D50A3432C0E6ED200B921E1 /* MainScreenView.swift in Sources */,
 				0D50A3412C0E6ED200B921E1 /* FrostCompanionApp.swift in Sources */,
 				0DDAB7B12C7683A6009FA521 /* MainScreenReducer.swift in Sources */,
 				0DDAB7BB2C76A5A4009FA521 /* ParticipantImportView.swift in Sources */,
@@ -313,6 +316,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0D50A3532C0E6ED300B921E1 /* FrostCompanionTests.swift in Sources */,
+				0DB77E062C78F9ED0011DDCB /* ParticipanFeatureTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

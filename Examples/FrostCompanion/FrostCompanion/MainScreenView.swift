@@ -7,10 +7,10 @@
 
 import SwiftUI
 import ComposableArchitecture
-struct ContentView: View {
-    let store: StoreOf<MainScreenFeature>
+struct MainScreenView: View {
+    @Bindable var store: StoreOf<MainScreenFeature>
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $store.scope(state: \.path, action:\.path)) {
             VStack {
                 Image(systemName: "snow")
                     .imageScale(.large)
@@ -18,24 +18,31 @@ struct ContentView: View {
                 
                 Text("Who are you?")
                 VStack {
-                    Button("Participant") {
-                        store.send(.participantTapped)
+                    NavigationLink(state: ParticipantImportFeature.State(keyShare: .empty)){
+                        Text("Participant")
+//                        Button("Participant") {
+//                            store.send(.participantTapped)
+//                        }
                     }
                     
+
                     Button("Coordinator") {
                         store.send(.coordinatorTapped)
                     }
                 }
             }
             .padding()
+        } destination: { store in
+            ParticipantImportView(store: store)
         }
+
         .navigationTitle("Hello, FROST! ❄️")
     }
-    
+
 }
 
 #Preview {
-    ContentView(
+    MainScreenView(
         store: Store(initialState: MainScreenFeature.State()){
             MainScreenFeature()
         }
