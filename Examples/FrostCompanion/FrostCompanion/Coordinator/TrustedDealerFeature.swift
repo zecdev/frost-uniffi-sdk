@@ -12,15 +12,32 @@ import ComposableArchitecture
 @Reducer
 struct TrustedDealerFeature {
     @ObservableState
-    struct State {
-        var maxParticipants: UInt = 3
-        var minParticipants: UInt = 2
-        var path: StackState<NewTrustedDealerSchemeFeature.State>
+    struct State: Equatable {
+        var maxParticipants: Int = 3
+        var minParticipants: Int = 2
+
+        var focus: Field? = .minParticipants
+
+        enum Field: Hashable {
+            case minParticipants
+            case maxParticipants
+        }
     }
 
-    enum Action {
-        case createScheme
-        case setMaxParticipants(Int)
-        case setMinParticipants(Int)
+    enum Action: BindableAction, Equatable {
+        case binding(BindingAction<State>)
+        case createSchemePressed
+    }
+
+    var body: some ReducerOf<Self> {
+        BindingReducer()
+        Reduce { state, action  in
+            switch action {
+            case .binding:
+                return .none
+            case .createSchemePressed:
+                return .none
+            }
+        }
     }
 }

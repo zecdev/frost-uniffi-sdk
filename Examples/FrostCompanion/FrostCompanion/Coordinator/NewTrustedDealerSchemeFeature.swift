@@ -13,6 +13,14 @@ import ComposableArchitecture
 struct NewTrustedDealerSchemeFeature {
     @ObservableState
     struct State {
-        
+        let schemeConfig: FROSTSchemeConfig
+        var scheme: TrustedDealerScheme?
+//        var path: StackState<
+    }
+
+    enum Action {
+        case dealerSucceeded(TrustedDealerScheme)
+        case dealerFailed(AppErrors)
     }
 }
+

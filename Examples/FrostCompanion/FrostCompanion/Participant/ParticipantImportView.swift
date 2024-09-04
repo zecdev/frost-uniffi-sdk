@@ -26,17 +26,6 @@ struct ParticipantImportView: View {
                 )
             }
         }
-        .toolbar {
-            ToolbarItem {
-                Button(
-                    "Cancel"
-                )  {
-                    store.send(
-                        .cancelButtonTapped
-                    )
-                }
-            }
-        }
         .navigationTitle(
             "Import your Key-package JSON"
         )

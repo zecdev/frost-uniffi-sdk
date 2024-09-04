@@ -10,7 +10,6 @@ import ComposableArchitecture
 struct MainScreenView: View {
     @Bindable var store: StoreOf<MainScreenFeature>
     var body: some View {
-        NavigationStack(path: $store.scope(state: \.path, action:\.path)) {
             VStack {
                 Image(systemName: "snow")
                     .imageScale(.large)
@@ -18,23 +17,16 @@ struct MainScreenView: View {
                 
                 Text("Who are you?")
                 VStack {
-                    NavigationLink(state: ParticipantImportFeature.State(keyShare: .empty)){
+                    NavigationLink(state: AppFeature.Path.State.importParticipant(.init())){
                         Text("Participant")
-//                        Button("Participant") {
-//                            store.send(.participantTapped)
-//                        }
                     }
-                    
 
-                    Button("Coordinator") {
-                        store.send(.coordinatorTapped)
+                    NavigationLink(state: AppFeature.Path.State.coordinator(.init())) {
+                        Text("Coordinator")
                     }
                 }
             }
             .padding()
-        } destination: { store in
-            ParticipantImportView(store: store)
-        }
 
         .navigationTitle("Hello, FROST! ❄️")
     }
