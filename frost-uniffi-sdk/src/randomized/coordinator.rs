@@ -58,7 +58,7 @@ pub fn aggregate(
         .into_randomizer::<E>()
         .map_err(|_| CoordinationError::InvalidRandomizer)?;
 
-    frost::aggregate(
+    let signature = frost::aggregate(
         &signing_package,
         &shares,
         &public_key_package,
@@ -67,8 +67,10 @@ pub fn aggregate(
     )
     .map_err(|e| CoordinationError::SignatureShareAggregationFailed {
         message: e.to_string(),
-    })
-    .map(FrostSignature::from_signature)
+    })?;
+
+    FrostSignature::from_signature(signature)
+        .map_err(|_| CoordinationError::SigningPackageSerializationError)
 }
 
 #[uniffi::export]

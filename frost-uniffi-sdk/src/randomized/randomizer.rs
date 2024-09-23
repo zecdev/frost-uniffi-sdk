@@ -3,8 +3,8 @@ use std::sync::Arc;
 use rand::thread_rng;
 use reddsa::frost::redpallas as frost;
 
+use crate::randomized::randomizer::frost::Randomizer;
 use crate::{coordinator::FrostSigningPackage, FrostError, FrostPublicKeyPackage};
-use frost::round2::Randomizer;
 use frost::RandomizedParams;
 use frost_core::{Ciphersuite, Error};
 use uniffi;
@@ -77,18 +77,14 @@ pub fn from_hex_string(hex_string: String) -> Result<FrostRandomizer, FrostError
         .try_into()
         .map_err(|_| FrostError::DeserializationError)?;
 
-    let randomizer = frost::round2::Randomizer::deserialize(&buf).map_err(FrostError::map_err)?;
+    let randomizer = Randomizer::deserialize(&buf).map_err(FrostError::map_err)?;
 
     FrostRandomizer::from_randomizer::<E>(randomizer).map_err(FrostError::map_err)
 }
 
 impl FrostRandomizer {
     pub fn into_randomizer<C: Ciphersuite>(&self) -> Result<Randomizer, Error<E>> {
-        let raw_randomizer = &self.data[0..32]
-            .try_into()
-            .map_err(|_| Error::DeserializationError)?;
-
-        Randomizer::deserialize(raw_randomizer)
+        Randomizer::deserialize(&self.data)
     }
 
     pub fn from_randomizer<C: Ciphersuite>(

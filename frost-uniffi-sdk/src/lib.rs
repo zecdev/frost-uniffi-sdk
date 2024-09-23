@@ -5,12 +5,12 @@ type E = reddsa::frost::redpallas::PallasBlake2b512;
 pub mod coordinator;
 pub mod dkg;
 pub mod error;
+pub mod orchard;
 pub mod participant;
 #[cfg(feature = "redpallas")]
 pub mod randomized;
 pub mod serialization;
 pub mod trusted_dealer;
-pub mod orchard;
 use crate::trusted_dealer::{trusted_dealer_keygen, trusted_dealer_keygen_from_configuration};
 
 use frost_core::{
@@ -377,13 +377,13 @@ impl FrostPublicKeyPackage {
         for (k, v) in verifying_shares {
             shares.insert(
                 ParticipantIdentifier::from_identifier(*k)?,
-                hex::encode(v.serialize()),
+                hex::encode(v.serialize()?),
             );
         }
 
         Ok(Self {
             verifying_shares: shares,
-            verifying_key: hex::encode(verifying_key.serialize()),
+            verifying_key: hex::encode(verifying_key.serialize()?),
         })
     }
 
@@ -408,7 +408,7 @@ impl FrostPublicKeyPackage {
                 .try_into()
                 .map_err(|_| Error::DeserializationError)?;
 
-            let verifying_share = VerifyingShare::deserialize(verifying_share_bytes)?;
+            let verifying_share = VerifyingShare::deserialize(&verifying_share_bytes)?;
 
             btree_map.insert(identifier, verifying_share);
         }

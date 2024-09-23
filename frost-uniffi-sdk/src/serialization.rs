@@ -155,7 +155,7 @@ pub fn json_to_signature_share(
 
     Ok(share)
 }
-
+#[cfg(feature = "redpallas")]
 #[cfg(test)]
 mod test {
     use frost_core::{keys::KeyPackage, round2::SignatureShare, Identifier};
@@ -170,9 +170,12 @@ mod test {
     };
 
     use super::{
-        commitment_to_json, json_to_commitment, json_to_public_key_package, json_to_randomizer,
-        json_to_signature_share, public_key_package_to_json, randomizer_to_json,
+        commitment_to_json, json_to_commitment, json_to_public_key_package,
+        json_to_signature_share, public_key_package_to_json,
     };
+
+    #[cfg(feature = "redpallas")]
+    use super::{json_to_randomizer, randomizer_to_json};
 
     /// ```
     /// let json_package = r#"
@@ -189,6 +192,7 @@ mod test {
     ///    }
     ///"#;
     /// ```
+    #[cfg(feature = "redpallas")]
     #[test]
     fn test_key_package_roundtrip() {
         #[cfg(feature = "redpallas")]
@@ -223,6 +227,7 @@ mod test {
     /// ```
     ///
     ///
+    #[cfg(feature = "redpallas")]
     #[test]
     fn test_signature_share_serialization_round_trip() {
         let share_json = r#"{"header":{"version":0,"ciphersuite":"FROST(Pallas, BLAKE2b-512)"},"share":"d202ad8525dd0b238bdc969141ebe9b33402b71694fb6caffa78439634ee320d"}"#;
@@ -261,6 +266,7 @@ mod test {
     ///    }
     ///    "#;
     /// ```
+    #[cfg(feature = "redpallas")]
     #[test]
     fn test_commitment_serialization() {
         let commitment_json = r#"{"header":{"version":0,"ciphersuite":"FROST(Pallas, BLAKE2b-512)"},"hiding":"ad737cac6f8e9ae3ae21a0de51556c8ea86c8e483b2418cf58300c036ebc100c","binding":"d36a016645420728b278f33fcaa45781840b4960625e3c7cf189cebb76f9a08c"}"#;
@@ -296,6 +302,7 @@ mod test {
     ///    "share": "307ebf4d5b7125407f359fa010cdca940a83e942fd389ecd67c6683ecee78f3e"
     /// }"#;
     /// ```
+    #[cfg(feature = "redpallas")]
     #[test]
     fn test_signature_share_serialization() {
         let signature_share_json = r#"{"header":{"version":0,"ciphersuite":"FROST(Pallas, BLAKE2b-512)"},"share":"307ebf4d5b7125407f359fa010cdca940a83e942fd389ecd67c6683ecee78f3e"}"#;
@@ -311,6 +318,7 @@ mod test {
         assert_eq!(signature_share_json, json_signature_share);
     }
 
+    #[cfg(feature = "redpallas")]
     #[test]
     fn test_randomizer_serialization() {
         let randomizer_json =
@@ -339,6 +347,7 @@ mod test {
     ///    }
     ///   "#;
     /// ```
+    #[cfg(feature = "redpallas")]
     #[test]
     fn test_public_key_package_serialization() {
         let public_key_package_json = r#"{"header":{"version":0,"ciphersuite":"FROST(Pallas, BLAKE2b-512)"},"verifying_shares":{"0100000000000000000000000000000000000000000000000000000000000000":"61a199916a3c2b64c5e566deb1ab18997282f9559f5b328f6ae50ca24b349f9d","0200000000000000000000000000000000000000000000000000000000000000":"389656dbe50a0b260c5b4e7ee953e8d81b0814cbdc112a6cd773d55de4202c0e","0300000000000000000000000000000000000000000000000000000000000000":"c0d94a637e113a82942bd0b886fa7d0e2256010bd42a9893c81df1a58e34ff8d"},"verifying_key":"93c3d1dca3634e26c7068342175b7dd5b3e3f3654494f6f6a3b77f96f3cb0a39"}"#;
