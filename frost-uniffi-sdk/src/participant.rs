@@ -129,7 +129,7 @@ impl FrostSignatureShare {
             .map_err(|_| Error::DeserializationError)?;
 
         // TODO: Do not define the underlying curve inside the function
-        SignatureShare::<E>::deserialize(bytes)
+        SignatureShare::<E>::deserialize(&bytes)
     }
 
     pub fn from_signature_share<C: Ciphersuite>(
@@ -138,7 +138,7 @@ impl FrostSignatureShare {
     ) -> Result<FrostSignatureShare, Error<C>> {
         Ok(FrostSignatureShare {
             identifier: ParticipantIdentifier::from_identifier(identifier)?,
-            data: share.serialize().as_ref().to_vec(),
+            data: share.serialize(),
         })
     }
 }

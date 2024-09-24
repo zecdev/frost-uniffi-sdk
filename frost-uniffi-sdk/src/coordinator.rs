@@ -110,11 +110,20 @@ pub fn aggregate(
         .into_public_key_package()
         .map_err(|_| CoordinationError::PublicKeyPackageDeserializationError)?;
 
-    frost::aggregate(&signing_package, &shares, &public_key_package)
-        .map_err(|e| CoordinationError::SignatureShareAggregationFailed {
-            message: e.to_string(),
-        })
-        .map(FrostSignature::from_signature)
+    let signature =
+        frost::aggregate(&signing_package, &shares, &public_key_package).map_err(|e| {
+            CoordinationError::SignatureShareAggregationFailed {
+                message: e.to_string(),
+            }
+        })?;
+
+    Ok(FrostSignature {
+        data: signature.serialize().map_err(|e| {
+            CoordinationError::SignatureShareAggregationFailed {
+                message: e.to_string(),
+            }
+        })?,
+    })
 }
 
 #[derive(Debug, uniffi::Error, thiserror::Error)]
@@ -154,13 +163,14 @@ impl FrostSignature {
         let bytes: [u8; 64] = self.data[0..64]
             .try_into()
             .map_err(|_| Error::DeserializationError)?;
-        Signature::<E>::deserialize(bytes)
+        Signature::<E>::deserialize(&bytes)
     }
 
-    pub fn from_signature<C: Ciphersuite>(signature: Signature<C>) -> FrostSignature {
-        FrostSignature {
-            data: signature.serialize().as_ref().to_vec(),
-        }
+    pub fn from_signature<C: Ciphersuite>(
+        signature: Signature<C>,
+    ) -> Result<FrostSignature, Error<C>> {
+        let data = signature.serialize()?;
+        Ok(FrostSignature { data })
     }
 }
 
