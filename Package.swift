@@ -17,7 +17,7 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/krzyzanowskim/CryptoSwift", from: "1.8.3")
+        .package(url: "https://github.com/pacu/frost-uniffi-sdk/releases/download/0.0.7/RustFramework.xcframework.zip", from: "1.8.3")
     ],
     targets: [
         .target(
@@ -26,7 +26,7 @@ let package = Package(
                 .target(name: "FrostSwiftFFI")
             ], path: "FrostSwift/Sources/FrostSwift"
         ),
-        .binaryTarget(name: "RustFramework", url: "https://github.com/pacu/frost-uniffi-sdk/releases/download/0.0.6/RustFramework.xcframework.zip", checksum: "b84677041219487bca551d563ff2993164454e6d70fd74076ed1f6309a7c9d85"),
+        .binaryTarget(name: "RustFramework", url: "https://github.com/pacu/frost-uniffi-sdk/releases/download/0.0.7/RustFramework.xcframework.zip", checksum: "4a9d0051a83e5c363dea06107972b82c6c72a28e464a5f4e70d3edbcb419d228"),
         .target(
             name: "FrostSwiftFFI",
             dependencies: [
