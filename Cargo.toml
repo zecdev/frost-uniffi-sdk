@@ -13,7 +13,7 @@ hex = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 rand = "0.8"
 serde_json = "1.0"
-itertools = "0.12.1"
+itertools = "0.14.0"
 tokio = { version = "1", features = ["full"] }
 message-io = "0.18"
 
