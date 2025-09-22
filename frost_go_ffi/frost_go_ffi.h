@@ -24,24 +24,10 @@
 // ⚠️ increment the version suffix in all instances of UNIFFI_SHARED_HEADER_V6 in this file.           ⚠️
 
 typedef struct RustBuffer {
-	int32_t capacity;
-	int32_t len;
+	uint64_t capacity;
+	uint64_t len;
 	uint8_t *data;
 } RustBuffer;
-
-typedef int32_t (*ForeignCallback)(uint64_t, int32_t, uint8_t *, int32_t, RustBuffer *);
-
-// Task defined in Rust that Go executes
-typedef void (*RustTaskCallback)(const void *, int8_t);
-
-// Callback to execute Rust tasks using a Go routine
-//
-// Args:
-//   executor: ForeignExecutor lowered into a uint64_t value
-//   delay: Delay in MS
-//   task: RustTaskCallback to call
-//   task_data: data to pass the task callback
-typedef int8_t (*ForeignExecutorCallback)(uint64_t, uint32_t, RustTaskCallback, void *);
 
 typedef struct ForeignBytes {
 	int32_t len;
@@ -54,818 +40,1244 @@ typedef struct RustCallStatus {
 	RustBuffer errorBuf;
 } RustCallStatus;
 
-// Continuation callback for UniFFI Futures
-typedef void (*RustFutureContinuation)(void * , int8_t);
-
-// ⚠️ Attention: If you change this #else block (ending in `#endif // def UNIFFI_SHARED_H`) you *must* ⚠️
-// ⚠️ increment the version suffix in all instances of UNIFFI_SHARED_HEADER_V6 in this file.           ⚠️
-#endif // def UNIFFI_SHARED_H
-
-// Needed because we can't execute the callback directly from go.
-void cgo_rust_task_callback_bridge_frost_go_ffi(RustTaskCallback, const void *, int8_t);
-
-int8_t uniffiForeignExecutorCallbackfrost_go_ffi(uint64_t, uint32_t, RustTaskCallback, void*);
-
-void uniffiFutureContinuationCallbackfrost_go_ffi(void*, int8_t);
-
-void uniffi_frost_uniffi_sdk_fn_free_dkgpart1result(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_dkgpart2result(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_dkground1secretpackage(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_dkground2secretpackage(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_frostrandomizedparams(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_orchardaddress(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_constructor_orchardaddress_new_from_string(
-	RustBuffer string,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardaddress_string_encoded(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_orchardcommitivkrandomness(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_constructor_orchardcommitivkrandomness_new(
-	RustBuffer bytes,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardcommitivkrandomness_to_bytes(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_orchardfullviewingkey(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_decode(
-	RustBuffer string_enconded,
-	RustBuffer network,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_checked_parts(
-	void* ak,
-	void* nk,
-	void* rivk,
-	RustBuffer network,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(
-	void* validating_key,
-	RustBuffer zip_32_seed,
-	RustBuffer network,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_ak(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_derive_address(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_encode(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_nk(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_rivk(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_orchardkeyparts(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_constructor_orchardkeyparts_random(
-	RustBuffer network,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_orchardnullifierderivingkey(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_constructor_orchardnullifierderivingkey_new(
-	RustBuffer bytes,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardnullifierderivingkey_to_bytes(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_free_orchardspendvalidatingkey(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_constructor_orchardspendvalidatingkey_from_bytes(
-	RustBuffer bytes,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardspendvalidatingkey_to_bytes(
-	void* ptr,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_aggregate(
-	RustBuffer signing_package,
-	RustBuffer signature_shares,
-	RustBuffer pubkey_package,
-	RustBuffer randomizer,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_commitment_to_json(
-	RustBuffer commitment,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_from_hex_string(
-	RustBuffer hex_string,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(
-	RustBuffer key_package,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_json_string(
-	RustBuffer string,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_string(
-	RustBuffer string,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_uint16(
-	uint16_t unsigned_uint,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_commitment(
-	RustBuffer commitment_json,
-	RustBuffer identifier,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_key_package(
-	RustBuffer key_package_json,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_public_key_package(
-	RustBuffer public_key_package_json,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_randomizer(
-	RustBuffer randomizer_json,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_signature_share(
-	RustBuffer signature_share_json,
-	RustBuffer identifier,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_key_package_to_json(
-	RustBuffer key_package,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_new_signing_package(
-	RustBuffer message,
-	RustBuffer commitments,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_func_part_1(
-	RustBuffer participant_identifier,
-	uint16_t max_signers,
-	uint16_t min_signers,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_func_part_2(
-	void* secret_package,
-	RustBuffer round1_packages,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_part_3(
-	void* secret_package,
-	RustBuffer round1_packages,
-	RustBuffer round2_packages,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_public_key_package_to_json(
-	RustBuffer public_key_package,
-	RustCallStatus* out_status
-);
-
-void* uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(
-	RustBuffer public_key,
-	RustBuffer signing_package,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(
-	void* randomized_params,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_randomizer_to_json(
-	RustBuffer randomizer,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_sign(
-	RustBuffer signing_package,
-	RustBuffer nonces,
-	RustBuffer key_package,
-	RustBuffer randomizer,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_signature_share_package_to_json(
-	RustBuffer signature_share,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_from(
-	RustBuffer configuration,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_with_identifiers(
-	RustBuffer configuration,
-	RustBuffer participants,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_func_validate_config(
-	RustBuffer config,
-	RustCallStatus* out_status
-);
-
-RustBuffer uniffi_frost_uniffi_sdk_fn_func_verify_and_get_key_package_from(
-	RustBuffer secret_share,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(
-	RustBuffer randomizer,
-	RustBuffer message,
-	RustBuffer signature,
-	RustBuffer pubkey,
-	RustCallStatus* out_status
-);
-
-void uniffi_frost_uniffi_sdk_fn_func_verify_signature(
-	RustBuffer message,
-	RustBuffer signature,
-	RustBuffer pubkey,
-	RustCallStatus* out_status
-);
-
-RustBuffer ffi_frost_uniffi_sdk_rustbuffer_alloc(
-	int32_t size,
-	RustCallStatus* out_status
-);
-
-RustBuffer ffi_frost_uniffi_sdk_rustbuffer_from_bytes(
-	ForeignBytes bytes,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rustbuffer_free(
-	RustBuffer buf,
-	RustCallStatus* out_status
-);
-
-RustBuffer ffi_frost_uniffi_sdk_rustbuffer_reserve(
-	RustBuffer buf,
-	int32_t additional,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_continuation_callback_set(
-	RustFutureContinuation callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_u8(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_u8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_u8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint8_t ffi_frost_uniffi_sdk_rust_future_complete_u8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_i8(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_i8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_i8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-int8_t ffi_frost_uniffi_sdk_rust_future_complete_i8(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_u16(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_u16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_u16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint16_t ffi_frost_uniffi_sdk_rust_future_complete_u16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_i16(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_i16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_i16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-int16_t ffi_frost_uniffi_sdk_rust_future_complete_i16(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_u32(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_u32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_u32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint32_t ffi_frost_uniffi_sdk_rust_future_complete_u32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_i32(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_i32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_i32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-int32_t ffi_frost_uniffi_sdk_rust_future_complete_i32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_u64(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_u64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_u64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint64_t ffi_frost_uniffi_sdk_rust_future_complete_u64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_i64(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_i64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_i64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-int64_t ffi_frost_uniffi_sdk_rust_future_complete_i64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_f32(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_f32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_f32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-float ffi_frost_uniffi_sdk_rust_future_complete_f32(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_f64(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_f64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_f64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-double ffi_frost_uniffi_sdk_rust_future_complete_f64(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_pointer(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_pointer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_pointer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void* ffi_frost_uniffi_sdk_rust_future_complete_pointer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_rust_buffer(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_rust_buffer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_rust_buffer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-RustBuffer ffi_frost_uniffi_sdk_rust_future_complete_rust_buffer(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_poll_void(
-	void* handle,
-	void* uniffi_callback,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_cancel_void(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_free_void(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-void ffi_frost_uniffi_sdk_rust_future_complete_void(
-	void* handle,
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_aggregate(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_commitment_to_json(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_from_hex_string(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_json_string(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_commitment(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_key_package(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_public_key_package(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_randomizer(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_signature_share(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_key_package_to_json(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_new_signing_package(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_1(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_2(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_3(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_public_key_package_to_json(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomizer_to_json(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_sign(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_signature_share_package_to_json(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_validate_config(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_signature(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardaddress_string_encoded(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardcommitivkrandomness_to_bytes(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_ak(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_derive_address(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_encode(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_nk(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_rivk(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardnullifierderivingkey_to_bytes(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardspendvalidatingkey_to_bytes(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardaddress_new_from_string(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardcommitivkrandomness_new(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_decode(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_checked_parts(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardkeyparts_random(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardnullifierderivingkey_new(
-	RustCallStatus* out_status
-);
-
-uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardspendvalidatingkey_from_bytes(
-	RustCallStatus* out_status
-);
-
-uint32_t ffi_frost_uniffi_sdk_uniffi_contract_version(
-	RustCallStatus* out_status
-);
-
-
+#endif // UNIFFI_SHARED_H
+
+
+#ifndef UNIFFI_FFIDEF_RUST_FUTURE_CONTINUATION_CALLBACK
+#define UNIFFI_FFIDEF_RUST_FUTURE_CONTINUATION_CALLBACK
+typedef void (*UniffiRustFutureContinuationCallback)(uint64_t data, int8_t poll_result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiRustFutureContinuationCallback(
+				UniffiRustFutureContinuationCallback cb, uint64_t data, int8_t poll_result)
+{
+	return cb(data, poll_result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_FREE
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_FREE
+typedef void (*UniffiForeignFutureFree)(uint64_t handle);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureFree(
+				UniffiForeignFutureFree cb, uint64_t handle)
+{
+	return cb(handle);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_CALLBACK_INTERFACE_FREE
+#define UNIFFI_FFIDEF_CALLBACK_INTERFACE_FREE
+typedef void (*UniffiCallbackInterfaceFree)(uint64_t handle);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiCallbackInterfaceFree(
+				UniffiCallbackInterfaceFree cb, uint64_t handle)
+{
+	return cb(handle);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE
+typedef struct UniffiForeignFuture {
+    uint64_t handle;
+    UniffiForeignFutureFree free;
+} UniffiForeignFuture;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U8
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U8
+typedef struct UniffiForeignFutureStructU8 {
+    uint8_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructU8;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U8
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U8
+typedef void (*UniffiForeignFutureCompleteU8)(uint64_t callback_data, UniffiForeignFutureStructU8 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteU8(
+				UniffiForeignFutureCompleteU8 cb, uint64_t callback_data, UniffiForeignFutureStructU8 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I8
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I8
+typedef struct UniffiForeignFutureStructI8 {
+    int8_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructI8;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I8
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I8
+typedef void (*UniffiForeignFutureCompleteI8)(uint64_t callback_data, UniffiForeignFutureStructI8 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteI8(
+				UniffiForeignFutureCompleteI8 cb, uint64_t callback_data, UniffiForeignFutureStructI8 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U16
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U16
+typedef struct UniffiForeignFutureStructU16 {
+    uint16_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructU16;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U16
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U16
+typedef void (*UniffiForeignFutureCompleteU16)(uint64_t callback_data, UniffiForeignFutureStructU16 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteU16(
+				UniffiForeignFutureCompleteU16 cb, uint64_t callback_data, UniffiForeignFutureStructU16 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I16
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I16
+typedef struct UniffiForeignFutureStructI16 {
+    int16_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructI16;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I16
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I16
+typedef void (*UniffiForeignFutureCompleteI16)(uint64_t callback_data, UniffiForeignFutureStructI16 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteI16(
+				UniffiForeignFutureCompleteI16 cb, uint64_t callback_data, UniffiForeignFutureStructI16 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U32
+typedef struct UniffiForeignFutureStructU32 {
+    uint32_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructU32;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U32
+typedef void (*UniffiForeignFutureCompleteU32)(uint64_t callback_data, UniffiForeignFutureStructU32 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteU32(
+				UniffiForeignFutureCompleteU32 cb, uint64_t callback_data, UniffiForeignFutureStructU32 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I32
+typedef struct UniffiForeignFutureStructI32 {
+    int32_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructI32;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I32
+typedef void (*UniffiForeignFutureCompleteI32)(uint64_t callback_data, UniffiForeignFutureStructI32 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteI32(
+				UniffiForeignFutureCompleteI32 cb, uint64_t callback_data, UniffiForeignFutureStructI32 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_U64
+typedef struct UniffiForeignFutureStructU64 {
+    uint64_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructU64;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_U64
+typedef void (*UniffiForeignFutureCompleteU64)(uint64_t callback_data, UniffiForeignFutureStructU64 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteU64(
+				UniffiForeignFutureCompleteU64 cb, uint64_t callback_data, UniffiForeignFutureStructU64 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_I64
+typedef struct UniffiForeignFutureStructI64 {
+    int64_t returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructI64;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_I64
+typedef void (*UniffiForeignFutureCompleteI64)(uint64_t callback_data, UniffiForeignFutureStructI64 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteI64(
+				UniffiForeignFutureCompleteI64 cb, uint64_t callback_data, UniffiForeignFutureStructI64 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_F32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_F32
+typedef struct UniffiForeignFutureStructF32 {
+    float returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructF32;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_F32
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_F32
+typedef void (*UniffiForeignFutureCompleteF32)(uint64_t callback_data, UniffiForeignFutureStructF32 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteF32(
+				UniffiForeignFutureCompleteF32 cb, uint64_t callback_data, UniffiForeignFutureStructF32 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_F64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_F64
+typedef struct UniffiForeignFutureStructF64 {
+    double returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructF64;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_F64
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_F64
+typedef void (*UniffiForeignFutureCompleteF64)(uint64_t callback_data, UniffiForeignFutureStructF64 result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteF64(
+				UniffiForeignFutureCompleteF64 cb, uint64_t callback_data, UniffiForeignFutureStructF64 result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_POINTER
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_POINTER
+typedef struct UniffiForeignFutureStructPointer {
+    void* returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructPointer;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_POINTER
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_POINTER
+typedef void (*UniffiForeignFutureCompletePointer)(uint64_t callback_data, UniffiForeignFutureStructPointer result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompletePointer(
+				UniffiForeignFutureCompletePointer cb, uint64_t callback_data, UniffiForeignFutureStructPointer result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_RUST_BUFFER
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_RUST_BUFFER
+typedef struct UniffiForeignFutureStructRustBuffer {
+    RustBuffer returnValue;
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructRustBuffer;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_RUST_BUFFER
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_RUST_BUFFER
+typedef void (*UniffiForeignFutureCompleteRustBuffer)(uint64_t callback_data, UniffiForeignFutureStructRustBuffer result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteRustBuffer(
+				UniffiForeignFutureCompleteRustBuffer cb, uint64_t callback_data, UniffiForeignFutureStructRustBuffer result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_VOID
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_STRUCT_VOID
+typedef struct UniffiForeignFutureStructVoid {
+    RustCallStatus callStatus;
+} UniffiForeignFutureStructVoid;
+
+#endif
+#ifndef UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_VOID
+#define UNIFFI_FFIDEF_FOREIGN_FUTURE_COMPLETE_VOID
+typedef void (*UniffiForeignFutureCompleteVoid)(uint64_t callback_data, UniffiForeignFutureStructVoid result);
+
+// Making function static works arround:
+// https://github.com/golang/go/issues/11263
+static void call_UniffiForeignFutureCompleteVoid(
+				UniffiForeignFutureCompleteVoid cb, uint64_t callback_data, UniffiForeignFutureStructVoid result)
+{
+	return cb(callback_data, result);
+}
+
+
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_DKGPART1RESULT
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_DKGPART1RESULT
+void* uniffi_frost_uniffi_sdk_fn_clone_dkgpart1result(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_DKGPART1RESULT
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_DKGPART1RESULT
+void uniffi_frost_uniffi_sdk_fn_free_dkgpart1result(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_DKGPART2RESULT
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_DKGPART2RESULT
+void* uniffi_frost_uniffi_sdk_fn_clone_dkgpart2result(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_DKGPART2RESULT
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_DKGPART2RESULT
+void uniffi_frost_uniffi_sdk_fn_free_dkgpart2result(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_DKGROUND1SECRETPACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_DKGROUND1SECRETPACKAGE
+void* uniffi_frost_uniffi_sdk_fn_clone_dkground1secretpackage(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_DKGROUND1SECRETPACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_DKGROUND1SECRETPACKAGE
+void uniffi_frost_uniffi_sdk_fn_free_dkground1secretpackage(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_DKGROUND2SECRETPACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_DKGROUND2SECRETPACKAGE
+void* uniffi_frost_uniffi_sdk_fn_clone_dkground2secretpackage(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_DKGROUND2SECRETPACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_DKGROUND2SECRETPACKAGE
+void uniffi_frost_uniffi_sdk_fn_free_dkground2secretpackage(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_FROSTRANDOMIZEDPARAMS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_FROSTRANDOMIZEDPARAMS
+void* uniffi_frost_uniffi_sdk_fn_clone_frostrandomizedparams(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_FROSTRANDOMIZEDPARAMS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_FROSTRANDOMIZEDPARAMS
+void uniffi_frost_uniffi_sdk_fn_free_frostrandomizedparams(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDADDRESS
+void* uniffi_frost_uniffi_sdk_fn_clone_orchardaddress(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDADDRESS
+void uniffi_frost_uniffi_sdk_fn_free_orchardaddress(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDADDRESS_NEW_FROM_STRING
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDADDRESS_NEW_FROM_STRING
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardaddress_new_from_string(RustBuffer string, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDADDRESS_STRING_ENCODED
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDADDRESS_STRING_ENCODED
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardaddress_string_encoded(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDCOMMITIVKRANDOMNESS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDCOMMITIVKRANDOMNESS
+void* uniffi_frost_uniffi_sdk_fn_clone_orchardcommitivkrandomness(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDCOMMITIVKRANDOMNESS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDCOMMITIVKRANDOMNESS
+void uniffi_frost_uniffi_sdk_fn_free_orchardcommitivkrandomness(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDCOMMITIVKRANDOMNESS_NEW
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDCOMMITIVKRANDOMNESS_NEW
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardcommitivkrandomness_new(RustBuffer bytes, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDCOMMITIVKRANDOMNESS_TO_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDCOMMITIVKRANDOMNESS_TO_BYTES
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardcommitivkrandomness_to_bytes(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDFULLVIEWINGKEY
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDFULLVIEWINGKEY
+void* uniffi_frost_uniffi_sdk_fn_clone_orchardfullviewingkey(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDFULLVIEWINGKEY
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDFULLVIEWINGKEY
+void uniffi_frost_uniffi_sdk_fn_free_orchardfullviewingkey(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_DECODE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_DECODE
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_decode(RustBuffer string_enconded, RustBuffer network, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_NEW_FROM_CHECKED_PARTS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_NEW_FROM_CHECKED_PARTS
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_checked_parts(void* ak, void* nk, void* rivk, RustBuffer network, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_NEW_FROM_VALIDATING_KEY_AND_SEED
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_NEW_FROM_VALIDATING_KEY_AND_SEED
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(void* validating_key, RustBuffer zip_32_seed, RustBuffer network, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_AK
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_AK
+void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_ak(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_DERIVE_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_DERIVE_ADDRESS
+void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_derive_address(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_ENCODE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_ENCODE
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_encode(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_NK
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_NK
+void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_nk(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_RIVK
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDFULLVIEWINGKEY_RIVK
+void* uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_rivk(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDKEYPARTS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDKEYPARTS
+void* uniffi_frost_uniffi_sdk_fn_clone_orchardkeyparts(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDKEYPARTS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDKEYPARTS
+void uniffi_frost_uniffi_sdk_fn_free_orchardkeyparts(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDKEYPARTS_RANDOM
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDKEYPARTS_RANDOM
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardkeyparts_random(RustBuffer network, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDNULLIFIERDERIVINGKEY
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDNULLIFIERDERIVINGKEY
+void* uniffi_frost_uniffi_sdk_fn_clone_orchardnullifierderivingkey(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDNULLIFIERDERIVINGKEY
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDNULLIFIERDERIVINGKEY
+void uniffi_frost_uniffi_sdk_fn_free_orchardnullifierderivingkey(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDNULLIFIERDERIVINGKEY_NEW
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDNULLIFIERDERIVINGKEY_NEW
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardnullifierderivingkey_new(RustBuffer bytes, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDNULLIFIERDERIVINGKEY_TO_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDNULLIFIERDERIVINGKEY_TO_BYTES
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardnullifierderivingkey_to_bytes(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDSPENDVALIDATINGKEY
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CLONE_ORCHARDSPENDVALIDATINGKEY
+void* uniffi_frost_uniffi_sdk_fn_clone_orchardspendvalidatingkey(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDSPENDVALIDATINGKEY
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FREE_ORCHARDSPENDVALIDATINGKEY
+void uniffi_frost_uniffi_sdk_fn_free_orchardspendvalidatingkey(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDSPENDVALIDATINGKEY_FROM_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_CONSTRUCTOR_ORCHARDSPENDVALIDATINGKEY_FROM_BYTES
+void* uniffi_frost_uniffi_sdk_fn_constructor_orchardspendvalidatingkey_from_bytes(RustBuffer bytes, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDSPENDVALIDATINGKEY_TO_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_METHOD_ORCHARDSPENDVALIDATINGKEY_TO_BYTES
+RustBuffer uniffi_frost_uniffi_sdk_fn_method_orchardspendvalidatingkey_to_bytes(void* ptr, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_AGGREGATE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_AGGREGATE
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_aggregate(RustBuffer signing_package, RustBuffer signature_shares, RustBuffer pubkey_package, RustBuffer randomizer, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_COMMITMENT_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_COMMITMENT_TO_JSON
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_commitment_to_json(RustBuffer commitment, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_FROM_HEX_STRING
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_FROM_HEX_STRING
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_from_hex_string(RustBuffer hex_string, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_GENERATE_NONCES_AND_COMMITMENTS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_GENERATE_NONCES_AND_COMMITMENTS
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(RustBuffer key_package, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_IDENTIFIER_FROM_JSON_STRING
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_IDENTIFIER_FROM_JSON_STRING
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_json_string(RustBuffer string, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_IDENTIFIER_FROM_STRING
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_IDENTIFIER_FROM_STRING
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_string(RustBuffer string, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_IDENTIFIER_FROM_UINT16
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_IDENTIFIER_FROM_UINT16
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_identifier_from_uint16(uint16_t unsigned_uint, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_COMMITMENT
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_COMMITMENT
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_commitment(RustBuffer commitment_json, RustBuffer identifier, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_KEY_PACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_KEY_PACKAGE
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_key_package(RustBuffer key_package_json, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_PUBLIC_KEY_PACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_PUBLIC_KEY_PACKAGE
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_public_key_package(RustBuffer public_key_package_json, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_RANDOMIZER
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_RANDOMIZER
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_randomizer(RustBuffer randomizer_json, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_SIGNATURE_SHARE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_JSON_TO_SIGNATURE_SHARE
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_json_to_signature_share(RustBuffer signature_share_json, RustBuffer identifier, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_KEY_PACKAGE_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_KEY_PACKAGE_TO_JSON
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_key_package_to_json(RustBuffer key_package, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_NEW_SIGNING_PACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_NEW_SIGNING_PACKAGE
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_new_signing_package(RustBuffer message, RustBuffer commitments, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_PART_1
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_PART_1
+void* uniffi_frost_uniffi_sdk_fn_func_part_1(RustBuffer participant_identifier, uint16_t max_signers, uint16_t min_signers, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_PART_2
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_PART_2
+void* uniffi_frost_uniffi_sdk_fn_func_part_2(void* secret_package, RustBuffer round1_packages, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_PART_3
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_PART_3
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_part_3(void* secret_package, RustBuffer round1_packages, RustBuffer round2_packages, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_PUBLIC_KEY_PACKAGE_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_PUBLIC_KEY_PACKAGE_TO_JSON
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_public_key_package_to_json(RustBuffer public_key_package, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_RANDOMIZED_PARAMS_FROM_PUBLIC_KEY_AND_SIGNING_PACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_RANDOMIZED_PARAMS_FROM_PUBLIC_KEY_AND_SIGNING_PACKAGE
+void* uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(RustBuffer public_key, RustBuffer signing_package, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_RANDOMIZER_FROM_PARAMS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_RANDOMIZER_FROM_PARAMS
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(void* randomized_params, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_RANDOMIZER_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_RANDOMIZER_TO_JSON
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_randomizer_to_json(RustBuffer randomizer, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_SIGN
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_SIGN
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_sign(RustBuffer signing_package, RustBuffer nonces, RustBuffer key_package, RustBuffer randomizer, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_SIGNATURE_SHARE_PACKAGE_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_SIGNATURE_SHARE_PACKAGE_TO_JSON
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_signature_share_package_to_json(RustBuffer signature_share, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_TRUSTED_DEALER_KEYGEN_FROM
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_TRUSTED_DEALER_KEYGEN_FROM
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_from(RustBuffer configuration, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_TRUSTED_DEALER_KEYGEN_WITH_IDENTIFIERS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_TRUSTED_DEALER_KEYGEN_WITH_IDENTIFIERS
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_with_identifiers(RustBuffer configuration, RustBuffer participants, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_VALIDATE_CONFIG
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_VALIDATE_CONFIG
+void uniffi_frost_uniffi_sdk_fn_func_validate_config(RustBuffer config, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_VERIFY_AND_GET_KEY_PACKAGE_FROM
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_VERIFY_AND_GET_KEY_PACKAGE_FROM
+RustBuffer uniffi_frost_uniffi_sdk_fn_func_verify_and_get_key_package_from(RustBuffer secret_share, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_VERIFY_RANDOMIZED_SIGNATURE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_VERIFY_RANDOMIZED_SIGNATURE
+void uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(RustBuffer randomizer, RustBuffer message, RustBuffer signature, RustBuffer pubkey, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_VERIFY_SIGNATURE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_FN_FUNC_VERIFY_SIGNATURE
+void uniffi_frost_uniffi_sdk_fn_func_verify_signature(RustBuffer message, RustBuffer signature, RustBuffer pubkey, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUSTBUFFER_ALLOC
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUSTBUFFER_ALLOC
+RustBuffer ffi_frost_uniffi_sdk_rustbuffer_alloc(uint64_t size, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUSTBUFFER_FROM_BYTES
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUSTBUFFER_FROM_BYTES
+RustBuffer ffi_frost_uniffi_sdk_rustbuffer_from_bytes(ForeignBytes bytes, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUSTBUFFER_FREE
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUSTBUFFER_FREE
+void ffi_frost_uniffi_sdk_rustbuffer_free(RustBuffer buf, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUSTBUFFER_RESERVE
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUSTBUFFER_RESERVE
+RustBuffer ffi_frost_uniffi_sdk_rustbuffer_reserve(RustBuffer buf, uint64_t additional, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_U8
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_U8
+void ffi_frost_uniffi_sdk_rust_future_poll_u8(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_U8
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_U8
+void ffi_frost_uniffi_sdk_rust_future_cancel_u8(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_U8
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_U8
+void ffi_frost_uniffi_sdk_rust_future_free_u8(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_U8
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_U8
+uint8_t ffi_frost_uniffi_sdk_rust_future_complete_u8(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_I8
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_I8
+void ffi_frost_uniffi_sdk_rust_future_poll_i8(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_I8
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_I8
+void ffi_frost_uniffi_sdk_rust_future_cancel_i8(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_I8
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_I8
+void ffi_frost_uniffi_sdk_rust_future_free_i8(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_I8
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_I8
+int8_t ffi_frost_uniffi_sdk_rust_future_complete_i8(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_U16
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_U16
+void ffi_frost_uniffi_sdk_rust_future_poll_u16(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_U16
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_U16
+void ffi_frost_uniffi_sdk_rust_future_cancel_u16(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_U16
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_U16
+void ffi_frost_uniffi_sdk_rust_future_free_u16(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_U16
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_U16
+uint16_t ffi_frost_uniffi_sdk_rust_future_complete_u16(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_I16
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_I16
+void ffi_frost_uniffi_sdk_rust_future_poll_i16(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_I16
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_I16
+void ffi_frost_uniffi_sdk_rust_future_cancel_i16(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_I16
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_I16
+void ffi_frost_uniffi_sdk_rust_future_free_i16(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_I16
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_I16
+int16_t ffi_frost_uniffi_sdk_rust_future_complete_i16(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_U32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_U32
+void ffi_frost_uniffi_sdk_rust_future_poll_u32(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_U32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_U32
+void ffi_frost_uniffi_sdk_rust_future_cancel_u32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_U32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_U32
+void ffi_frost_uniffi_sdk_rust_future_free_u32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_U32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_U32
+uint32_t ffi_frost_uniffi_sdk_rust_future_complete_u32(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_I32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_I32
+void ffi_frost_uniffi_sdk_rust_future_poll_i32(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_I32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_I32
+void ffi_frost_uniffi_sdk_rust_future_cancel_i32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_I32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_I32
+void ffi_frost_uniffi_sdk_rust_future_free_i32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_I32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_I32
+int32_t ffi_frost_uniffi_sdk_rust_future_complete_i32(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_U64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_U64
+void ffi_frost_uniffi_sdk_rust_future_poll_u64(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_U64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_U64
+void ffi_frost_uniffi_sdk_rust_future_cancel_u64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_U64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_U64
+void ffi_frost_uniffi_sdk_rust_future_free_u64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_U64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_U64
+uint64_t ffi_frost_uniffi_sdk_rust_future_complete_u64(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_I64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_I64
+void ffi_frost_uniffi_sdk_rust_future_poll_i64(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_I64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_I64
+void ffi_frost_uniffi_sdk_rust_future_cancel_i64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_I64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_I64
+void ffi_frost_uniffi_sdk_rust_future_free_i64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_I64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_I64
+int64_t ffi_frost_uniffi_sdk_rust_future_complete_i64(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_F32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_F32
+void ffi_frost_uniffi_sdk_rust_future_poll_f32(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_F32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_F32
+void ffi_frost_uniffi_sdk_rust_future_cancel_f32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_F32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_F32
+void ffi_frost_uniffi_sdk_rust_future_free_f32(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_F32
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_F32
+float ffi_frost_uniffi_sdk_rust_future_complete_f32(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_F64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_F64
+void ffi_frost_uniffi_sdk_rust_future_poll_f64(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_F64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_F64
+void ffi_frost_uniffi_sdk_rust_future_cancel_f64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_F64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_F64
+void ffi_frost_uniffi_sdk_rust_future_free_f64(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_F64
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_F64
+double ffi_frost_uniffi_sdk_rust_future_complete_f64(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_POINTER
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_POINTER
+void ffi_frost_uniffi_sdk_rust_future_poll_pointer(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_POINTER
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_POINTER
+void ffi_frost_uniffi_sdk_rust_future_cancel_pointer(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_POINTER
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_POINTER
+void ffi_frost_uniffi_sdk_rust_future_free_pointer(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_POINTER
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_POINTER
+void* ffi_frost_uniffi_sdk_rust_future_complete_pointer(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_RUST_BUFFER
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_RUST_BUFFER
+void ffi_frost_uniffi_sdk_rust_future_poll_rust_buffer(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_RUST_BUFFER
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_RUST_BUFFER
+void ffi_frost_uniffi_sdk_rust_future_cancel_rust_buffer(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_RUST_BUFFER
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_RUST_BUFFER
+void ffi_frost_uniffi_sdk_rust_future_free_rust_buffer(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_RUST_BUFFER
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_RUST_BUFFER
+RustBuffer ffi_frost_uniffi_sdk_rust_future_complete_rust_buffer(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_VOID
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_POLL_VOID
+void ffi_frost_uniffi_sdk_rust_future_poll_void(uint64_t handle, UniffiRustFutureContinuationCallback callback, uint64_t callback_data
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_VOID
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_CANCEL_VOID
+void ffi_frost_uniffi_sdk_rust_future_cancel_void(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_VOID
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_FREE_VOID
+void ffi_frost_uniffi_sdk_rust_future_free_void(uint64_t handle
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_VOID
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_RUST_FUTURE_COMPLETE_VOID
+void ffi_frost_uniffi_sdk_rust_future_complete_void(uint64_t handle, RustCallStatus *out_status
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_AGGREGATE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_AGGREGATE
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_aggregate(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_COMMITMENT_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_COMMITMENT_TO_JSON
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_commitment_to_json(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_FROM_HEX_STRING
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_FROM_HEX_STRING
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_from_hex_string(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_GENERATE_NONCES_AND_COMMITMENTS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_GENERATE_NONCES_AND_COMMITMENTS
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_IDENTIFIER_FROM_JSON_STRING
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_IDENTIFIER_FROM_JSON_STRING
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_json_string(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_IDENTIFIER_FROM_STRING
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_IDENTIFIER_FROM_STRING
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_IDENTIFIER_FROM_UINT16
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_IDENTIFIER_FROM_UINT16
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_COMMITMENT
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_COMMITMENT
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_commitment(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_KEY_PACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_KEY_PACKAGE
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_key_package(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_PUBLIC_KEY_PACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_PUBLIC_KEY_PACKAGE
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_public_key_package(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_RANDOMIZER
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_RANDOMIZER
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_randomizer(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_SIGNATURE_SHARE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_JSON_TO_SIGNATURE_SHARE
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_json_to_signature_share(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_KEY_PACKAGE_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_KEY_PACKAGE_TO_JSON
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_key_package_to_json(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_NEW_SIGNING_PACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_NEW_SIGNING_PACKAGE
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_new_signing_package(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_PART_1
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_PART_1
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_1(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_PART_2
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_PART_2
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_2(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_PART_3
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_PART_3
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_part_3(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_PUBLIC_KEY_PACKAGE_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_PUBLIC_KEY_PACKAGE_TO_JSON
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_public_key_package_to_json(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_RANDOMIZED_PARAMS_FROM_PUBLIC_KEY_AND_SIGNING_PACKAGE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_RANDOMIZED_PARAMS_FROM_PUBLIC_KEY_AND_SIGNING_PACKAGE
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_RANDOMIZER_FROM_PARAMS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_RANDOMIZER_FROM_PARAMS
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_RANDOMIZER_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_RANDOMIZER_TO_JSON
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_randomizer_to_json(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_SIGN
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_SIGN
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_sign(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_SIGNATURE_SHARE_PACKAGE_TO_JSON
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_SIGNATURE_SHARE_PACKAGE_TO_JSON
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_signature_share_package_to_json(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_TRUSTED_DEALER_KEYGEN_FROM
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_TRUSTED_DEALER_KEYGEN_FROM
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_TRUSTED_DEALER_KEYGEN_WITH_IDENTIFIERS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_TRUSTED_DEALER_KEYGEN_WITH_IDENTIFIERS
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_VALIDATE_CONFIG
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_VALIDATE_CONFIG
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_validate_config(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_VERIFY_AND_GET_KEY_PACKAGE_FROM
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_VERIFY_AND_GET_KEY_PACKAGE_FROM
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_VERIFY_RANDOMIZED_SIGNATURE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_VERIFY_RANDOMIZED_SIGNATURE
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_VERIFY_SIGNATURE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_FUNC_VERIFY_SIGNATURE
+uint16_t uniffi_frost_uniffi_sdk_checksum_func_verify_signature(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDADDRESS_STRING_ENCODED
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDADDRESS_STRING_ENCODED
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardaddress_string_encoded(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDCOMMITIVKRANDOMNESS_TO_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDCOMMITIVKRANDOMNESS_TO_BYTES
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardcommitivkrandomness_to_bytes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_AK
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_AK
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_ak(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_DERIVE_ADDRESS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_DERIVE_ADDRESS
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_derive_address(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_ENCODE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_ENCODE
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_encode(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_NK
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_NK
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_nk(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_RIVK
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDFULLVIEWINGKEY_RIVK
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_rivk(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDNULLIFIERDERIVINGKEY_TO_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDNULLIFIERDERIVINGKEY_TO_BYTES
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardnullifierderivingkey_to_bytes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDSPENDVALIDATINGKEY_TO_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_METHOD_ORCHARDSPENDVALIDATINGKEY_TO_BYTES
+uint16_t uniffi_frost_uniffi_sdk_checksum_method_orchardspendvalidatingkey_to_bytes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDADDRESS_NEW_FROM_STRING
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDADDRESS_NEW_FROM_STRING
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardaddress_new_from_string(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDCOMMITIVKRANDOMNESS_NEW
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDCOMMITIVKRANDOMNESS_NEW
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardcommitivkrandomness_new(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_DECODE
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_DECODE
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_decode(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_NEW_FROM_CHECKED_PARTS
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_NEW_FROM_CHECKED_PARTS
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_checked_parts(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_NEW_FROM_VALIDATING_KEY_AND_SEED
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDFULLVIEWINGKEY_NEW_FROM_VALIDATING_KEY_AND_SEED
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDKEYPARTS_RANDOM
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDKEYPARTS_RANDOM
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardkeyparts_random(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDNULLIFIERDERIVINGKEY_NEW
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDNULLIFIERDERIVINGKEY_NEW
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardnullifierderivingkey_new(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDSPENDVALIDATINGKEY_FROM_BYTES
+#define UNIFFI_FFIDEF_UNIFFI_FROST_UNIFFI_SDK_CHECKSUM_CONSTRUCTOR_ORCHARDSPENDVALIDATINGKEY_FROM_BYTES
+uint16_t uniffi_frost_uniffi_sdk_checksum_constructor_orchardspendvalidatingkey_from_bytes(void
+    
+);
+#endif
+#ifndef UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_UNIFFI_CONTRACT_VERSION
+#define UNIFFI_FFIDEF_FFI_FROST_UNIFFI_SDK_UNIFFI_CONTRACT_VERSION
+uint32_t ffi_frost_uniffi_sdk_uniffi_contract_version(void
+    
+);
+#endif
 

@@ -2,7 +2,7 @@
 set -euxo pipefail
 # this builds randomized frost by default because cargo-swift 0.5 does not have the 
 cd frost-uniffi-sdk
-cargo install cargo-swift@=0.5 -f  
+cargo install cargo-swift@=0.8 -f  
 cargo swift package --platforms macos ios --name FrostSwiftFFI --release
 cd ..
 
