@@ -134,7 +134,9 @@ pub enum FrostError {
     },
     /// Secret share verification failed.
     #[error("Invalid secret share.")]
-    InvalidSecretShare,
+    InvalidSecretShare {
+        culprit: Option<ParticipantIdentifier>,
+    },
     /// Round 1 package not found for Round 2 participant.
     #[error("Round 1 package not found for Round 2 participant.")]
     PackageNotFound,

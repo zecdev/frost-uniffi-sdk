@@ -14,60 +14,67 @@ import (
 	"unsafe"
 )
 
-type RustBuffer = C.RustBuffer
+// This is needed, because as of go 1.24
+// type RustBuffer C.RustBuffer cannot have methods,
+// RustBuffer is treated as non-local type
+type GoRustBuffer struct {
+	inner C.RustBuffer
+}
 
 type RustBufferI interface {
 	AsReader() *bytes.Reader
 	Free()
 	ToGoBytes() []byte
 	Data() unsafe.Pointer
-	Len() int
-	Capacity() int
+	Len() uint64
+	Capacity() uint64
 }
 
-func RustBufferFromExternal(b RustBufferI) RustBuffer {
-	return RustBuffer{
-		capacity: C.int(b.Capacity()),
-		len:      C.int(b.Len()),
-		data:     (*C.uchar)(b.Data()),
+func RustBufferFromExternal(b RustBufferI) GoRustBuffer {
+	return GoRustBuffer{
+		inner: C.RustBuffer{
+			capacity: C.uint64_t(b.Capacity()),
+			len:      C.uint64_t(b.Len()),
+			data:     (*C.uchar)(b.Data()),
+		},
 	}
 }
 
-func (cb RustBuffer) Capacity() int {
-	return int(cb.capacity)
+func (cb GoRustBuffer) Capacity() uint64 {
+	return uint64(cb.inner.capacity)
 }
 
-func (cb RustBuffer) Len() int {
-	return int(cb.len)
+func (cb GoRustBuffer) Len() uint64 {
+	return uint64(cb.inner.len)
 }
 
-func (cb RustBuffer) Data() unsafe.Pointer {
-	return unsafe.Pointer(cb.data)
+func (cb GoRustBuffer) Data() unsafe.Pointer {
+	return unsafe.Pointer(cb.inner.data)
 }
 
-func (cb RustBuffer) AsReader() *bytes.Reader {
-	b := unsafe.Slice((*byte)(cb.data), C.int(cb.len))
+func (cb GoRustBuffer) AsReader() *bytes.Reader {
+	b := unsafe.Slice((*byte)(cb.inner.data), C.uint64_t(cb.inner.len))
 	return bytes.NewReader(b)
 }
 
-func (cb RustBuffer) Free() {
+func (cb GoRustBuffer) Free() {
 	rustCall(func(status *C.RustCallStatus) bool {
-		C.ffi_frost_uniffi_sdk_rustbuffer_free(cb, status)
+		C.ffi_frost_uniffi_sdk_rustbuffer_free(cb.inner, status)
 		return false
 	})
 }
 
-func (cb RustBuffer) ToGoBytes() []byte {
-	return C.GoBytes(unsafe.Pointer(cb.data), C.int(cb.len))
+func (cb GoRustBuffer) ToGoBytes() []byte {
+	return C.GoBytes(unsafe.Pointer(cb.inner.data), C.int(cb.inner.len))
 }
 
-func stringToRustBuffer(str string) RustBuffer {
+func stringToRustBuffer(str string) C.RustBuffer {
 	return bytesToRustBuffer([]byte(str))
 }
 
-func bytesToRustBuffer(b []byte) RustBuffer {
+func bytesToRustBuffer(b []byte) C.RustBuffer {
 	if len(b) == 0 {
-		return RustBuffer{}
+		return C.RustBuffer{}
 	}
 	// We can pass the pointer along here, as it is pinned
 	// for the duration of this call
@@ -76,7 +83,7 @@ func bytesToRustBuffer(b []byte) RustBuffer {
 		data: (*C.uchar)(unsafe.Pointer(&b[0])),
 	}
 
-	return rustCall(func(status *C.RustCallStatus) RustBuffer {
+	return rustCall(func(status *C.RustCallStatus) C.RustBuffer {
 		return C.ffi_frost_uniffi_sdk_rustbuffer_from_bytes(foreign, status)
 	})
 }
@@ -86,12 +93,7 @@ type BufLifter[GoType any] interface {
 }
 
 type BufLowerer[GoType any] interface {
-	Lower(value GoType) RustBuffer
-}
-
-type FfiConverter[GoType any, FfiType any] interface {
-	Lift(value FfiType) GoType
-	Lower(value GoType) FfiType
+	Lower(value GoType) C.RustBuffer
 }
 
 type BufReader[GoType any] interface {
@@ -102,12 +104,7 @@ type BufWriter[GoType any] interface {
 	Write(writer io.Writer, value GoType)
 }
 
-type FfiRustBufConverter[GoType any, FfiType any] interface {
-	FfiConverter[GoType, FfiType]
-	BufReader[GoType]
-}
-
-func LowerIntoRustBuffer[GoType any](bufWriter BufWriter[GoType], value GoType) RustBuffer {
+func LowerIntoRustBuffer[GoType any](bufWriter BufWriter[GoType], value GoType) C.RustBuffer {
 	// This might be not the most efficient way but it does not require knowing allocation size
 	// beforehand
 	var buffer bytes.Buffer
@@ -132,31 +129,30 @@ func LiftFromRustBuffer[GoType any](bufReader BufReader[GoType], rbuf RustBuffer
 	return item
 }
 
-func rustCallWithError[U any](converter BufLifter[error], callback func(*C.RustCallStatus) U) (U, error) {
+func rustCallWithError[E any, U any](converter BufReader[*E], callback func(*C.RustCallStatus) U) (U, *E) {
 	var status C.RustCallStatus
 	returnValue := callback(&status)
 	err := checkCallStatus(converter, status)
-
 	return returnValue, err
 }
 
-func checkCallStatus(converter BufLifter[error], status C.RustCallStatus) error {
+func checkCallStatus[E any](converter BufReader[*E], status C.RustCallStatus) *E {
 	switch status.code {
 	case 0:
 		return nil
 	case 1:
-		return converter.Lift(status.errorBuf)
+		return LiftFromRustBuffer(converter, GoRustBuffer{inner: status.errorBuf})
 	case 2:
-		// when the rust code sees a panic, it tries to construct a rustbuffer
+		// when the rust code sees a panic, it tries to construct a rustBuffer
 		// with the message.  but if that code panics, then it just sends back
 		// an empty buffer.
 		if status.errorBuf.len > 0 {
-			panic(fmt.Errorf("%s", FfiConverterStringINSTANCE.Lift(status.errorBuf)))
+			panic(fmt.Errorf("%s", FfiConverterStringINSTANCE.Lift(GoRustBuffer{inner: status.errorBuf})))
 		} else {
 			panic(fmt.Errorf("Rust panicked while handling Rust panic"))
 		}
 	default:
-		return fmt.Errorf("unknown status code: %d", status.code)
+		panic(fmt.Errorf("unknown status code: %d", status.code))
 	}
 }
 
@@ -167,11 +163,13 @@ func checkCallStatusUnknown(status C.RustCallStatus) error {
 	case 1:
 		panic(fmt.Errorf("function not returning an error returned an error"))
 	case 2:
-		// when the rust code sees a panic, it tries to construct a rustbuffer
+		// when the rust code sees a panic, it tries to construct a C.RustBuffer
 		// with the message.  but if that code panics, then it just sends back
 		// an empty buffer.
 		if status.errorBuf.len > 0 {
-			panic(fmt.Errorf("%s", FfiConverterStringINSTANCE.Lift(status.errorBuf)))
+			panic(fmt.Errorf("%s", FfiConverterStringINSTANCE.Lift(GoRustBuffer{
+				inner: status.errorBuf,
+			})))
 		} else {
 			panic(fmt.Errorf("Rust panicked while handling Rust panic"))
 		}
@@ -181,11 +179,15 @@ func checkCallStatusUnknown(status C.RustCallStatus) error {
 }
 
 func rustCall[U any](callback func(*C.RustCallStatus) U) U {
-	returnValue, err := rustCallWithError(nil, callback)
+	returnValue, err := rustCallWithError[error](nil, callback)
 	if err != nil {
 		panic(err)
 	}
 	return returnValue
+}
+
+type NativeError interface {
+	AsError() error
 }
 
 func writeInt8(writer io.Writer, value int8) {
@@ -335,425 +337,425 @@ func init() {
 
 func uniffiCheckChecksums() {
 	// Get the bindings contract version from our ComponentInterface
-	bindingsContractVersion := 24
+	bindingsContractVersion := 26
 	// Get the scaffolding contract version by calling the into the dylib
-	scaffoldingContractVersion := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint32_t {
-		return C.ffi_frost_uniffi_sdk_uniffi_contract_version(uniffiStatus)
+	scaffoldingContractVersion := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint32_t {
+		return C.ffi_frost_uniffi_sdk_uniffi_contract_version()
 	})
 	if bindingsContractVersion != int(scaffoldingContractVersion) {
 		// If this happens try cleaning and rebuilding your project
 		panic("frost_uniffi_sdk: UniFFI contract version mismatch")
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_aggregate(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_aggregate()
 		})
-		if checksum != 3424 {
+		if checksum != 14107 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_aggregate: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_commitment_to_json(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_commitment_to_json()
 		})
-		if checksum != 12818 {
+		if checksum != 37322 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_commitment_to_json: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_from_hex_string(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_from_hex_string()
 		})
-		if checksum != 29801 {
+		if checksum != 6554 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_from_hex_string: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments()
 		})
-		if checksum != 1477 {
+		if checksum != 61549 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_generate_nonces_and_commitments: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_identifier_from_json_string(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_identifier_from_json_string()
 		})
-		if checksum != 56485 {
+		if checksum != 4885 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_identifier_from_json_string: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string()
 		})
-		if checksum != 3795 {
+		if checksum != 17207 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_identifier_from_string: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16()
 		})
-		if checksum != 11722 {
+		if checksum != 13096 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_identifier_from_uint16: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_commitment(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_commitment()
 		})
-		if checksum != 62453 {
+		if checksum != 377 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_commitment: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_key_package(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_key_package()
 		})
-		if checksum != 58769 {
+		if checksum != 50636 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_key_package: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_public_key_package(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_public_key_package()
 		})
-		if checksum != 8036 {
+		if checksum != 47876 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_public_key_package: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_randomizer(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_randomizer()
 		})
-		if checksum != 47111 {
+		if checksum != 43415 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_randomizer: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_signature_share(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_json_to_signature_share()
 		})
-		if checksum != 62549 {
+		if checksum != 20444 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_json_to_signature_share: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_key_package_to_json(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_key_package_to_json()
 		})
-		if checksum != 11157 {
+		if checksum != 27984 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_key_package_to_json: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_new_signing_package(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_new_signing_package()
 		})
-		if checksum != 50111 {
+		if checksum != 59539 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_new_signing_package: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_part_1(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_part_1()
 		})
-		if checksum != 7592 {
+		if checksum != 48695 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_part_1: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_part_2(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_part_2()
 		})
-		if checksum != 30136 {
+		if checksum != 4947 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_part_2: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_part_3(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_part_3()
 		})
-		if checksum != 31134 {
+		if checksum != 39757 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_part_3: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_public_key_package_to_json(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_public_key_package_to_json()
 		})
-		if checksum != 20437 {
+		if checksum != 13971 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_public_key_package_to_json: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package()
 		})
-		if checksum != 58556 {
+		if checksum != 42974 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_randomized_params_from_public_key_and_signing_package: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params()
 		})
-		if checksum != 50217 {
+		if checksum != 26841 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_randomizer_from_params: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_randomizer_to_json(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_randomizer_to_json()
 		})
-		if checksum != 23719 {
+		if checksum != 17475 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_randomizer_to_json: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_sign(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_sign()
 		})
-		if checksum != 723 {
+		if checksum != 22743 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_sign: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_signature_share_package_to_json(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_signature_share_package_to_json()
 		})
-		if checksum != 2249 {
+		if checksum != 17380 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_signature_share_package_to_json: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from()
 		})
-		if checksum != 43563 {
+		if checksum != 4367 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_from: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers()
 		})
-		if checksum != 49159 {
+		if checksum != 25579 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_trusted_dealer_keygen_with_identifiers: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_validate_config(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_validate_config()
 		})
-		if checksum != 26688 {
+		if checksum != 42309 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_validate_config: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from()
 		})
-		if checksum != 16387 {
+		if checksum != 52603 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_verify_and_get_key_package_from: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature()
 		})
-		if checksum != 24114 {
+		if checksum != 61115 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_verify_randomized_signature: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_func_verify_signature(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_func_verify_signature()
 		})
-		if checksum != 13620 {
+		if checksum != 31978 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_func_verify_signature: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardaddress_string_encoded(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardaddress_string_encoded()
 		})
-		if checksum != 38758 {
+		if checksum != 17163 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardaddress_string_encoded: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardcommitivkrandomness_to_bytes(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardcommitivkrandomness_to_bytes()
 		})
-		if checksum != 54004 {
+		if checksum != 45794 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardcommitivkrandomness_to_bytes: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_ak(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_ak()
 		})
-		if checksum != 1900 {
+		if checksum != 17920 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_ak: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_derive_address(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_derive_address()
 		})
-		if checksum != 26015 {
+		if checksum != 39349 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_derive_address: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_encode(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_encode()
 		})
-		if checksum != 34271 {
+		if checksum != 15911 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_encode: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_nk(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_nk()
 		})
-		if checksum != 33472 {
+		if checksum != 26127 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_nk: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_rivk(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_rivk()
 		})
-		if checksum != 25054 {
+		if checksum != 62140 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardfullviewingkey_rivk: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardnullifierderivingkey_to_bytes(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardnullifierderivingkey_to_bytes()
 		})
-		if checksum != 8783 {
+		if checksum != 38576 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardnullifierderivingkey_to_bytes: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardspendvalidatingkey_to_bytes(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_method_orchardspendvalidatingkey_to_bytes()
 		})
-		if checksum != 10051 {
+		if checksum != 32867 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_method_orchardspendvalidatingkey_to_bytes: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardaddress_new_from_string(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardaddress_new_from_string()
 		})
-		if checksum != 64287 {
+		if checksum != 54798 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardaddress_new_from_string: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardcommitivkrandomness_new(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardcommitivkrandomness_new()
 		})
-		if checksum != 55160 {
+		if checksum != 65326 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardcommitivkrandomness_new: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_decode(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_decode()
 		})
-		if checksum != 6758 {
+		if checksum != 15654 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_decode: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_checked_parts(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_checked_parts()
 		})
-		if checksum != 19481 {
+		if checksum != 32693 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_checked_parts: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_validating_key_and_seed()
 		})
-		if checksum != 62836 {
+		if checksum != 29602 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardfullviewingkey_new_from_validating_key_and_seed: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardkeyparts_random(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardkeyparts_random()
 		})
-		if checksum != 3046 {
+		if checksum != 17995 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardkeyparts_random: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardnullifierderivingkey_new(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardnullifierderivingkey_new()
 		})
-		if checksum != 15347 {
+		if checksum != 3116 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardnullifierderivingkey_new: UniFFI API checksum mismatch")
 		}
 	}
 	{
-		checksum := rustCall(func(uniffiStatus *C.RustCallStatus) C.uint16_t {
-			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardspendvalidatingkey_from_bytes(uniffiStatus)
+		checksum := rustCall(func(_uniffiStatus *C.RustCallStatus) C.uint16_t {
+			return C.uniffi_frost_uniffi_sdk_checksum_constructor_orchardspendvalidatingkey_from_bytes()
 		})
-		if checksum != 63121 {
+		if checksum != 52420 {
 			// If this happens try cleaning and rebuilding your project
 			panic("frost_uniffi_sdk: uniffi_frost_uniffi_sdk_checksum_constructor_orchardspendvalidatingkey_from_bytes: UniFFI API checksum mismatch")
 		}
@@ -802,7 +804,7 @@ func (FfiConverterString) Read(reader io.Reader) string {
 	length := readInt32(reader)
 	buffer := make([]byte, length)
 	read_length, err := reader.Read(buffer)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		panic(err)
 	}
 	if read_length != int(length) {
@@ -811,7 +813,7 @@ func (FfiConverterString) Read(reader io.Reader) string {
 	return string(buffer)
 }
 
-func (FfiConverterString) Lower(value string) RustBuffer {
+func (FfiConverterString) Lower(value string) C.RustBuffer {
 	return stringToRustBuffer(value)
 }
 
@@ -838,7 +840,7 @@ type FfiConverterBytes struct{}
 
 var FfiConverterBytesINSTANCE = FfiConverterBytes{}
 
-func (c FfiConverterBytes) Lower(value []byte) RustBuffer {
+func (c FfiConverterBytes) Lower(value []byte) C.RustBuffer {
 	return LowerIntoRustBuffer[[]byte](c, value)
 }
 
@@ -865,7 +867,7 @@ func (c FfiConverterBytes) Read(reader io.Reader) []byte {
 	length := readInt32(reader)
 	buffer := make([]byte, length)
 	read_length, err := reader.Read(buffer)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		panic(err)
 	}
 	if read_length != int(length) {
@@ -882,16 +884,22 @@ func (FfiDestroyerBytes) Destroy(_ []byte) {}
 // https://github.com/mozilla/uniffi-rs/blob/0dc031132d9493ca812c3af6e7dd60ad2ea95bf0/uniffi_bindgen/src/bindings/kotlin/templates/ObjectRuntime.kt#L31
 
 type FfiObject struct {
-	pointer      unsafe.Pointer
-	callCounter  atomic.Int64
-	freeFunction func(unsafe.Pointer, *C.RustCallStatus)
-	destroyed    atomic.Bool
+	pointer       unsafe.Pointer
+	callCounter   atomic.Int64
+	cloneFunction func(unsafe.Pointer, *C.RustCallStatus) unsafe.Pointer
+	freeFunction  func(unsafe.Pointer, *C.RustCallStatus)
+	destroyed     atomic.Bool
 }
 
-func newFfiObject(pointer unsafe.Pointer, freeFunction func(unsafe.Pointer, *C.RustCallStatus)) FfiObject {
+func newFfiObject(
+	pointer unsafe.Pointer,
+	cloneFunction func(unsafe.Pointer, *C.RustCallStatus) unsafe.Pointer,
+	freeFunction func(unsafe.Pointer, *C.RustCallStatus),
+) FfiObject {
 	return FfiObject{
-		pointer:      pointer,
-		freeFunction: freeFunction,
+		pointer:       pointer,
+		cloneFunction: cloneFunction,
+		freeFunction:  freeFunction,
 	}
 }
 
@@ -909,7 +917,9 @@ func (ffiObject *FfiObject) incrementPointer(debugName string) unsafe.Pointer {
 		}
 	}
 
-	return ffiObject.pointer
+	return rustCall(func(status *C.RustCallStatus) unsafe.Pointer {
+		return ffiObject.cloneFunction(ffiObject.pointer, status)
+	})
 }
 
 func (ffiObject *FfiObject) decrementPointer() {
@@ -933,6 +943,8 @@ func (ffiObject *FfiObject) freeRustArcPtr() {
 	})
 }
 
+type DkgPart1ResultInterface interface {
+}
 type DkgPart1Result struct {
 	ffiObject FfiObject
 }
@@ -942,36 +954,41 @@ func (object *DkgPart1Result) Destroy() {
 	object.ffiObject.destroy()
 }
 
-type FfiConverterDKGPart1Result struct{}
+type FfiConverterDkgPart1Result struct{}
 
-var FfiConverterDKGPart1ResultINSTANCE = FfiConverterDKGPart1Result{}
+var FfiConverterDkgPart1ResultINSTANCE = FfiConverterDkgPart1Result{}
 
-func (c FfiConverterDKGPart1Result) Lift(pointer unsafe.Pointer) *DkgPart1Result {
+func (c FfiConverterDkgPart1Result) Lift(pointer unsafe.Pointer) *DkgPart1Result {
 	result := &DkgPart1Result{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_dkgpart1result(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_dkgpart1result(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*DkgPart1Result).Destroy)
 	return result
 }
 
-func (c FfiConverterDKGPart1Result) Read(reader io.Reader) *DkgPart1Result {
+func (c FfiConverterDkgPart1Result) Read(reader io.Reader) *DkgPart1Result {
 	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
 }
 
-func (c FfiConverterDKGPart1Result) Lower(value *DkgPart1Result) unsafe.Pointer {
+func (c FfiConverterDkgPart1Result) Lower(value *DkgPart1Result) unsafe.Pointer {
 	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
 	// because the pointer will be decremented immediately after this function returns,
 	// and someone will be left holding onto a non-locked pointer.
 	pointer := value.ffiObject.incrementPointer("*DkgPart1Result")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
-func (c FfiConverterDKGPart1Result) Write(writer io.Writer, value *DkgPart1Result) {
+func (c FfiConverterDkgPart1Result) Write(writer io.Writer, value *DkgPart1Result) {
 	writeUint64(writer, uint64(uintptr(c.Lower(value))))
 }
 
@@ -981,6 +998,8 @@ func (_ FfiDestroyerDkgPart1Result) Destroy(value *DkgPart1Result) {
 	value.Destroy()
 }
 
+type DkgPart2ResultInterface interface {
+}
 type DkgPart2Result struct {
 	ffiObject FfiObject
 }
@@ -990,36 +1009,41 @@ func (object *DkgPart2Result) Destroy() {
 	object.ffiObject.destroy()
 }
 
-type FfiConverterDKGPart2Result struct{}
+type FfiConverterDkgPart2Result struct{}
 
-var FfiConverterDKGPart2ResultINSTANCE = FfiConverterDKGPart2Result{}
+var FfiConverterDkgPart2ResultINSTANCE = FfiConverterDkgPart2Result{}
 
-func (c FfiConverterDKGPart2Result) Lift(pointer unsafe.Pointer) *DkgPart2Result {
+func (c FfiConverterDkgPart2Result) Lift(pointer unsafe.Pointer) *DkgPart2Result {
 	result := &DkgPart2Result{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_dkgpart2result(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_dkgpart2result(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*DkgPart2Result).Destroy)
 	return result
 }
 
-func (c FfiConverterDKGPart2Result) Read(reader io.Reader) *DkgPart2Result {
+func (c FfiConverterDkgPart2Result) Read(reader io.Reader) *DkgPart2Result {
 	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
 }
 
-func (c FfiConverterDKGPart2Result) Lower(value *DkgPart2Result) unsafe.Pointer {
+func (c FfiConverterDkgPart2Result) Lower(value *DkgPart2Result) unsafe.Pointer {
 	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
 	// because the pointer will be decremented immediately after this function returns,
 	// and someone will be left holding onto a non-locked pointer.
 	pointer := value.ffiObject.incrementPointer("*DkgPart2Result")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
-func (c FfiConverterDKGPart2Result) Write(writer io.Writer, value *DkgPart2Result) {
+func (c FfiConverterDkgPart2Result) Write(writer io.Writer, value *DkgPart2Result) {
 	writeUint64(writer, uint64(uintptr(c.Lower(value))))
 }
 
@@ -1029,6 +1053,8 @@ func (_ FfiDestroyerDkgPart2Result) Destroy(value *DkgPart2Result) {
 	value.Destroy()
 }
 
+type DkgRound1SecretPackageInterface interface {
+}
 type DkgRound1SecretPackage struct {
 	ffiObject FfiObject
 }
@@ -1038,36 +1064,41 @@ func (object *DkgRound1SecretPackage) Destroy() {
 	object.ffiObject.destroy()
 }
 
-type FfiConverterDKGRound1SecretPackage struct{}
+type FfiConverterDkgRound1SecretPackage struct{}
 
-var FfiConverterDKGRound1SecretPackageINSTANCE = FfiConverterDKGRound1SecretPackage{}
+var FfiConverterDkgRound1SecretPackageINSTANCE = FfiConverterDkgRound1SecretPackage{}
 
-func (c FfiConverterDKGRound1SecretPackage) Lift(pointer unsafe.Pointer) *DkgRound1SecretPackage {
+func (c FfiConverterDkgRound1SecretPackage) Lift(pointer unsafe.Pointer) *DkgRound1SecretPackage {
 	result := &DkgRound1SecretPackage{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_dkground1secretpackage(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_dkground1secretpackage(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*DkgRound1SecretPackage).Destroy)
 	return result
 }
 
-func (c FfiConverterDKGRound1SecretPackage) Read(reader io.Reader) *DkgRound1SecretPackage {
+func (c FfiConverterDkgRound1SecretPackage) Read(reader io.Reader) *DkgRound1SecretPackage {
 	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
 }
 
-func (c FfiConverterDKGRound1SecretPackage) Lower(value *DkgRound1SecretPackage) unsafe.Pointer {
+func (c FfiConverterDkgRound1SecretPackage) Lower(value *DkgRound1SecretPackage) unsafe.Pointer {
 	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
 	// because the pointer will be decremented immediately after this function returns,
 	// and someone will be left holding onto a non-locked pointer.
 	pointer := value.ffiObject.incrementPointer("*DkgRound1SecretPackage")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
-func (c FfiConverterDKGRound1SecretPackage) Write(writer io.Writer, value *DkgRound1SecretPackage) {
+func (c FfiConverterDkgRound1SecretPackage) Write(writer io.Writer, value *DkgRound1SecretPackage) {
 	writeUint64(writer, uint64(uintptr(c.Lower(value))))
 }
 
@@ -1077,6 +1108,8 @@ func (_ FfiDestroyerDkgRound1SecretPackage) Destroy(value *DkgRound1SecretPackag
 	value.Destroy()
 }
 
+type DkgRound2SecretPackageInterface interface {
+}
 type DkgRound2SecretPackage struct {
 	ffiObject FfiObject
 }
@@ -1086,36 +1119,41 @@ func (object *DkgRound2SecretPackage) Destroy() {
 	object.ffiObject.destroy()
 }
 
-type FfiConverterDKGRound2SecretPackage struct{}
+type FfiConverterDkgRound2SecretPackage struct{}
 
-var FfiConverterDKGRound2SecretPackageINSTANCE = FfiConverterDKGRound2SecretPackage{}
+var FfiConverterDkgRound2SecretPackageINSTANCE = FfiConverterDkgRound2SecretPackage{}
 
-func (c FfiConverterDKGRound2SecretPackage) Lift(pointer unsafe.Pointer) *DkgRound2SecretPackage {
+func (c FfiConverterDkgRound2SecretPackage) Lift(pointer unsafe.Pointer) *DkgRound2SecretPackage {
 	result := &DkgRound2SecretPackage{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_dkground2secretpackage(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_dkground2secretpackage(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*DkgRound2SecretPackage).Destroy)
 	return result
 }
 
-func (c FfiConverterDKGRound2SecretPackage) Read(reader io.Reader) *DkgRound2SecretPackage {
+func (c FfiConverterDkgRound2SecretPackage) Read(reader io.Reader) *DkgRound2SecretPackage {
 	return c.Lift(unsafe.Pointer(uintptr(readUint64(reader))))
 }
 
-func (c FfiConverterDKGRound2SecretPackage) Lower(value *DkgRound2SecretPackage) unsafe.Pointer {
+func (c FfiConverterDkgRound2SecretPackage) Lower(value *DkgRound2SecretPackage) unsafe.Pointer {
 	// TODO: this is bad - all synchronization from ObjectRuntime.go is discarded here,
 	// because the pointer will be decremented immediately after this function returns,
 	// and someone will be left holding onto a non-locked pointer.
 	pointer := value.ffiObject.incrementPointer("*DkgRound2SecretPackage")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
-func (c FfiConverterDKGRound2SecretPackage) Write(writer io.Writer, value *DkgRound2SecretPackage) {
+func (c FfiConverterDkgRound2SecretPackage) Write(writer io.Writer, value *DkgRound2SecretPackage) {
 	writeUint64(writer, uint64(uintptr(c.Lower(value))))
 }
 
@@ -1125,6 +1163,8 @@ func (_ FfiDestroyerDkgRound2SecretPackage) Destroy(value *DkgRound2SecretPackag
 	value.Destroy()
 }
 
+type FrostRandomizedParamsInterface interface {
+}
 type FrostRandomizedParams struct {
 	ffiObject FfiObject
 }
@@ -1142,9 +1182,13 @@ func (c FfiConverterFrostRandomizedParams) Lift(pointer unsafe.Pointer) *FrostRa
 	result := &FrostRandomizedParams{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_frostrandomizedparams(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_frostrandomizedparams(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*FrostRandomizedParams).Destroy)
 	return result
@@ -1161,6 +1205,7 @@ func (c FfiConverterFrostRandomizedParams) Lower(value *FrostRandomizedParams) u
 	pointer := value.ffiObject.incrementPointer("*FrostRandomizedParams")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterFrostRandomizedParams) Write(writer io.Writer, value *FrostRandomizedParams) {
@@ -1173,31 +1218,45 @@ func (_ FfiDestroyerFrostRandomizedParams) Destroy(value *FrostRandomizedParams)
 	value.Destroy()
 }
 
+// An Zcash Orchard Address and its associated network type.
+type OrchardAddressInterface interface {
+	// Returns the string-encoded form of this Orchard Address (A
+	// Unified Address containing only the orchard receiver.)
+	StringEncoded() string
+}
+
+// An Zcash Orchard Address and its associated network type.
 type OrchardAddress struct {
 	ffiObject FfiObject
 }
 
+// Creates an [`OrchardAddress`] from its string-encoded form
+// If the string is invalid `Err(OrchardKeyError::DeserializationError)`
+// is returned in the Result.
 func OrchardAddressNewFromString(string string) (*OrchardAddress, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardaddress_new_from_string(FfiConverterStringINSTANCE.Lower(string), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *OrchardAddress
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOrchardAddressINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOrchardAddressINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
+// Returns the string-encoded form of this Orchard Address (A
+// Unified Address containing only the orchard receiver.)
 func (_self *OrchardAddress) StringEncoded() string {
 	_pointer := _self.ffiObject.incrementPointer("*OrchardAddress")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterStringINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_method_orchardaddress_string_encoded(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_method_orchardaddress_string_encoded(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
-
 func (object *OrchardAddress) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -1211,9 +1270,13 @@ func (c FfiConverterOrchardAddress) Lift(pointer unsafe.Pointer) *OrchardAddress
 	result := &OrchardAddress{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_orchardaddress(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_orchardaddress(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*OrchardAddress).Destroy)
 	return result
@@ -1230,6 +1293,7 @@ func (c FfiConverterOrchardAddress) Lower(value *OrchardAddress) unsafe.Pointer 
 	pointer := value.ffiObject.incrementPointer("*OrchardAddress")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterOrchardAddress) Write(writer io.Writer, value *OrchardAddress) {
@@ -1242,19 +1306,31 @@ func (_ FfiDestroyerOrchardAddress) Destroy(value *OrchardAddress) {
 	value.Destroy()
 }
 
+// The `rivk` component of an Orchard Full Viewing Key.
+// This is intended for key backup purposes.
+// - Note: See [ZF FROST Book - Technical Details](https://frost.zfnd.org/zcash/technical-details.html)
+type OrchardCommitIvkRandomnessInterface interface {
+	ToBytes() []byte
+}
+
+// The `rivk` component of an Orchard Full Viewing Key.
+// This is intended for key backup purposes.
+// - Note: See [ZF FROST Book - Technical Details](https://frost.zfnd.org/zcash/technical-details.html)
 type OrchardCommitIvkRandomness struct {
 	ffiObject FfiObject
 }
 
+// Creates a `rivk` from a sequence of bytes. Returns [`OrchardKeyError::DeserializationError`]
+// if these bytes can't be deserialized into a valid `rivk`
 func NewOrchardCommitIvkRandomness(bytes []byte) (*OrchardCommitIvkRandomness, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardcommitivkrandomness_new(FfiConverterBytesINSTANCE.Lower(bytes), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *OrchardCommitIvkRandomness
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOrchardCommitIvkRandomnessINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOrchardCommitIvkRandomnessINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
@@ -1262,11 +1338,12 @@ func (_self *OrchardCommitIvkRandomness) ToBytes() []byte {
 	_pointer := _self.ffiObject.incrementPointer("*OrchardCommitIvkRandomness")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterBytesINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_method_orchardcommitivkrandomness_to_bytes(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_method_orchardcommitivkrandomness_to_bytes(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
-
 func (object *OrchardCommitIvkRandomness) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -1280,9 +1357,13 @@ func (c FfiConverterOrchardCommitIvkRandomness) Lift(pointer unsafe.Pointer) *Or
 	result := &OrchardCommitIvkRandomness{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_orchardcommitivkrandomness(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_orchardcommitivkrandomness(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*OrchardCommitIvkRandomness).Destroy)
 	return result
@@ -1299,6 +1380,7 @@ func (c FfiConverterOrchardCommitIvkRandomness) Lower(value *OrchardCommitIvkRan
 	pointer := value.ffiObject.incrementPointer("*OrchardCommitIvkRandomness")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterOrchardCommitIvkRandomness) Write(writer io.Writer, value *OrchardCommitIvkRandomness) {
@@ -1311,46 +1393,76 @@ func (_ FfiDestroyerOrchardCommitIvkRandomness) Destroy(value *OrchardCommitIvkR
 	value.Destroy()
 }
 
+// A UnifiedViewingKey containing only an Orchard component and
+// its associated network constant.
+type OrchardFullViewingKeyInterface interface {
+	// Returns the Spend Validating Key component of this Orchard FVK
+	Ak() *OrchardSpendValidatingKey
+	// derives external address 0 of this Orchard Full viewing key.
+	DeriveAddress() (*OrchardAddress, error)
+	// Encodes a [`OrchardFullViewingKey`] to its Unified Full Viewing Key
+	// string-encoded format. If this operation fails, it returns
+	// `Err(OrchardKeyError::DeserializationError)`. This should be straight
+	// forward and an error thrown could indicate another kind of issue like a
+	// PEBKAC.
+	Encode() (string, error)
+	Nk() *OrchardNullifierDerivingKey
+	// Returns the External Scope of this FVK
+	Rivk() *OrchardCommitIvkRandomness
+}
+
+// A UnifiedViewingKey containing only an Orchard component and
+// its associated network constant.
 type OrchardFullViewingKey struct {
 	ffiObject FfiObject
 }
 
+// Decodes a [`OrchardFullViewingKey`] from its Unified Full Viewing Key
+// string-encoded format. If this operation fails, it returns
+// `Err(OrchardKeyError::DeserializationError)`
 func OrchardFullViewingKeyDecode(stringEnconded string, network ZcashNetwork) (*OrchardFullViewingKey, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_decode(FfiConverterStringINSTANCE.Lower(stringEnconded), FfiConverterTypeZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_decode(FfiConverterStringINSTANCE.Lower(stringEnconded), FfiConverterZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *OrchardFullViewingKey
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOrchardFullViewingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOrchardFullViewingKeyINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
+// Creates an [`OrchardFullViewingKey`] from its checked composing parts
+// and its associated Network constant.
 func OrchardFullViewingKeyNewFromCheckedParts(ak *OrchardSpendValidatingKey, nk *OrchardNullifierDerivingKey, rivk *OrchardCommitIvkRandomness, network ZcashNetwork) (*OrchardFullViewingKey, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_checked_parts(FfiConverterOrchardSpendValidatingKeyINSTANCE.Lower(ak), FfiConverterOrchardNullifierDerivingKeyINSTANCE.Lower(nk), FfiConverterOrchardCommitIvkRandomnessINSTANCE.Lower(rivk), FfiConverterTypeZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_checked_parts(FfiConverterOrchardSpendValidatingKeyINSTANCE.Lower(ak), FfiConverterOrchardNullifierDerivingKeyINSTANCE.Lower(nk), FfiConverterOrchardCommitIvkRandomnessINSTANCE.Lower(rivk), FfiConverterZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *OrchardFullViewingKey
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOrchardFullViewingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOrchardFullViewingKeyINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
+// Creates a new FullViewingKey from a ZIP-32 Seed and validating key
+// using the `Network` coin type on `AccountId(0u32)`
+// see https://frost.zfnd.org/zcash/technical-details.html for more
+// information.
 func OrchardFullViewingKeyNewFromValidatingKeyAndSeed(validatingKey *OrchardSpendValidatingKey, zip32Seed []byte, network ZcashNetwork) (*OrchardFullViewingKey, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(FfiConverterOrchardSpendValidatingKeyINSTANCE.Lower(validatingKey), FfiConverterBytesINSTANCE.Lower(zip32Seed), FfiConverterTypeZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardfullviewingkey_new_from_validating_key_and_seed(FfiConverterOrchardSpendValidatingKeyINSTANCE.Lower(validatingKey), FfiConverterBytesINSTANCE.Lower(zip32Seed), FfiConverterZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *OrchardFullViewingKey
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOrchardFullViewingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOrchardFullViewingKeyINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
+// Returns the Spend Validating Key component of this Orchard FVK
 func (_self *OrchardFullViewingKey) Ak() *OrchardSpendValidatingKey {
 	_pointer := _self.ffiObject.incrementPointer("*OrchardFullViewingKey")
 	defer _self.ffiObject.decrementPointer()
@@ -1360,10 +1472,11 @@ func (_self *OrchardFullViewingKey) Ak() *OrchardSpendValidatingKey {
 	}))
 }
 
+// derives external address 0 of this Orchard Full viewing key.
 func (_self *OrchardFullViewingKey) DeriveAddress() (*OrchardAddress, error) {
 	_pointer := _self.ffiObject.incrementPointer("*OrchardFullViewingKey")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_derive_address(
 			_pointer, _uniffiStatus)
 	})
@@ -1371,22 +1484,29 @@ func (_self *OrchardFullViewingKey) DeriveAddress() (*OrchardAddress, error) {
 		var _uniffiDefaultValue *OrchardAddress
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOrchardAddressINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOrchardAddressINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
+// Encodes a [`OrchardFullViewingKey`] to its Unified Full Viewing Key
+// string-encoded format. If this operation fails, it returns
+// `Err(OrchardKeyError::DeserializationError)`. This should be straight
+// forward and an error thrown could indicate another kind of issue like a
+// PEBKAC.
 func (_self *OrchardFullViewingKey) Encode() (string, error) {
 	_pointer := _self.ffiObject.incrementPointer("*OrchardFullViewingKey")
 	defer _self.ffiObject.decrementPointer()
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_encode(
-			_pointer, _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_method_orchardfullviewingkey_encode(
+				_pointer, _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
@@ -1399,6 +1519,7 @@ func (_self *OrchardFullViewingKey) Nk() *OrchardNullifierDerivingKey {
 	}))
 }
 
+// Returns the External Scope of this FVK
 func (_self *OrchardFullViewingKey) Rivk() *OrchardCommitIvkRandomness {
 	_pointer := _self.ffiObject.incrementPointer("*OrchardFullViewingKey")
 	defer _self.ffiObject.decrementPointer()
@@ -1407,7 +1528,6 @@ func (_self *OrchardFullViewingKey) Rivk() *OrchardCommitIvkRandomness {
 			_pointer, _uniffiStatus)
 	}))
 }
-
 func (object *OrchardFullViewingKey) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -1421,9 +1541,13 @@ func (c FfiConverterOrchardFullViewingKey) Lift(pointer unsafe.Pointer) *Orchard
 	result := &OrchardFullViewingKey{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_orchardfullviewingkey(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_orchardfullviewingkey(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*OrchardFullViewingKey).Destroy)
 	return result
@@ -1440,6 +1564,7 @@ func (c FfiConverterOrchardFullViewingKey) Lower(value *OrchardFullViewingKey) u
 	pointer := value.ffiObject.incrementPointer("*OrchardFullViewingKey")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterOrchardFullViewingKey) Write(writer io.Writer, value *OrchardFullViewingKey) {
@@ -1452,19 +1577,37 @@ func (_ FfiDestroyerOrchardFullViewingKey) Destroy(value *OrchardFullViewingKey)
 	value.Destroy()
 }
 
+// This responds to Backup and DKG requirements
+// for FROST.
+//
+// - Note: See [FROST Book backup section](https://frost.zfnd.org/zcash/technical-details.html#backing-up-key-shares)
+type OrchardKeyPartsInterface interface {
+}
+
+// This responds to Backup and DKG requirements
+// for FROST.
+//
+// - Note: See [FROST Book backup section](https://frost.zfnd.org/zcash/technical-details.html#backing-up-key-shares)
 type OrchardKeyParts struct {
 	ffiObject FfiObject
 }
 
+// Creates a Random `nk` and `rivk` from a random Spending Key
+// originated from a random 24-word Mnemonic seed which is tossed
+// away.
+// This responds to Backup and DKG requirements
+// for FROST.
+//
+// - Note: See [FROST Book backup section](https://frost.zfnd.org/zcash/technical-details.html#backing-up-key-shares)
 func OrchardKeyPartsRandom(network ZcashNetwork) (*OrchardKeyParts, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardkeyparts_random(FfiConverterTypeZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardkeyparts_random(FfiConverterZcashNetworkINSTANCE.Lower(network), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *OrchardKeyParts
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOrchardKeyPartsINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOrchardKeyPartsINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
@@ -1481,9 +1624,13 @@ func (c FfiConverterOrchardKeyParts) Lift(pointer unsafe.Pointer) *OrchardKeyPar
 	result := &OrchardKeyParts{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_orchardkeyparts(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_orchardkeyparts(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*OrchardKeyParts).Destroy)
 	return result
@@ -1500,6 +1647,7 @@ func (c FfiConverterOrchardKeyParts) Lower(value *OrchardKeyParts) unsafe.Pointe
 	pointer := value.ffiObject.incrementPointer("*OrchardKeyParts")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterOrchardKeyParts) Write(writer io.Writer, value *OrchardKeyParts) {
@@ -1512,31 +1660,49 @@ func (_ FfiDestroyerOrchardKeyParts) Destroy(value *OrchardKeyParts) {
 	value.Destroy()
 }
 
+// The Orchard Nullifier Deriving Key component of an
+// Orchard full viewing key. This is intended for key backup
+// purposes.
+// - Note: See [ZF FROST Book - Technical Details](https://frost.zfnd.org/zcash/technical-details.html)
+type OrchardNullifierDerivingKeyInterface interface {
+	// Serializes [`OrchardNullifierDerivingKey`] to a sequence of bytes.
+	ToBytes() []byte
+}
+
+// The Orchard Nullifier Deriving Key component of an
+// Orchard full viewing key. This is intended for key backup
+// purposes.
+// - Note: See [ZF FROST Book - Technical Details](https://frost.zfnd.org/zcash/technical-details.html)
 type OrchardNullifierDerivingKey struct {
 	ffiObject FfiObject
 }
 
+// Creates an [`OrchardNullifierDerivingKey`] from a sequence of bytes.
+// If the byte sequence is not suitable for doing so, it will return an
+// [`Err(OrchardKeyError::DeserializationError)`]
 func NewOrchardNullifierDerivingKey(bytes []byte) (*OrchardNullifierDerivingKey, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardnullifierderivingkey_new(FfiConverterBytesINSTANCE.Lower(bytes), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *OrchardNullifierDerivingKey
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOrchardNullifierDerivingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOrchardNullifierDerivingKeyINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
+// Serializes [`OrchardNullifierDerivingKey`] to a sequence of bytes.
 func (_self *OrchardNullifierDerivingKey) ToBytes() []byte {
 	_pointer := _self.ffiObject.incrementPointer("*OrchardNullifierDerivingKey")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterBytesINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_method_orchardnullifierderivingkey_to_bytes(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_method_orchardnullifierderivingkey_to_bytes(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
-
 func (object *OrchardNullifierDerivingKey) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -1550,9 +1716,13 @@ func (c FfiConverterOrchardNullifierDerivingKey) Lift(pointer unsafe.Pointer) *O
 	result := &OrchardNullifierDerivingKey{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_orchardnullifierderivingkey(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_orchardnullifierderivingkey(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*OrchardNullifierDerivingKey).Destroy)
 	return result
@@ -1569,6 +1739,7 @@ func (c FfiConverterOrchardNullifierDerivingKey) Lower(value *OrchardNullifierDe
 	pointer := value.ffiObject.incrementPointer("*OrchardNullifierDerivingKey")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterOrchardNullifierDerivingKey) Write(writer io.Writer, value *OrchardNullifierDerivingKey) {
@@ -1581,31 +1752,55 @@ func (_ FfiDestroyerOrchardNullifierDerivingKey) Destroy(value *OrchardNullifier
 	value.Destroy()
 }
 
+// The `ak` component of an Orchard Full Viewing key. This shall be
+// derived from the Spend Authorizing Key `ask`
+type OrchardSpendValidatingKeyInterface interface {
+	// Serialized the [`OrchardSpendValidatingKey`] into bytes for
+	// backup purposes.
+	// - Note: See [ZF FROST Book - Technical Details](https://frost.zfnd.org/zcash/technical-details.html)
+	// to deserialize use the `OrchardSpendValidatingKey::from_bytes`
+	// constructor
+	ToBytes() []byte
+}
+
+// The `ak` component of an Orchard Full Viewing key. This shall be
+// derived from the Spend Authorizing Key `ask`
 type OrchardSpendValidatingKey struct {
 	ffiObject FfiObject
 }
 
+// Deserialized the [`OrchardSpendValidatingKey`] into bytes for
+// backup purposes.
+// - Note: See [ZF FROST Book - Technical Details](https://frost.zfnd.org/zcash/technical-details.html)
+// to serialize use the `OrchardSpendValidatingKey::to_bytes`
+// constructor
 func OrchardSpendValidatingKeyFromBytes(bytes []byte) (*OrchardSpendValidatingKey, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+	_uniffiRV, _uniffiErr := rustCallWithError[OrchardKeyError](FfiConverterOrchardKeyError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
 		return C.uniffi_frost_uniffi_sdk_fn_constructor_orchardspendvalidatingkey_from_bytes(FfiConverterBytesINSTANCE.Lower(bytes), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *OrchardSpendValidatingKey
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterOrchardSpendValidatingKeyINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterOrchardSpendValidatingKeyINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
+// Serialized the [`OrchardSpendValidatingKey`] into bytes for
+// backup purposes.
+// - Note: See [ZF FROST Book - Technical Details](https://frost.zfnd.org/zcash/technical-details.html)
+// to deserialize use the `OrchardSpendValidatingKey::from_bytes`
+// constructor
 func (_self *OrchardSpendValidatingKey) ToBytes() []byte {
 	_pointer := _self.ffiObject.incrementPointer("*OrchardSpendValidatingKey")
 	defer _self.ffiObject.decrementPointer()
 	return FfiConverterBytesINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_method_orchardspendvalidatingkey_to_bytes(
-			_pointer, _uniffiStatus)
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_method_orchardspendvalidatingkey_to_bytes(
+				_pointer, _uniffiStatus),
+		}
 	}))
 }
-
 func (object *OrchardSpendValidatingKey) Destroy() {
 	runtime.SetFinalizer(object, nil)
 	object.ffiObject.destroy()
@@ -1619,9 +1814,13 @@ func (c FfiConverterOrchardSpendValidatingKey) Lift(pointer unsafe.Pointer) *Orc
 	result := &OrchardSpendValidatingKey{
 		newFfiObject(
 			pointer,
+			func(pointer unsafe.Pointer, status *C.RustCallStatus) unsafe.Pointer {
+				return C.uniffi_frost_uniffi_sdk_fn_clone_orchardspendvalidatingkey(pointer, status)
+			},
 			func(pointer unsafe.Pointer, status *C.RustCallStatus) {
 				C.uniffi_frost_uniffi_sdk_fn_free_orchardspendvalidatingkey(pointer, status)
-			}),
+			},
+		),
 	}
 	runtime.SetFinalizer(result, (*OrchardSpendValidatingKey).Destroy)
 	return result
@@ -1638,6 +1837,7 @@ func (c FfiConverterOrchardSpendValidatingKey) Lower(value *OrchardSpendValidati
 	pointer := value.ffiObject.incrementPointer("*OrchardSpendValidatingKey")
 	defer value.ffiObject.decrementPointer()
 	return pointer
+
 }
 
 func (c FfiConverterOrchardSpendValidatingKey) Write(writer io.Writer, value *OrchardSpendValidatingKey) {
@@ -1662,15 +1862,15 @@ func (r *Configuration) Destroy() {
 	FfiDestroyerBytes{}.Destroy(r.Secret)
 }
 
-type FfiConverterTypeConfiguration struct{}
+type FfiConverterConfiguration struct{}
 
-var FfiConverterTypeConfigurationINSTANCE = FfiConverterTypeConfiguration{}
+var FfiConverterConfigurationINSTANCE = FfiConverterConfiguration{}
 
-func (c FfiConverterTypeConfiguration) Lift(rb RustBufferI) Configuration {
+func (c FfiConverterConfiguration) Lift(rb RustBufferI) Configuration {
 	return LiftFromRustBuffer[Configuration](c, rb)
 }
 
-func (c FfiConverterTypeConfiguration) Read(reader io.Reader) Configuration {
+func (c FfiConverterConfiguration) Read(reader io.Reader) Configuration {
 	return Configuration{
 		FfiConverterUint16INSTANCE.Read(reader),
 		FfiConverterUint16INSTANCE.Read(reader),
@@ -1678,19 +1878,19 @@ func (c FfiConverterTypeConfiguration) Read(reader io.Reader) Configuration {
 	}
 }
 
-func (c FfiConverterTypeConfiguration) Lower(value Configuration) RustBuffer {
+func (c FfiConverterConfiguration) Lower(value Configuration) C.RustBuffer {
 	return LowerIntoRustBuffer[Configuration](c, value)
 }
 
-func (c FfiConverterTypeConfiguration) Write(writer io.Writer, value Configuration) {
+func (c FfiConverterConfiguration) Write(writer io.Writer, value Configuration) {
 	FfiConverterUint16INSTANCE.Write(writer, value.MinSigners)
 	FfiConverterUint16INSTANCE.Write(writer, value.MaxSigners)
 	FfiConverterBytesINSTANCE.Write(writer, value.Secret)
 }
 
-type FfiDestroyerTypeConfiguration struct{}
+type FfiDestroyerConfiguration struct{}
 
-func (_ FfiDestroyerTypeConfiguration) Destroy(value Configuration) {
+func (_ FfiDestroyerConfiguration) Destroy(value Configuration) {
 	value.Destroy()
 }
 
@@ -1700,37 +1900,37 @@ type DkgPart3Result struct {
 }
 
 func (r *DkgPart3Result) Destroy() {
-	FfiDestroyerTypeFrostPublicKeyPackage{}.Destroy(r.PublicKeyPackage)
-	FfiDestroyerTypeFrostKeyPackage{}.Destroy(r.KeyPackage)
+	FfiDestroyerFrostPublicKeyPackage{}.Destroy(r.PublicKeyPackage)
+	FfiDestroyerFrostKeyPackage{}.Destroy(r.KeyPackage)
 }
 
-type FfiConverterTypeDKGPart3Result struct{}
+type FfiConverterDkgPart3Result struct{}
 
-var FfiConverterTypeDKGPart3ResultINSTANCE = FfiConverterTypeDKGPart3Result{}
+var FfiConverterDkgPart3ResultINSTANCE = FfiConverterDkgPart3Result{}
 
-func (c FfiConverterTypeDKGPart3Result) Lift(rb RustBufferI) DkgPart3Result {
+func (c FfiConverterDkgPart3Result) Lift(rb RustBufferI) DkgPart3Result {
 	return LiftFromRustBuffer[DkgPart3Result](c, rb)
 }
 
-func (c FfiConverterTypeDKGPart3Result) Read(reader io.Reader) DkgPart3Result {
+func (c FfiConverterDkgPart3Result) Read(reader io.Reader) DkgPart3Result {
 	return DkgPart3Result{
-		FfiConverterTypeFrostPublicKeyPackageINSTANCE.Read(reader),
-		FfiConverterTypeFrostKeyPackageINSTANCE.Read(reader),
+		FfiConverterFrostPublicKeyPackageINSTANCE.Read(reader),
+		FfiConverterFrostKeyPackageINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeDKGPart3Result) Lower(value DkgPart3Result) RustBuffer {
+func (c FfiConverterDkgPart3Result) Lower(value DkgPart3Result) C.RustBuffer {
 	return LowerIntoRustBuffer[DkgPart3Result](c, value)
 }
 
-func (c FfiConverterTypeDKGPart3Result) Write(writer io.Writer, value DkgPart3Result) {
-	FfiConverterTypeFrostPublicKeyPackageINSTANCE.Write(writer, value.PublicKeyPackage)
-	FfiConverterTypeFrostKeyPackageINSTANCE.Write(writer, value.KeyPackage)
+func (c FfiConverterDkgPart3Result) Write(writer io.Writer, value DkgPart3Result) {
+	FfiConverterFrostPublicKeyPackageINSTANCE.Write(writer, value.PublicKeyPackage)
+	FfiConverterFrostKeyPackageINSTANCE.Write(writer, value.KeyPackage)
 }
 
-type FfiDestroyerTypeDkgPart3Result struct{}
+type FfiDestroyerDkgPart3Result struct{}
 
-func (_ FfiDestroyerTypeDkgPart3Result) Destroy(value DkgPart3Result) {
+func (_ FfiDestroyerDkgPart3Result) Destroy(value DkgPart3Result) {
 	value.Destroy()
 }
 
@@ -1740,37 +1940,37 @@ type DkgRound1Package struct {
 }
 
 func (r *DkgRound1Package) Destroy() {
-	FfiDestroyerTypeParticipantIdentifier{}.Destroy(r.Identifier)
+	FfiDestroyerParticipantIdentifier{}.Destroy(r.Identifier)
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeDKGRound1Package struct{}
+type FfiConverterDkgRound1Package struct{}
 
-var FfiConverterTypeDKGRound1PackageINSTANCE = FfiConverterTypeDKGRound1Package{}
+var FfiConverterDkgRound1PackageINSTANCE = FfiConverterDkgRound1Package{}
 
-func (c FfiConverterTypeDKGRound1Package) Lift(rb RustBufferI) DkgRound1Package {
+func (c FfiConverterDkgRound1Package) Lift(rb RustBufferI) DkgRound1Package {
 	return LiftFromRustBuffer[DkgRound1Package](c, rb)
 }
 
-func (c FfiConverterTypeDKGRound1Package) Read(reader io.Reader) DkgRound1Package {
+func (c FfiConverterDkgRound1Package) Read(reader io.Reader) DkgRound1Package {
 	return DkgRound1Package{
-		FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		FfiConverterParticipantIdentifierINSTANCE.Read(reader),
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeDKGRound1Package) Lower(value DkgRound1Package) RustBuffer {
+func (c FfiConverterDkgRound1Package) Lower(value DkgRound1Package) C.RustBuffer {
 	return LowerIntoRustBuffer[DkgRound1Package](c, value)
 }
 
-func (c FfiConverterTypeDKGRound1Package) Write(writer io.Writer, value DkgRound1Package) {
-	FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
+func (c FfiConverterDkgRound1Package) Write(writer io.Writer, value DkgRound1Package) {
+	FfiConverterParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeDkgRound1Package struct{}
+type FfiDestroyerDkgRound1Package struct{}
 
-func (_ FfiDestroyerTypeDkgRound1Package) Destroy(value DkgRound1Package) {
+func (_ FfiDestroyerDkgRound1Package) Destroy(value DkgRound1Package) {
 	value.Destroy()
 }
 
@@ -1780,37 +1980,37 @@ type DkgRound2Package struct {
 }
 
 func (r *DkgRound2Package) Destroy() {
-	FfiDestroyerTypeParticipantIdentifier{}.Destroy(r.Identifier)
+	FfiDestroyerParticipantIdentifier{}.Destroy(r.Identifier)
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeDKGRound2Package struct{}
+type FfiConverterDkgRound2Package struct{}
 
-var FfiConverterTypeDKGRound2PackageINSTANCE = FfiConverterTypeDKGRound2Package{}
+var FfiConverterDkgRound2PackageINSTANCE = FfiConverterDkgRound2Package{}
 
-func (c FfiConverterTypeDKGRound2Package) Lift(rb RustBufferI) DkgRound2Package {
+func (c FfiConverterDkgRound2Package) Lift(rb RustBufferI) DkgRound2Package {
 	return LiftFromRustBuffer[DkgRound2Package](c, rb)
 }
 
-func (c FfiConverterTypeDKGRound2Package) Read(reader io.Reader) DkgRound2Package {
+func (c FfiConverterDkgRound2Package) Read(reader io.Reader) DkgRound2Package {
 	return DkgRound2Package{
-		FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		FfiConverterParticipantIdentifierINSTANCE.Read(reader),
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeDKGRound2Package) Lower(value DkgRound2Package) RustBuffer {
+func (c FfiConverterDkgRound2Package) Lower(value DkgRound2Package) C.RustBuffer {
 	return LowerIntoRustBuffer[DkgRound2Package](c, value)
 }
 
-func (c FfiConverterTypeDKGRound2Package) Write(writer io.Writer, value DkgRound2Package) {
-	FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
+func (c FfiConverterDkgRound2Package) Write(writer io.Writer, value DkgRound2Package) {
+	FfiConverterParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeDkgRound2Package struct{}
+type FfiDestroyerDkgRound2Package struct{}
 
-func (_ FfiDestroyerTypeDkgRound2Package) Destroy(value DkgRound2Package) {
+func (_ FfiDestroyerDkgRound2Package) Destroy(value DkgRound2Package) {
 	value.Destroy()
 }
 
@@ -1820,37 +2020,37 @@ type FirstRoundCommitment struct {
 }
 
 func (r *FirstRoundCommitment) Destroy() {
-	FfiDestroyerTypeFrostSigningNonces{}.Destroy(r.Nonces)
-	FfiDestroyerTypeFrostSigningCommitments{}.Destroy(r.Commitments)
+	FfiDestroyerFrostSigningNonces{}.Destroy(r.Nonces)
+	FfiDestroyerFrostSigningCommitments{}.Destroy(r.Commitments)
 }
 
-type FfiConverterTypeFirstRoundCommitment struct{}
+type FfiConverterFirstRoundCommitment struct{}
 
-var FfiConverterTypeFirstRoundCommitmentINSTANCE = FfiConverterTypeFirstRoundCommitment{}
+var FfiConverterFirstRoundCommitmentINSTANCE = FfiConverterFirstRoundCommitment{}
 
-func (c FfiConverterTypeFirstRoundCommitment) Lift(rb RustBufferI) FirstRoundCommitment {
+func (c FfiConverterFirstRoundCommitment) Lift(rb RustBufferI) FirstRoundCommitment {
 	return LiftFromRustBuffer[FirstRoundCommitment](c, rb)
 }
 
-func (c FfiConverterTypeFirstRoundCommitment) Read(reader io.Reader) FirstRoundCommitment {
+func (c FfiConverterFirstRoundCommitment) Read(reader io.Reader) FirstRoundCommitment {
 	return FirstRoundCommitment{
-		FfiConverterTypeFrostSigningNoncesINSTANCE.Read(reader),
-		FfiConverterTypeFrostSigningCommitmentsINSTANCE.Read(reader),
+		FfiConverterFrostSigningNoncesINSTANCE.Read(reader),
+		FfiConverterFrostSigningCommitmentsINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFirstRoundCommitment) Lower(value FirstRoundCommitment) RustBuffer {
+func (c FfiConverterFirstRoundCommitment) Lower(value FirstRoundCommitment) C.RustBuffer {
 	return LowerIntoRustBuffer[FirstRoundCommitment](c, value)
 }
 
-func (c FfiConverterTypeFirstRoundCommitment) Write(writer io.Writer, value FirstRoundCommitment) {
-	FfiConverterTypeFrostSigningNoncesINSTANCE.Write(writer, value.Nonces)
-	FfiConverterTypeFrostSigningCommitmentsINSTANCE.Write(writer, value.Commitments)
+func (c FfiConverterFirstRoundCommitment) Write(writer io.Writer, value FirstRoundCommitment) {
+	FfiConverterFrostSigningNoncesINSTANCE.Write(writer, value.Nonces)
+	FfiConverterFrostSigningCommitmentsINSTANCE.Write(writer, value.Commitments)
 }
 
-type FfiDestroyerTypeFirstRoundCommitment struct{}
+type FfiDestroyerFirstRoundCommitment struct{}
 
-func (_ FfiDestroyerTypeFirstRoundCommitment) Destroy(value FirstRoundCommitment) {
+func (_ FfiDestroyerFirstRoundCommitment) Destroy(value FirstRoundCommitment) {
 	value.Destroy()
 }
 
@@ -1860,37 +2060,37 @@ type FrostKeyPackage struct {
 }
 
 func (r *FrostKeyPackage) Destroy() {
-	FfiDestroyerTypeParticipantIdentifier{}.Destroy(r.Identifier)
+	FfiDestroyerParticipantIdentifier{}.Destroy(r.Identifier)
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeFrostKeyPackage struct{}
+type FfiConverterFrostKeyPackage struct{}
 
-var FfiConverterTypeFrostKeyPackageINSTANCE = FfiConverterTypeFrostKeyPackage{}
+var FfiConverterFrostKeyPackageINSTANCE = FfiConverterFrostKeyPackage{}
 
-func (c FfiConverterTypeFrostKeyPackage) Lift(rb RustBufferI) FrostKeyPackage {
+func (c FfiConverterFrostKeyPackage) Lift(rb RustBufferI) FrostKeyPackage {
 	return LiftFromRustBuffer[FrostKeyPackage](c, rb)
 }
 
-func (c FfiConverterTypeFrostKeyPackage) Read(reader io.Reader) FrostKeyPackage {
+func (c FfiConverterFrostKeyPackage) Read(reader io.Reader) FrostKeyPackage {
 	return FrostKeyPackage{
-		FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		FfiConverterParticipantIdentifierINSTANCE.Read(reader),
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFrostKeyPackage) Lower(value FrostKeyPackage) RustBuffer {
+func (c FfiConverterFrostKeyPackage) Lower(value FrostKeyPackage) C.RustBuffer {
 	return LowerIntoRustBuffer[FrostKeyPackage](c, value)
 }
 
-func (c FfiConverterTypeFrostKeyPackage) Write(writer io.Writer, value FrostKeyPackage) {
-	FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
+func (c FfiConverterFrostKeyPackage) Write(writer io.Writer, value FrostKeyPackage) {
+	FfiConverterParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeFrostKeyPackage struct{}
+type FfiDestroyerFrostKeyPackage struct{}
 
-func (_ FfiDestroyerTypeFrostKeyPackage) Destroy(value FrostKeyPackage) {
+func (_ FfiDestroyerFrostKeyPackage) Destroy(value FrostKeyPackage) {
 	value.Destroy()
 }
 
@@ -1900,37 +2100,37 @@ type FrostPublicKeyPackage struct {
 }
 
 func (r *FrostPublicKeyPackage) Destroy() {
-	FfiDestroyerMapTypeParticipantIdentifierString{}.Destroy(r.VerifyingShares)
+	FfiDestroyerMapParticipantIdentifierString{}.Destroy(r.VerifyingShares)
 	FfiDestroyerString{}.Destroy(r.VerifyingKey)
 }
 
-type FfiConverterTypeFrostPublicKeyPackage struct{}
+type FfiConverterFrostPublicKeyPackage struct{}
 
-var FfiConverterTypeFrostPublicKeyPackageINSTANCE = FfiConverterTypeFrostPublicKeyPackage{}
+var FfiConverterFrostPublicKeyPackageINSTANCE = FfiConverterFrostPublicKeyPackage{}
 
-func (c FfiConverterTypeFrostPublicKeyPackage) Lift(rb RustBufferI) FrostPublicKeyPackage {
+func (c FfiConverterFrostPublicKeyPackage) Lift(rb RustBufferI) FrostPublicKeyPackage {
 	return LiftFromRustBuffer[FrostPublicKeyPackage](c, rb)
 }
 
-func (c FfiConverterTypeFrostPublicKeyPackage) Read(reader io.Reader) FrostPublicKeyPackage {
+func (c FfiConverterFrostPublicKeyPackage) Read(reader io.Reader) FrostPublicKeyPackage {
 	return FrostPublicKeyPackage{
-		FfiConverterMapTypeParticipantIdentifierStringINSTANCE.Read(reader),
+		FfiConverterMapParticipantIdentifierStringINSTANCE.Read(reader),
 		FfiConverterStringINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFrostPublicKeyPackage) Lower(value FrostPublicKeyPackage) RustBuffer {
+func (c FfiConverterFrostPublicKeyPackage) Lower(value FrostPublicKeyPackage) C.RustBuffer {
 	return LowerIntoRustBuffer[FrostPublicKeyPackage](c, value)
 }
 
-func (c FfiConverterTypeFrostPublicKeyPackage) Write(writer io.Writer, value FrostPublicKeyPackage) {
-	FfiConverterMapTypeParticipantIdentifierStringINSTANCE.Write(writer, value.VerifyingShares)
+func (c FfiConverterFrostPublicKeyPackage) Write(writer io.Writer, value FrostPublicKeyPackage) {
+	FfiConverterMapParticipantIdentifierStringINSTANCE.Write(writer, value.VerifyingShares)
 	FfiConverterStringINSTANCE.Write(writer, value.VerifyingKey)
 }
 
-type FfiDestroyerTypeFrostPublicKeyPackage struct{}
+type FfiDestroyerFrostPublicKeyPackage struct{}
 
-func (_ FfiDestroyerTypeFrostPublicKeyPackage) Destroy(value FrostPublicKeyPackage) {
+func (_ FfiDestroyerFrostPublicKeyPackage) Destroy(value FrostPublicKeyPackage) {
 	value.Destroy()
 }
 
@@ -1942,31 +2142,31 @@ func (r *FrostRandomizer) Destroy() {
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeFrostRandomizer struct{}
+type FfiConverterFrostRandomizer struct{}
 
-var FfiConverterTypeFrostRandomizerINSTANCE = FfiConverterTypeFrostRandomizer{}
+var FfiConverterFrostRandomizerINSTANCE = FfiConverterFrostRandomizer{}
 
-func (c FfiConverterTypeFrostRandomizer) Lift(rb RustBufferI) FrostRandomizer {
+func (c FfiConverterFrostRandomizer) Lift(rb RustBufferI) FrostRandomizer {
 	return LiftFromRustBuffer[FrostRandomizer](c, rb)
 }
 
-func (c FfiConverterTypeFrostRandomizer) Read(reader io.Reader) FrostRandomizer {
+func (c FfiConverterFrostRandomizer) Read(reader io.Reader) FrostRandomizer {
 	return FrostRandomizer{
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFrostRandomizer) Lower(value FrostRandomizer) RustBuffer {
+func (c FfiConverterFrostRandomizer) Lower(value FrostRandomizer) C.RustBuffer {
 	return LowerIntoRustBuffer[FrostRandomizer](c, value)
 }
 
-func (c FfiConverterTypeFrostRandomizer) Write(writer io.Writer, value FrostRandomizer) {
+func (c FfiConverterFrostRandomizer) Write(writer io.Writer, value FrostRandomizer) {
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeFrostRandomizer struct{}
+type FfiDestroyerFrostRandomizer struct{}
 
-func (_ FfiDestroyerTypeFrostRandomizer) Destroy(value FrostRandomizer) {
+func (_ FfiDestroyerFrostRandomizer) Destroy(value FrostRandomizer) {
 	value.Destroy()
 }
 
@@ -1976,37 +2176,37 @@ type FrostSecretKeyShare struct {
 }
 
 func (r *FrostSecretKeyShare) Destroy() {
-	FfiDestroyerTypeParticipantIdentifier{}.Destroy(r.Identifier)
+	FfiDestroyerParticipantIdentifier{}.Destroy(r.Identifier)
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeFrostSecretKeyShare struct{}
+type FfiConverterFrostSecretKeyShare struct{}
 
-var FfiConverterTypeFrostSecretKeyShareINSTANCE = FfiConverterTypeFrostSecretKeyShare{}
+var FfiConverterFrostSecretKeyShareINSTANCE = FfiConverterFrostSecretKeyShare{}
 
-func (c FfiConverterTypeFrostSecretKeyShare) Lift(rb RustBufferI) FrostSecretKeyShare {
+func (c FfiConverterFrostSecretKeyShare) Lift(rb RustBufferI) FrostSecretKeyShare {
 	return LiftFromRustBuffer[FrostSecretKeyShare](c, rb)
 }
 
-func (c FfiConverterTypeFrostSecretKeyShare) Read(reader io.Reader) FrostSecretKeyShare {
+func (c FfiConverterFrostSecretKeyShare) Read(reader io.Reader) FrostSecretKeyShare {
 	return FrostSecretKeyShare{
-		FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		FfiConverterParticipantIdentifierINSTANCE.Read(reader),
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFrostSecretKeyShare) Lower(value FrostSecretKeyShare) RustBuffer {
+func (c FfiConverterFrostSecretKeyShare) Lower(value FrostSecretKeyShare) C.RustBuffer {
 	return LowerIntoRustBuffer[FrostSecretKeyShare](c, value)
 }
 
-func (c FfiConverterTypeFrostSecretKeyShare) Write(writer io.Writer, value FrostSecretKeyShare) {
-	FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
+func (c FfiConverterFrostSecretKeyShare) Write(writer io.Writer, value FrostSecretKeyShare) {
+	FfiConverterParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeFrostSecretKeyShare struct{}
+type FfiDestroyerFrostSecretKeyShare struct{}
 
-func (_ FfiDestroyerTypeFrostSecretKeyShare) Destroy(value FrostSecretKeyShare) {
+func (_ FfiDestroyerFrostSecretKeyShare) Destroy(value FrostSecretKeyShare) {
 	value.Destroy()
 }
 
@@ -2018,31 +2218,31 @@ func (r *FrostSignature) Destroy() {
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeFrostSignature struct{}
+type FfiConverterFrostSignature struct{}
 
-var FfiConverterTypeFrostSignatureINSTANCE = FfiConverterTypeFrostSignature{}
+var FfiConverterFrostSignatureINSTANCE = FfiConverterFrostSignature{}
 
-func (c FfiConverterTypeFrostSignature) Lift(rb RustBufferI) FrostSignature {
+func (c FfiConverterFrostSignature) Lift(rb RustBufferI) FrostSignature {
 	return LiftFromRustBuffer[FrostSignature](c, rb)
 }
 
-func (c FfiConverterTypeFrostSignature) Read(reader io.Reader) FrostSignature {
+func (c FfiConverterFrostSignature) Read(reader io.Reader) FrostSignature {
 	return FrostSignature{
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFrostSignature) Lower(value FrostSignature) RustBuffer {
+func (c FfiConverterFrostSignature) Lower(value FrostSignature) C.RustBuffer {
 	return LowerIntoRustBuffer[FrostSignature](c, value)
 }
 
-func (c FfiConverterTypeFrostSignature) Write(writer io.Writer, value FrostSignature) {
+func (c FfiConverterFrostSignature) Write(writer io.Writer, value FrostSignature) {
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeFrostSignature struct{}
+type FfiDestroyerFrostSignature struct{}
 
-func (_ FfiDestroyerTypeFrostSignature) Destroy(value FrostSignature) {
+func (_ FfiDestroyerFrostSignature) Destroy(value FrostSignature) {
 	value.Destroy()
 }
 
@@ -2052,37 +2252,37 @@ type FrostSignatureShare struct {
 }
 
 func (r *FrostSignatureShare) Destroy() {
-	FfiDestroyerTypeParticipantIdentifier{}.Destroy(r.Identifier)
+	FfiDestroyerParticipantIdentifier{}.Destroy(r.Identifier)
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeFrostSignatureShare struct{}
+type FfiConverterFrostSignatureShare struct{}
 
-var FfiConverterTypeFrostSignatureShareINSTANCE = FfiConverterTypeFrostSignatureShare{}
+var FfiConverterFrostSignatureShareINSTANCE = FfiConverterFrostSignatureShare{}
 
-func (c FfiConverterTypeFrostSignatureShare) Lift(rb RustBufferI) FrostSignatureShare {
+func (c FfiConverterFrostSignatureShare) Lift(rb RustBufferI) FrostSignatureShare {
 	return LiftFromRustBuffer[FrostSignatureShare](c, rb)
 }
 
-func (c FfiConverterTypeFrostSignatureShare) Read(reader io.Reader) FrostSignatureShare {
+func (c FfiConverterFrostSignatureShare) Read(reader io.Reader) FrostSignatureShare {
 	return FrostSignatureShare{
-		FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		FfiConverterParticipantIdentifierINSTANCE.Read(reader),
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFrostSignatureShare) Lower(value FrostSignatureShare) RustBuffer {
+func (c FfiConverterFrostSignatureShare) Lower(value FrostSignatureShare) C.RustBuffer {
 	return LowerIntoRustBuffer[FrostSignatureShare](c, value)
 }
 
-func (c FfiConverterTypeFrostSignatureShare) Write(writer io.Writer, value FrostSignatureShare) {
-	FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
+func (c FfiConverterFrostSignatureShare) Write(writer io.Writer, value FrostSignatureShare) {
+	FfiConverterParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeFrostSignatureShare struct{}
+type FfiDestroyerFrostSignatureShare struct{}
 
-func (_ FfiDestroyerTypeFrostSignatureShare) Destroy(value FrostSignatureShare) {
+func (_ FfiDestroyerFrostSignatureShare) Destroy(value FrostSignatureShare) {
 	value.Destroy()
 }
 
@@ -2092,37 +2292,37 @@ type FrostSigningCommitments struct {
 }
 
 func (r *FrostSigningCommitments) Destroy() {
-	FfiDestroyerTypeParticipantIdentifier{}.Destroy(r.Identifier)
+	FfiDestroyerParticipantIdentifier{}.Destroy(r.Identifier)
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeFrostSigningCommitments struct{}
+type FfiConverterFrostSigningCommitments struct{}
 
-var FfiConverterTypeFrostSigningCommitmentsINSTANCE = FfiConverterTypeFrostSigningCommitments{}
+var FfiConverterFrostSigningCommitmentsINSTANCE = FfiConverterFrostSigningCommitments{}
 
-func (c FfiConverterTypeFrostSigningCommitments) Lift(rb RustBufferI) FrostSigningCommitments {
+func (c FfiConverterFrostSigningCommitments) Lift(rb RustBufferI) FrostSigningCommitments {
 	return LiftFromRustBuffer[FrostSigningCommitments](c, rb)
 }
 
-func (c FfiConverterTypeFrostSigningCommitments) Read(reader io.Reader) FrostSigningCommitments {
+func (c FfiConverterFrostSigningCommitments) Read(reader io.Reader) FrostSigningCommitments {
 	return FrostSigningCommitments{
-		FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+		FfiConverterParticipantIdentifierINSTANCE.Read(reader),
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFrostSigningCommitments) Lower(value FrostSigningCommitments) RustBuffer {
+func (c FfiConverterFrostSigningCommitments) Lower(value FrostSigningCommitments) C.RustBuffer {
 	return LowerIntoRustBuffer[FrostSigningCommitments](c, value)
 }
 
-func (c FfiConverterTypeFrostSigningCommitments) Write(writer io.Writer, value FrostSigningCommitments) {
-	FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
+func (c FfiConverterFrostSigningCommitments) Write(writer io.Writer, value FrostSigningCommitments) {
+	FfiConverterParticipantIdentifierINSTANCE.Write(writer, value.Identifier)
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeFrostSigningCommitments struct{}
+type FfiDestroyerFrostSigningCommitments struct{}
 
-func (_ FfiDestroyerTypeFrostSigningCommitments) Destroy(value FrostSigningCommitments) {
+func (_ FfiDestroyerFrostSigningCommitments) Destroy(value FrostSigningCommitments) {
 	value.Destroy()
 }
 
@@ -2134,31 +2334,31 @@ func (r *FrostSigningNonces) Destroy() {
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeFrostSigningNonces struct{}
+type FfiConverterFrostSigningNonces struct{}
 
-var FfiConverterTypeFrostSigningNoncesINSTANCE = FfiConverterTypeFrostSigningNonces{}
+var FfiConverterFrostSigningNoncesINSTANCE = FfiConverterFrostSigningNonces{}
 
-func (c FfiConverterTypeFrostSigningNonces) Lift(rb RustBufferI) FrostSigningNonces {
+func (c FfiConverterFrostSigningNonces) Lift(rb RustBufferI) FrostSigningNonces {
 	return LiftFromRustBuffer[FrostSigningNonces](c, rb)
 }
 
-func (c FfiConverterTypeFrostSigningNonces) Read(reader io.Reader) FrostSigningNonces {
+func (c FfiConverterFrostSigningNonces) Read(reader io.Reader) FrostSigningNonces {
 	return FrostSigningNonces{
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFrostSigningNonces) Lower(value FrostSigningNonces) RustBuffer {
+func (c FfiConverterFrostSigningNonces) Lower(value FrostSigningNonces) C.RustBuffer {
 	return LowerIntoRustBuffer[FrostSigningNonces](c, value)
 }
 
-func (c FfiConverterTypeFrostSigningNonces) Write(writer io.Writer, value FrostSigningNonces) {
+func (c FfiConverterFrostSigningNonces) Write(writer io.Writer, value FrostSigningNonces) {
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeFrostSigningNonces struct{}
+type FfiDestroyerFrostSigningNonces struct{}
 
-func (_ FfiDestroyerTypeFrostSigningNonces) Destroy(value FrostSigningNonces) {
+func (_ FfiDestroyerFrostSigningNonces) Destroy(value FrostSigningNonces) {
 	value.Destroy()
 }
 
@@ -2170,31 +2370,31 @@ func (r *FrostSigningPackage) Destroy() {
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeFrostSigningPackage struct{}
+type FfiConverterFrostSigningPackage struct{}
 
-var FfiConverterTypeFrostSigningPackageINSTANCE = FfiConverterTypeFrostSigningPackage{}
+var FfiConverterFrostSigningPackageINSTANCE = FfiConverterFrostSigningPackage{}
 
-func (c FfiConverterTypeFrostSigningPackage) Lift(rb RustBufferI) FrostSigningPackage {
+func (c FfiConverterFrostSigningPackage) Lift(rb RustBufferI) FrostSigningPackage {
 	return LiftFromRustBuffer[FrostSigningPackage](c, rb)
 }
 
-func (c FfiConverterTypeFrostSigningPackage) Read(reader io.Reader) FrostSigningPackage {
+func (c FfiConverterFrostSigningPackage) Read(reader io.Reader) FrostSigningPackage {
 	return FrostSigningPackage{
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeFrostSigningPackage) Lower(value FrostSigningPackage) RustBuffer {
+func (c FfiConverterFrostSigningPackage) Lower(value FrostSigningPackage) C.RustBuffer {
 	return LowerIntoRustBuffer[FrostSigningPackage](c, value)
 }
 
-func (c FfiConverterTypeFrostSigningPackage) Write(writer io.Writer, value FrostSigningPackage) {
+func (c FfiConverterFrostSigningPackage) Write(writer io.Writer, value FrostSigningPackage) {
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeFrostSigningPackage struct{}
+type FfiDestroyerFrostSigningPackage struct{}
 
-func (_ FfiDestroyerTypeFrostSigningPackage) Destroy(value FrostSigningPackage) {
+func (_ FfiDestroyerFrostSigningPackage) Destroy(value FrostSigningPackage) {
 	value.Destroy()
 }
 
@@ -2206,31 +2406,31 @@ func (r *Message) Destroy() {
 	FfiDestroyerBytes{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeMessage struct{}
+type FfiConverterMessage struct{}
 
-var FfiConverterTypeMessageINSTANCE = FfiConverterTypeMessage{}
+var FfiConverterMessageINSTANCE = FfiConverterMessage{}
 
-func (c FfiConverterTypeMessage) Lift(rb RustBufferI) Message {
+func (c FfiConverterMessage) Lift(rb RustBufferI) Message {
 	return LiftFromRustBuffer[Message](c, rb)
 }
 
-func (c FfiConverterTypeMessage) Read(reader io.Reader) Message {
+func (c FfiConverterMessage) Read(reader io.Reader) Message {
 	return Message{
 		FfiConverterBytesINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeMessage) Lower(value Message) RustBuffer {
+func (c FfiConverterMessage) Lower(value Message) C.RustBuffer {
 	return LowerIntoRustBuffer[Message](c, value)
 }
 
-func (c FfiConverterTypeMessage) Write(writer io.Writer, value Message) {
+func (c FfiConverterMessage) Write(writer io.Writer, value Message) {
 	FfiConverterBytesINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeMessage struct{}
+type FfiDestroyerMessage struct{}
 
-func (_ FfiDestroyerTypeMessage) Destroy(value Message) {
+func (_ FfiDestroyerMessage) Destroy(value Message) {
 	value.Destroy()
 }
 
@@ -2242,31 +2442,31 @@ func (r *ParticipantIdentifier) Destroy() {
 	FfiDestroyerString{}.Destroy(r.Data)
 }
 
-type FfiConverterTypeParticipantIdentifier struct{}
+type FfiConverterParticipantIdentifier struct{}
 
-var FfiConverterTypeParticipantIdentifierINSTANCE = FfiConverterTypeParticipantIdentifier{}
+var FfiConverterParticipantIdentifierINSTANCE = FfiConverterParticipantIdentifier{}
 
-func (c FfiConverterTypeParticipantIdentifier) Lift(rb RustBufferI) ParticipantIdentifier {
+func (c FfiConverterParticipantIdentifier) Lift(rb RustBufferI) ParticipantIdentifier {
 	return LiftFromRustBuffer[ParticipantIdentifier](c, rb)
 }
 
-func (c FfiConverterTypeParticipantIdentifier) Read(reader io.Reader) ParticipantIdentifier {
+func (c FfiConverterParticipantIdentifier) Read(reader io.Reader) ParticipantIdentifier {
 	return ParticipantIdentifier{
 		FfiConverterStringINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeParticipantIdentifier) Lower(value ParticipantIdentifier) RustBuffer {
+func (c FfiConverterParticipantIdentifier) Lower(value ParticipantIdentifier) C.RustBuffer {
 	return LowerIntoRustBuffer[ParticipantIdentifier](c, value)
 }
 
-func (c FfiConverterTypeParticipantIdentifier) Write(writer io.Writer, value ParticipantIdentifier) {
+func (c FfiConverterParticipantIdentifier) Write(writer io.Writer, value ParticipantIdentifier) {
 	FfiConverterStringINSTANCE.Write(writer, value.Data)
 }
 
-type FfiDestroyerTypeParticipantIdentifier struct{}
+type FfiDestroyerParticipantIdentifier struct{}
 
-func (_ FfiDestroyerTypeParticipantIdentifier) Destroy(value ParticipantIdentifier) {
+func (_ FfiDestroyerParticipantIdentifier) Destroy(value ParticipantIdentifier) {
 	value.Destroy()
 }
 
@@ -2275,34 +2475,34 @@ type ParticipantList struct {
 }
 
 func (r *ParticipantList) Destroy() {
-	FfiDestroyerSequenceTypeParticipantIdentifier{}.Destroy(r.Identifiers)
+	FfiDestroyerSequenceParticipantIdentifier{}.Destroy(r.Identifiers)
 }
 
-type FfiConverterTypeParticipantList struct{}
+type FfiConverterParticipantList struct{}
 
-var FfiConverterTypeParticipantListINSTANCE = FfiConverterTypeParticipantList{}
+var FfiConverterParticipantListINSTANCE = FfiConverterParticipantList{}
 
-func (c FfiConverterTypeParticipantList) Lift(rb RustBufferI) ParticipantList {
+func (c FfiConverterParticipantList) Lift(rb RustBufferI) ParticipantList {
 	return LiftFromRustBuffer[ParticipantList](c, rb)
 }
 
-func (c FfiConverterTypeParticipantList) Read(reader io.Reader) ParticipantList {
+func (c FfiConverterParticipantList) Read(reader io.Reader) ParticipantList {
 	return ParticipantList{
-		FfiConverterSequenceTypeParticipantIdentifierINSTANCE.Read(reader),
+		FfiConverterSequenceParticipantIdentifierINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeParticipantList) Lower(value ParticipantList) RustBuffer {
+func (c FfiConverterParticipantList) Lower(value ParticipantList) C.RustBuffer {
 	return LowerIntoRustBuffer[ParticipantList](c, value)
 }
 
-func (c FfiConverterTypeParticipantList) Write(writer io.Writer, value ParticipantList) {
-	FfiConverterSequenceTypeParticipantIdentifierINSTANCE.Write(writer, value.Identifiers)
+func (c FfiConverterParticipantList) Write(writer io.Writer, value ParticipantList) {
+	FfiConverterSequenceParticipantIdentifierINSTANCE.Write(writer, value.Identifiers)
 }
 
-type FfiDestroyerTypeParticipantList struct{}
+type FfiDestroyerParticipantList struct{}
 
-func (_ FfiDestroyerTypeParticipantList) Destroy(value ParticipantList) {
+func (_ FfiDestroyerParticipantList) Destroy(value ParticipantList) {
 	value.Destroy()
 }
 
@@ -2312,42 +2512,52 @@ type TrustedKeyGeneration struct {
 }
 
 func (r *TrustedKeyGeneration) Destroy() {
-	FfiDestroyerMapTypeParticipantIdentifierTypeFrostSecretKeyShare{}.Destroy(r.SecretShares)
-	FfiDestroyerTypeFrostPublicKeyPackage{}.Destroy(r.PublicKeyPackage)
+	FfiDestroyerMapParticipantIdentifierFrostSecretKeyShare{}.Destroy(r.SecretShares)
+	FfiDestroyerFrostPublicKeyPackage{}.Destroy(r.PublicKeyPackage)
 }
 
-type FfiConverterTypeTrustedKeyGeneration struct{}
+type FfiConverterTrustedKeyGeneration struct{}
 
-var FfiConverterTypeTrustedKeyGenerationINSTANCE = FfiConverterTypeTrustedKeyGeneration{}
+var FfiConverterTrustedKeyGenerationINSTANCE = FfiConverterTrustedKeyGeneration{}
 
-func (c FfiConverterTypeTrustedKeyGeneration) Lift(rb RustBufferI) TrustedKeyGeneration {
+func (c FfiConverterTrustedKeyGeneration) Lift(rb RustBufferI) TrustedKeyGeneration {
 	return LiftFromRustBuffer[TrustedKeyGeneration](c, rb)
 }
 
-func (c FfiConverterTypeTrustedKeyGeneration) Read(reader io.Reader) TrustedKeyGeneration {
+func (c FfiConverterTrustedKeyGeneration) Read(reader io.Reader) TrustedKeyGeneration {
 	return TrustedKeyGeneration{
-		FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShareINSTANCE.Read(reader),
-		FfiConverterTypeFrostPublicKeyPackageINSTANCE.Read(reader),
+		FfiConverterMapParticipantIdentifierFrostSecretKeyShareINSTANCE.Read(reader),
+		FfiConverterFrostPublicKeyPackageINSTANCE.Read(reader),
 	}
 }
 
-func (c FfiConverterTypeTrustedKeyGeneration) Lower(value TrustedKeyGeneration) RustBuffer {
+func (c FfiConverterTrustedKeyGeneration) Lower(value TrustedKeyGeneration) C.RustBuffer {
 	return LowerIntoRustBuffer[TrustedKeyGeneration](c, value)
 }
 
-func (c FfiConverterTypeTrustedKeyGeneration) Write(writer io.Writer, value TrustedKeyGeneration) {
-	FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShareINSTANCE.Write(writer, value.SecretShares)
-	FfiConverterTypeFrostPublicKeyPackageINSTANCE.Write(writer, value.PublicKeyPackage)
+func (c FfiConverterTrustedKeyGeneration) Write(writer io.Writer, value TrustedKeyGeneration) {
+	FfiConverterMapParticipantIdentifierFrostSecretKeyShareINSTANCE.Write(writer, value.SecretShares)
+	FfiConverterFrostPublicKeyPackageINSTANCE.Write(writer, value.PublicKeyPackage)
 }
 
-type FfiDestroyerTypeTrustedKeyGeneration struct{}
+type FfiDestroyerTrustedKeyGeneration struct{}
 
-func (_ FfiDestroyerTypeTrustedKeyGeneration) Destroy(value TrustedKeyGeneration) {
+func (_ FfiDestroyerTrustedKeyGeneration) Destroy(value TrustedKeyGeneration) {
 	value.Destroy()
 }
 
 type ConfigurationError struct {
 	err error
+}
+
+// Convience method to turn *ConfigurationError into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *ConfigurationError) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err ConfigurationError) Error() string {
@@ -2369,9 +2579,10 @@ type ConfigurationErrorInvalidMaxSigners struct {
 }
 
 func NewConfigurationErrorInvalidMaxSigners() *ConfigurationError {
-	return &ConfigurationError{
-		err: &ConfigurationErrorInvalidMaxSigners{},
-	}
+	return &ConfigurationError{err: &ConfigurationErrorInvalidMaxSigners{}}
+}
+
+func (e ConfigurationErrorInvalidMaxSigners) destroy() {
 }
 
 func (err ConfigurationErrorInvalidMaxSigners) Error() string {
@@ -2386,9 +2597,10 @@ type ConfigurationErrorInvalidMinSigners struct {
 }
 
 func NewConfigurationErrorInvalidMinSigners() *ConfigurationError {
-	return &ConfigurationError{
-		err: &ConfigurationErrorInvalidMinSigners{},
-	}
+	return &ConfigurationError{err: &ConfigurationErrorInvalidMinSigners{}}
+}
+
+func (e ConfigurationErrorInvalidMinSigners) destroy() {
 }
 
 func (err ConfigurationErrorInvalidMinSigners) Error() string {
@@ -2403,9 +2615,10 @@ type ConfigurationErrorInvalidIdentifier struct {
 }
 
 func NewConfigurationErrorInvalidIdentifier() *ConfigurationError {
-	return &ConfigurationError{
-		err: &ConfigurationErrorInvalidIdentifier{},
-	}
+	return &ConfigurationError{err: &ConfigurationErrorInvalidIdentifier{}}
+}
+
+func (e ConfigurationErrorInvalidIdentifier) destroy() {
 }
 
 func (err ConfigurationErrorInvalidIdentifier) Error() string {
@@ -2420,9 +2633,10 @@ type ConfigurationErrorUnknownError struct {
 }
 
 func NewConfigurationErrorUnknownError() *ConfigurationError {
-	return &ConfigurationError{
-		err: &ConfigurationErrorUnknownError{},
-	}
+	return &ConfigurationError{err: &ConfigurationErrorUnknownError{}}
+}
+
+func (e ConfigurationErrorUnknownError) destroy() {
 }
 
 func (err ConfigurationErrorUnknownError) Error() string {
@@ -2433,19 +2647,19 @@ func (self ConfigurationErrorUnknownError) Is(target error) bool {
 	return target == ErrConfigurationErrorUnknownError
 }
 
-type FfiConverterTypeConfigurationError struct{}
+type FfiConverterConfigurationError struct{}
 
-var FfiConverterTypeConfigurationErrorINSTANCE = FfiConverterTypeConfigurationError{}
+var FfiConverterConfigurationErrorINSTANCE = FfiConverterConfigurationError{}
 
-func (c FfiConverterTypeConfigurationError) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterConfigurationError) Lift(eb RustBufferI) *ConfigurationError {
+	return LiftFromRustBuffer[*ConfigurationError](c, eb)
 }
 
-func (c FfiConverterTypeConfigurationError) Lower(value *ConfigurationError) RustBuffer {
+func (c FfiConverterConfigurationError) Lower(value *ConfigurationError) C.RustBuffer {
 	return LowerIntoRustBuffer[*ConfigurationError](c, value)
 }
 
-func (c FfiConverterTypeConfigurationError) Read(reader io.Reader) error {
+func (c FfiConverterConfigurationError) Read(reader io.Reader) *ConfigurationError {
 	errorID := readUint32(reader)
 
 	switch errorID {
@@ -2458,11 +2672,11 @@ func (c FfiConverterTypeConfigurationError) Read(reader io.Reader) error {
 	case 4:
 		return &ConfigurationError{&ConfigurationErrorUnknownError{}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeConfigurationError.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterConfigurationError.Read()", errorID))
 	}
 }
 
-func (c FfiConverterTypeConfigurationError) Write(writer io.Writer, value *ConfigurationError) {
+func (c FfiConverterConfigurationError) Write(writer io.Writer, value *ConfigurationError) {
 	switch variantValue := value.err.(type) {
 	case *ConfigurationErrorInvalidMaxSigners:
 		writeInt32(writer, 1)
@@ -2474,12 +2688,40 @@ func (c FfiConverterTypeConfigurationError) Write(writer io.Writer, value *Confi
 		writeInt32(writer, 4)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeConfigurationError.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterConfigurationError.Write", value))
+	}
+}
+
+type FfiDestroyerConfigurationError struct{}
+
+func (_ FfiDestroyerConfigurationError) Destroy(value *ConfigurationError) {
+	switch variantValue := value.err.(type) {
+	case ConfigurationErrorInvalidMaxSigners:
+		variantValue.destroy()
+	case ConfigurationErrorInvalidMinSigners:
+		variantValue.destroy()
+	case ConfigurationErrorInvalidIdentifier:
+		variantValue.destroy()
+	case ConfigurationErrorUnknownError:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerConfigurationError.Destroy", value))
 	}
 }
 
 type CoordinationError struct {
 	err error
+}
+
+// Convience method to turn *CoordinationError into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *CoordinationError) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err CoordinationError) Error() string {
@@ -2505,9 +2747,10 @@ type CoordinationErrorFailedToCreateSigningPackage struct {
 }
 
 func NewCoordinationErrorFailedToCreateSigningPackage() *CoordinationError {
-	return &CoordinationError{
-		err: &CoordinationErrorFailedToCreateSigningPackage{},
-	}
+	return &CoordinationError{err: &CoordinationErrorFailedToCreateSigningPackage{}}
+}
+
+func (e CoordinationErrorFailedToCreateSigningPackage) destroy() {
 }
 
 func (err CoordinationErrorFailedToCreateSigningPackage) Error() string {
@@ -2522,9 +2765,10 @@ type CoordinationErrorInvalidSigningCommitment struct {
 }
 
 func NewCoordinationErrorInvalidSigningCommitment() *CoordinationError {
-	return &CoordinationError{
-		err: &CoordinationErrorInvalidSigningCommitment{},
-	}
+	return &CoordinationError{err: &CoordinationErrorInvalidSigningCommitment{}}
+}
+
+func (e CoordinationErrorInvalidSigningCommitment) destroy() {
 }
 
 func (err CoordinationErrorInvalidSigningCommitment) Error() string {
@@ -2539,9 +2783,10 @@ type CoordinationErrorIdentifierDeserializationError struct {
 }
 
 func NewCoordinationErrorIdentifierDeserializationError() *CoordinationError {
-	return &CoordinationError{
-		err: &CoordinationErrorIdentifierDeserializationError{},
-	}
+	return &CoordinationError{err: &CoordinationErrorIdentifierDeserializationError{}}
+}
+
+func (e CoordinationErrorIdentifierDeserializationError) destroy() {
 }
 
 func (err CoordinationErrorIdentifierDeserializationError) Error() string {
@@ -2556,9 +2801,10 @@ type CoordinationErrorSigningPackageSerializationError struct {
 }
 
 func NewCoordinationErrorSigningPackageSerializationError() *CoordinationError {
-	return &CoordinationError{
-		err: &CoordinationErrorSigningPackageSerializationError{},
-	}
+	return &CoordinationError{err: &CoordinationErrorSigningPackageSerializationError{}}
+}
+
+func (e CoordinationErrorSigningPackageSerializationError) destroy() {
 }
 
 func (err CoordinationErrorSigningPackageSerializationError) Error() string {
@@ -2573,9 +2819,10 @@ type CoordinationErrorSignatureShareDeserializationError struct {
 }
 
 func NewCoordinationErrorSignatureShareDeserializationError() *CoordinationError {
-	return &CoordinationError{
-		err: &CoordinationErrorSignatureShareDeserializationError{},
-	}
+	return &CoordinationError{err: &CoordinationErrorSignatureShareDeserializationError{}}
+}
+
+func (e CoordinationErrorSignatureShareDeserializationError) destroy() {
 }
 
 func (err CoordinationErrorSignatureShareDeserializationError) Error() string {
@@ -2590,9 +2837,10 @@ type CoordinationErrorPublicKeyPackageDeserializationError struct {
 }
 
 func NewCoordinationErrorPublicKeyPackageDeserializationError() *CoordinationError {
-	return &CoordinationError{
-		err: &CoordinationErrorPublicKeyPackageDeserializationError{},
-	}
+	return &CoordinationError{err: &CoordinationErrorPublicKeyPackageDeserializationError{}}
+}
+
+func (e CoordinationErrorPublicKeyPackageDeserializationError) destroy() {
 }
 
 func (err CoordinationErrorPublicKeyPackageDeserializationError) Error() string {
@@ -2610,11 +2858,12 @@ type CoordinationErrorSignatureShareAggregationFailed struct {
 func NewCoordinationErrorSignatureShareAggregationFailed(
 	message string,
 ) *CoordinationError {
-	return &CoordinationError{
-		err: &CoordinationErrorSignatureShareAggregationFailed{
-			Message: message,
-		},
-	}
+	return &CoordinationError{err: &CoordinationErrorSignatureShareAggregationFailed{
+		Message: message}}
+}
+
+func (e CoordinationErrorSignatureShareAggregationFailed) destroy() {
+	FfiDestroyerString{}.Destroy(e.Message)
 }
 
 func (err CoordinationErrorSignatureShareAggregationFailed) Error() string {
@@ -2634,9 +2883,10 @@ type CoordinationErrorInvalidRandomizer struct {
 }
 
 func NewCoordinationErrorInvalidRandomizer() *CoordinationError {
-	return &CoordinationError{
-		err: &CoordinationErrorInvalidRandomizer{},
-	}
+	return &CoordinationError{err: &CoordinationErrorInvalidRandomizer{}}
+}
+
+func (e CoordinationErrorInvalidRandomizer) destroy() {
 }
 
 func (err CoordinationErrorInvalidRandomizer) Error() string {
@@ -2647,19 +2897,19 @@ func (self CoordinationErrorInvalidRandomizer) Is(target error) bool {
 	return target == ErrCoordinationErrorInvalidRandomizer
 }
 
-type FfiConverterTypeCoordinationError struct{}
+type FfiConverterCoordinationError struct{}
 
-var FfiConverterTypeCoordinationErrorINSTANCE = FfiConverterTypeCoordinationError{}
+var FfiConverterCoordinationErrorINSTANCE = FfiConverterCoordinationError{}
 
-func (c FfiConverterTypeCoordinationError) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterCoordinationError) Lift(eb RustBufferI) *CoordinationError {
+	return LiftFromRustBuffer[*CoordinationError](c, eb)
 }
 
-func (c FfiConverterTypeCoordinationError) Lower(value *CoordinationError) RustBuffer {
+func (c FfiConverterCoordinationError) Lower(value *CoordinationError) C.RustBuffer {
 	return LowerIntoRustBuffer[*CoordinationError](c, value)
 }
 
-func (c FfiConverterTypeCoordinationError) Read(reader io.Reader) error {
+func (c FfiConverterCoordinationError) Read(reader io.Reader) *CoordinationError {
 	errorID := readUint32(reader)
 
 	switch errorID {
@@ -2682,11 +2932,11 @@ func (c FfiConverterTypeCoordinationError) Read(reader io.Reader) error {
 	case 8:
 		return &CoordinationError{&CoordinationErrorInvalidRandomizer{}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeCoordinationError.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterCoordinationError.Read()", errorID))
 	}
 }
 
-func (c FfiConverterTypeCoordinationError) Write(writer io.Writer, value *CoordinationError) {
+func (c FfiConverterCoordinationError) Write(writer io.Writer, value *CoordinationError) {
 	switch variantValue := value.err.(type) {
 	case *CoordinationErrorFailedToCreateSigningPackage:
 		writeInt32(writer, 1)
@@ -2707,12 +2957,48 @@ func (c FfiConverterTypeCoordinationError) Write(writer io.Writer, value *Coordi
 		writeInt32(writer, 8)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeCoordinationError.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterCoordinationError.Write", value))
+	}
+}
+
+type FfiDestroyerCoordinationError struct{}
+
+func (_ FfiDestroyerCoordinationError) Destroy(value *CoordinationError) {
+	switch variantValue := value.err.(type) {
+	case CoordinationErrorFailedToCreateSigningPackage:
+		variantValue.destroy()
+	case CoordinationErrorInvalidSigningCommitment:
+		variantValue.destroy()
+	case CoordinationErrorIdentifierDeserializationError:
+		variantValue.destroy()
+	case CoordinationErrorSigningPackageSerializationError:
+		variantValue.destroy()
+	case CoordinationErrorSignatureShareDeserializationError:
+		variantValue.destroy()
+	case CoordinationErrorPublicKeyPackageDeserializationError:
+		variantValue.destroy()
+	case CoordinationErrorSignatureShareAggregationFailed:
+		variantValue.destroy()
+	case CoordinationErrorInvalidRandomizer:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerCoordinationError.Destroy", value))
 	}
 }
 
 type FrostError struct {
 	err error
+}
+
+// Convience method to turn *FrostError into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *FrostError) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err FrostError) Error() string {
@@ -2765,13 +3051,16 @@ var ErrFrostErrorInvalidConfiguration = fmt.Errorf("FrostErrorInvalidConfigurati
 var ErrFrostErrorUnexpectedError = fmt.Errorf("FrostErrorUnexpectedError")
 
 // Variant structs
+// min_signers is invalid
 type FrostErrorInvalidMinSigners struct {
 }
 
+// min_signers is invalid
 func NewFrostErrorInvalidMinSigners() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidMinSigners{},
-	}
+	return &FrostError{err: &FrostErrorInvalidMinSigners{}}
+}
+
+func (e FrostErrorInvalidMinSigners) destroy() {
 }
 
 func (err FrostErrorInvalidMinSigners) Error() string {
@@ -2782,13 +3071,16 @@ func (self FrostErrorInvalidMinSigners) Is(target error) bool {
 	return target == ErrFrostErrorInvalidMinSigners
 }
 
+// max_signers is invalid
 type FrostErrorInvalidMaxSigners struct {
 }
 
+// max_signers is invalid
 func NewFrostErrorInvalidMaxSigners() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidMaxSigners{},
-	}
+	return &FrostError{err: &FrostErrorInvalidMaxSigners{}}
+}
+
+func (e FrostErrorInvalidMaxSigners) destroy() {
 }
 
 func (err FrostErrorInvalidMaxSigners) Error() string {
@@ -2799,13 +3091,16 @@ func (self FrostErrorInvalidMaxSigners) Is(target error) bool {
 	return target == ErrFrostErrorInvalidMaxSigners
 }
 
+// max_signers is invalid
 type FrostErrorInvalidCoefficients struct {
 }
 
+// max_signers is invalid
 func NewFrostErrorInvalidCoefficients() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidCoefficients{},
-	}
+	return &FrostError{err: &FrostErrorInvalidCoefficients{}}
+}
+
+func (e FrostErrorInvalidCoefficients) destroy() {
 }
 
 func (err FrostErrorInvalidCoefficients) Error() string {
@@ -2816,13 +3111,16 @@ func (self FrostErrorInvalidCoefficients) Is(target error) bool {
 	return target == ErrFrostErrorInvalidCoefficients
 }
 
+// This identifier is unserializable.
 type FrostErrorMalformedIdentifier struct {
 }
 
+// This identifier is unserializable.
 func NewFrostErrorMalformedIdentifier() *FrostError {
-	return &FrostError{
-		err: &FrostErrorMalformedIdentifier{},
-	}
+	return &FrostError{err: &FrostErrorMalformedIdentifier{}}
+}
+
+func (e FrostErrorMalformedIdentifier) destroy() {
 }
 
 func (err FrostErrorMalformedIdentifier) Error() string {
@@ -2833,13 +3131,16 @@ func (self FrostErrorMalformedIdentifier) Is(target error) bool {
 	return target == ErrFrostErrorMalformedIdentifier
 }
 
+// This identifier is duplicated.
 type FrostErrorDuplicatedIdentifier struct {
 }
 
+// This identifier is duplicated.
 func NewFrostErrorDuplicatedIdentifier() *FrostError {
-	return &FrostError{
-		err: &FrostErrorDuplicatedIdentifier{},
-	}
+	return &FrostError{err: &FrostErrorDuplicatedIdentifier{}}
+}
+
+func (e FrostErrorDuplicatedIdentifier) destroy() {
 }
 
 func (err FrostErrorDuplicatedIdentifier) Error() string {
@@ -2850,13 +3151,16 @@ func (self FrostErrorDuplicatedIdentifier) Is(target error) bool {
 	return target == ErrFrostErrorDuplicatedIdentifier
 }
 
+// This identifier does not belong to a participant in the signing process.
 type FrostErrorUnknownIdentifier struct {
 }
 
+// This identifier does not belong to a participant in the signing process.
 func NewFrostErrorUnknownIdentifier() *FrostError {
-	return &FrostError{
-		err: &FrostErrorUnknownIdentifier{},
-	}
+	return &FrostError{err: &FrostErrorUnknownIdentifier{}}
+}
+
+func (e FrostErrorUnknownIdentifier) destroy() {
 }
 
 func (err FrostErrorUnknownIdentifier) Error() string {
@@ -2867,13 +3171,16 @@ func (self FrostErrorUnknownIdentifier) Is(target error) bool {
 	return target == ErrFrostErrorUnknownIdentifier
 }
 
+// Incorrect number of identifiers.
 type FrostErrorIncorrectNumberOfIdentifiers struct {
 }
 
+// Incorrect number of identifiers.
 func NewFrostErrorIncorrectNumberOfIdentifiers() *FrostError {
-	return &FrostError{
-		err: &FrostErrorIncorrectNumberOfIdentifiers{},
-	}
+	return &FrostError{err: &FrostErrorIncorrectNumberOfIdentifiers{}}
+}
+
+func (e FrostErrorIncorrectNumberOfIdentifiers) destroy() {
 }
 
 func (err FrostErrorIncorrectNumberOfIdentifiers) Error() string {
@@ -2884,13 +3191,16 @@ func (self FrostErrorIncorrectNumberOfIdentifiers) Is(target error) bool {
 	return target == ErrFrostErrorIncorrectNumberOfIdentifiers
 }
 
+// The encoding of a signing key was malformed.
 type FrostErrorMalformedSigningKey struct {
 }
 
+// The encoding of a signing key was malformed.
 func NewFrostErrorMalformedSigningKey() *FrostError {
-	return &FrostError{
-		err: &FrostErrorMalformedSigningKey{},
-	}
+	return &FrostError{err: &FrostErrorMalformedSigningKey{}}
+}
+
+func (e FrostErrorMalformedSigningKey) destroy() {
 }
 
 func (err FrostErrorMalformedSigningKey) Error() string {
@@ -2901,13 +3211,16 @@ func (self FrostErrorMalformedSigningKey) Is(target error) bool {
 	return target == ErrFrostErrorMalformedSigningKey
 }
 
+// The encoding of a verifying key was malformed.
 type FrostErrorMalformedVerifyingKey struct {
 }
 
+// The encoding of a verifying key was malformed.
 func NewFrostErrorMalformedVerifyingKey() *FrostError {
-	return &FrostError{
-		err: &FrostErrorMalformedVerifyingKey{},
-	}
+	return &FrostError{err: &FrostErrorMalformedVerifyingKey{}}
+}
+
+func (e FrostErrorMalformedVerifyingKey) destroy() {
 }
 
 func (err FrostErrorMalformedVerifyingKey) Error() string {
@@ -2918,13 +3231,16 @@ func (self FrostErrorMalformedVerifyingKey) Is(target error) bool {
 	return target == ErrFrostErrorMalformedVerifyingKey
 }
 
+// The encoding of a signature was malformed.
 type FrostErrorMalformedSignature struct {
 }
 
+// The encoding of a signature was malformed.
 func NewFrostErrorMalformedSignature() *FrostError {
-	return &FrostError{
-		err: &FrostErrorMalformedSignature{},
-	}
+	return &FrostError{err: &FrostErrorMalformedSignature{}}
+}
+
+func (e FrostErrorMalformedSignature) destroy() {
 }
 
 func (err FrostErrorMalformedSignature) Error() string {
@@ -2935,13 +3251,16 @@ func (self FrostErrorMalformedSignature) Is(target error) bool {
 	return target == ErrFrostErrorMalformedSignature
 }
 
+// Signature verification failed.
 type FrostErrorInvalidSignature struct {
 }
 
+// Signature verification failed.
 func NewFrostErrorInvalidSignature() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidSignature{},
-	}
+	return &FrostError{err: &FrostErrorInvalidSignature{}}
+}
+
+func (e FrostErrorInvalidSignature) destroy() {
 }
 
 func (err FrostErrorInvalidSignature) Error() string {
@@ -2952,13 +3271,16 @@ func (self FrostErrorInvalidSignature) Is(target error) bool {
 	return target == ErrFrostErrorInvalidSignature
 }
 
+// Duplicated shares provided
 type FrostErrorDuplicatedShares struct {
 }
 
+// Duplicated shares provided
 func NewFrostErrorDuplicatedShares() *FrostError {
-	return &FrostError{
-		err: &FrostErrorDuplicatedShares{},
-	}
+	return &FrostError{err: &FrostErrorDuplicatedShares{}}
+}
+
+func (e FrostErrorDuplicatedShares) destroy() {
 }
 
 func (err FrostErrorDuplicatedShares) Error() string {
@@ -2969,13 +3291,16 @@ func (self FrostErrorDuplicatedShares) Is(target error) bool {
 	return target == ErrFrostErrorDuplicatedShares
 }
 
+// Incorrect number of shares.
 type FrostErrorIncorrectNumberOfShares struct {
 }
 
+// Incorrect number of shares.
 func NewFrostErrorIncorrectNumberOfShares() *FrostError {
-	return &FrostError{
-		err: &FrostErrorIncorrectNumberOfShares{},
-	}
+	return &FrostError{err: &FrostErrorIncorrectNumberOfShares{}}
+}
+
+func (e FrostErrorIncorrectNumberOfShares) destroy() {
 }
 
 func (err FrostErrorIncorrectNumberOfShares) Error() string {
@@ -2986,13 +3311,16 @@ func (self FrostErrorIncorrectNumberOfShares) Is(target error) bool {
 	return target == ErrFrostErrorIncorrectNumberOfShares
 }
 
+// Commitment equals the identity
 type FrostErrorIdentityCommitment struct {
 }
 
+// Commitment equals the identity
 func NewFrostErrorIdentityCommitment() *FrostError {
-	return &FrostError{
-		err: &FrostErrorIdentityCommitment{},
-	}
+	return &FrostError{err: &FrostErrorIdentityCommitment{}}
+}
+
+func (e FrostErrorIdentityCommitment) destroy() {
 }
 
 func (err FrostErrorIdentityCommitment) Error() string {
@@ -3003,13 +3331,16 @@ func (self FrostErrorIdentityCommitment) Is(target error) bool {
 	return target == ErrFrostErrorIdentityCommitment
 }
 
+// The participant's commitment is missing from the Signing Package
 type FrostErrorMissingCommitment struct {
 }
 
+// The participant's commitment is missing from the Signing Package
 func NewFrostErrorMissingCommitment() *FrostError {
-	return &FrostError{
-		err: &FrostErrorMissingCommitment{},
-	}
+	return &FrostError{err: &FrostErrorMissingCommitment{}}
+}
+
+func (e FrostErrorMissingCommitment) destroy() {
 }
 
 func (err FrostErrorMissingCommitment) Error() string {
@@ -3020,13 +3351,16 @@ func (self FrostErrorMissingCommitment) Is(target error) bool {
 	return target == ErrFrostErrorMissingCommitment
 }
 
+// The participant's commitment is incorrect
 type FrostErrorIncorrectCommitment struct {
 }
 
+// The participant's commitment is incorrect
 func NewFrostErrorIncorrectCommitment() *FrostError {
-	return &FrostError{
-		err: &FrostErrorIncorrectCommitment{},
-	}
+	return &FrostError{err: &FrostErrorIncorrectCommitment{}}
+}
+
+func (e FrostErrorIncorrectCommitment) destroy() {
 }
 
 func (err FrostErrorIncorrectCommitment) Error() string {
@@ -3037,13 +3371,16 @@ func (self FrostErrorIncorrectCommitment) Is(target error) bool {
 	return target == ErrFrostErrorIncorrectCommitment
 }
 
+// Incorrect number of commitments.
 type FrostErrorIncorrectNumberOfCommitments struct {
 }
 
+// Incorrect number of commitments.
 func NewFrostErrorIncorrectNumberOfCommitments() *FrostError {
-	return &FrostError{
-		err: &FrostErrorIncorrectNumberOfCommitments{},
-	}
+	return &FrostError{err: &FrostErrorIncorrectNumberOfCommitments{}}
+}
+
+func (e FrostErrorIncorrectNumberOfCommitments) destroy() {
 }
 
 func (err FrostErrorIncorrectNumberOfCommitments) Error() string {
@@ -3061,11 +3398,12 @@ type FrostErrorInvalidSignatureShare struct {
 func NewFrostErrorInvalidSignatureShare(
 	culprit ParticipantIdentifier,
 ) *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidSignatureShare{
-			Culprit: culprit,
-		},
-	}
+	return &FrostError{err: &FrostErrorInvalidSignatureShare{
+		Culprit: culprit}}
+}
+
+func (e FrostErrorInvalidSignatureShare) destroy() {
+	FfiDestroyerParticipantIdentifier{}.Destroy(e.Culprit)
 }
 
 func (err FrostErrorInvalidSignatureShare) Error() string {
@@ -3081,30 +3419,46 @@ func (self FrostErrorInvalidSignatureShare) Is(target error) bool {
 	return target == ErrFrostErrorInvalidSignatureShare
 }
 
+// Secret share verification failed.
 type FrostErrorInvalidSecretShare struct {
+	Culprit *ParticipantIdentifier
 }
 
-func NewFrostErrorInvalidSecretShare() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidSecretShare{},
-	}
+// Secret share verification failed.
+func NewFrostErrorInvalidSecretShare(
+	culprit *ParticipantIdentifier,
+) *FrostError {
+	return &FrostError{err: &FrostErrorInvalidSecretShare{
+		Culprit: culprit}}
+}
+
+func (e FrostErrorInvalidSecretShare) destroy() {
+	FfiDestroyerOptionalParticipantIdentifier{}.Destroy(e.Culprit)
 }
 
 func (err FrostErrorInvalidSecretShare) Error() string {
-	return fmt.Sprint("InvalidSecretShare")
+	return fmt.Sprint("InvalidSecretShare",
+		": ",
+
+		"Culprit=",
+		err.Culprit,
+	)
 }
 
 func (self FrostErrorInvalidSecretShare) Is(target error) bool {
 	return target == ErrFrostErrorInvalidSecretShare
 }
 
+// Round 1 package not found for Round 2 participant.
 type FrostErrorPackageNotFound struct {
 }
 
+// Round 1 package not found for Round 2 participant.
 func NewFrostErrorPackageNotFound() *FrostError {
-	return &FrostError{
-		err: &FrostErrorPackageNotFound{},
-	}
+	return &FrostError{err: &FrostErrorPackageNotFound{}}
+}
+
+func (e FrostErrorPackageNotFound) destroy() {
 }
 
 func (err FrostErrorPackageNotFound) Error() string {
@@ -3115,13 +3469,16 @@ func (self FrostErrorPackageNotFound) Is(target error) bool {
 	return target == ErrFrostErrorPackageNotFound
 }
 
+// Incorrect number of packages.
 type FrostErrorIncorrectNumberOfPackages struct {
 }
 
+// Incorrect number of packages.
 func NewFrostErrorIncorrectNumberOfPackages() *FrostError {
-	return &FrostError{
-		err: &FrostErrorIncorrectNumberOfPackages{},
-	}
+	return &FrostError{err: &FrostErrorIncorrectNumberOfPackages{}}
+}
+
+func (e FrostErrorIncorrectNumberOfPackages) destroy() {
 }
 
 func (err FrostErrorIncorrectNumberOfPackages) Error() string {
@@ -3132,13 +3489,16 @@ func (self FrostErrorIncorrectNumberOfPackages) Is(target error) bool {
 	return target == ErrFrostErrorIncorrectNumberOfPackages
 }
 
+// The incorrect package was specified.
 type FrostErrorIncorrectPackage struct {
 }
 
+// The incorrect package was specified.
 func NewFrostErrorIncorrectPackage() *FrostError {
-	return &FrostError{
-		err: &FrostErrorIncorrectPackage{},
-	}
+	return &FrostError{err: &FrostErrorIncorrectPackage{}}
+}
+
+func (e FrostErrorIncorrectPackage) destroy() {
 }
 
 func (err FrostErrorIncorrectPackage) Error() string {
@@ -3149,13 +3509,16 @@ func (self FrostErrorIncorrectPackage) Is(target error) bool {
 	return target == ErrFrostErrorIncorrectPackage
 }
 
+// The ciphersuite does not support DKG.
 type FrostErrorDkgNotSupported struct {
 }
 
+// The ciphersuite does not support DKG.
 func NewFrostErrorDkgNotSupported() *FrostError {
-	return &FrostError{
-		err: &FrostErrorDkgNotSupported{},
-	}
+	return &FrostError{err: &FrostErrorDkgNotSupported{}}
+}
+
+func (e FrostErrorDkgNotSupported) destroy() {
 }
 
 func (err FrostErrorDkgNotSupported) Error() string {
@@ -3166,18 +3529,21 @@ func (self FrostErrorDkgNotSupported) Is(target error) bool {
 	return target == ErrFrostErrorDkgNotSupported
 }
 
+// The proof of knowledge is not valid.
 type FrostErrorInvalidProofOfKnowledge struct {
 	Culprit ParticipantIdentifier
 }
 
+// The proof of knowledge is not valid.
 func NewFrostErrorInvalidProofOfKnowledge(
 	culprit ParticipantIdentifier,
 ) *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidProofOfKnowledge{
-			Culprit: culprit,
-		},
-	}
+	return &FrostError{err: &FrostErrorInvalidProofOfKnowledge{
+		Culprit: culprit}}
+}
+
+func (e FrostErrorInvalidProofOfKnowledge) destroy() {
+	FfiDestroyerParticipantIdentifier{}.Destroy(e.Culprit)
 }
 
 func (err FrostErrorInvalidProofOfKnowledge) Error() string {
@@ -3193,18 +3559,21 @@ func (self FrostErrorInvalidProofOfKnowledge) Is(target error) bool {
 	return target == ErrFrostErrorInvalidProofOfKnowledge
 }
 
+// Error in scalar Field.
 type FrostErrorFieldError struct {
 	Message string
 }
 
+// Error in scalar Field.
 func NewFrostErrorFieldError(
 	message string,
 ) *FrostError {
-	return &FrostError{
-		err: &FrostErrorFieldError{
-			Message: message,
-		},
-	}
+	return &FrostError{err: &FrostErrorFieldError{
+		Message: message}}
+}
+
+func (e FrostErrorFieldError) destroy() {
+	FfiDestroyerString{}.Destroy(e.Message)
 }
 
 func (err FrostErrorFieldError) Error() string {
@@ -3220,18 +3589,21 @@ func (self FrostErrorFieldError) Is(target error) bool {
 	return target == ErrFrostErrorFieldError
 }
 
+// Error in elliptic curve Group.
 type FrostErrorGroupError struct {
 	Message string
 }
 
+// Error in elliptic curve Group.
 func NewFrostErrorGroupError(
 	message string,
 ) *FrostError {
-	return &FrostError{
-		err: &FrostErrorGroupError{
-			Message: message,
-		},
-	}
+	return &FrostError{err: &FrostErrorGroupError{
+		Message: message}}
+}
+
+func (e FrostErrorGroupError) destroy() {
+	FfiDestroyerString{}.Destroy(e.Message)
 }
 
 func (err FrostErrorGroupError) Error() string {
@@ -3247,13 +3619,16 @@ func (self FrostErrorGroupError) Is(target error) bool {
 	return target == ErrFrostErrorGroupError
 }
 
+// Error in coefficient commitment deserialization.
 type FrostErrorInvalidCoefficient struct {
 }
 
+// Error in coefficient commitment deserialization.
 func NewFrostErrorInvalidCoefficient() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidCoefficient{},
-	}
+	return &FrostError{err: &FrostErrorInvalidCoefficient{}}
+}
+
+func (e FrostErrorInvalidCoefficient) destroy() {
 }
 
 func (err FrostErrorInvalidCoefficient) Error() string {
@@ -3264,13 +3639,16 @@ func (self FrostErrorInvalidCoefficient) Is(target error) bool {
 	return target == ErrFrostErrorInvalidCoefficient
 }
 
+// The ciphersuite does not support deriving identifiers from strings.
 type FrostErrorIdentifierDerivationNotSupported struct {
 }
 
+// The ciphersuite does not support deriving identifiers from strings.
 func NewFrostErrorIdentifierDerivationNotSupported() *FrostError {
-	return &FrostError{
-		err: &FrostErrorIdentifierDerivationNotSupported{},
-	}
+	return &FrostError{err: &FrostErrorIdentifierDerivationNotSupported{}}
+}
+
+func (e FrostErrorIdentifierDerivationNotSupported) destroy() {
 }
 
 func (err FrostErrorIdentifierDerivationNotSupported) Error() string {
@@ -3281,13 +3659,16 @@ func (self FrostErrorIdentifierDerivationNotSupported) Is(target error) bool {
 	return target == ErrFrostErrorIdentifierDerivationNotSupported
 }
 
+// Error serializing value.
 type FrostErrorSerializationError struct {
 }
 
+// Error serializing value.
 func NewFrostErrorSerializationError() *FrostError {
-	return &FrostError{
-		err: &FrostErrorSerializationError{},
-	}
+	return &FrostError{err: &FrostErrorSerializationError{}}
+}
+
+func (e FrostErrorSerializationError) destroy() {
 }
 
 func (err FrostErrorSerializationError) Error() string {
@@ -3298,13 +3679,16 @@ func (self FrostErrorSerializationError) Is(target error) bool {
 	return target == ErrFrostErrorSerializationError
 }
 
+// Error deserializing value.
 type FrostErrorDeserializationError struct {
 }
 
+// Error deserializing value.
 func NewFrostErrorDeserializationError() *FrostError {
-	return &FrostError{
-		err: &FrostErrorDeserializationError{},
-	}
+	return &FrostError{err: &FrostErrorDeserializationError{}}
+}
+
+func (e FrostErrorDeserializationError) destroy() {
 }
 
 func (err FrostErrorDeserializationError) Error() string {
@@ -3319,9 +3703,10 @@ type FrostErrorDkgPart2IncorrectNumberOfCommitments struct {
 }
 
 func NewFrostErrorDkgPart2IncorrectNumberOfCommitments() *FrostError {
-	return &FrostError{
-		err: &FrostErrorDkgPart2IncorrectNumberOfCommitments{},
-	}
+	return &FrostError{err: &FrostErrorDkgPart2IncorrectNumberOfCommitments{}}
+}
+
+func (e FrostErrorDkgPart2IncorrectNumberOfCommitments) destroy() {
 }
 
 func (err FrostErrorDkgPart2IncorrectNumberOfCommitments) Error() string {
@@ -3336,9 +3721,10 @@ type FrostErrorDkgPart2IncorrectNumberOfPackages struct {
 }
 
 func NewFrostErrorDkgPart2IncorrectNumberOfPackages() *FrostError {
-	return &FrostError{
-		err: &FrostErrorDkgPart2IncorrectNumberOfPackages{},
-	}
+	return &FrostError{err: &FrostErrorDkgPart2IncorrectNumberOfPackages{}}
+}
+
+func (e FrostErrorDkgPart2IncorrectNumberOfPackages) destroy() {
 }
 
 func (err FrostErrorDkgPart2IncorrectNumberOfPackages) Error() string {
@@ -3353,9 +3739,10 @@ type FrostErrorDkgPart3IncorrectRound1Packages struct {
 }
 
 func NewFrostErrorDkgPart3IncorrectRound1Packages() *FrostError {
-	return &FrostError{
-		err: &FrostErrorDkgPart3IncorrectRound1Packages{},
-	}
+	return &FrostError{err: &FrostErrorDkgPart3IncorrectRound1Packages{}}
+}
+
+func (e FrostErrorDkgPart3IncorrectRound1Packages) destroy() {
 }
 
 func (err FrostErrorDkgPart3IncorrectRound1Packages) Error() string {
@@ -3370,9 +3757,10 @@ type FrostErrorDkgPart3IncorrectNumberOfPackages struct {
 }
 
 func NewFrostErrorDkgPart3IncorrectNumberOfPackages() *FrostError {
-	return &FrostError{
-		err: &FrostErrorDkgPart3IncorrectNumberOfPackages{},
-	}
+	return &FrostError{err: &FrostErrorDkgPart3IncorrectNumberOfPackages{}}
+}
+
+func (e FrostErrorDkgPart3IncorrectNumberOfPackages) destroy() {
 }
 
 func (err FrostErrorDkgPart3IncorrectNumberOfPackages) Error() string {
@@ -3387,9 +3775,10 @@ type FrostErrorDkgPart3PackageSendersMismatch struct {
 }
 
 func NewFrostErrorDkgPart3PackageSendersMismatch() *FrostError {
-	return &FrostError{
-		err: &FrostErrorDkgPart3PackageSendersMismatch{},
-	}
+	return &FrostError{err: &FrostErrorDkgPart3PackageSendersMismatch{}}
+}
+
+func (e FrostErrorDkgPart3PackageSendersMismatch) destroy() {
 }
 
 func (err FrostErrorDkgPart3PackageSendersMismatch) Error() string {
@@ -3404,9 +3793,10 @@ type FrostErrorInvalidKeyPackage struct {
 }
 
 func NewFrostErrorInvalidKeyPackage() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidKeyPackage{},
-	}
+	return &FrostError{err: &FrostErrorInvalidKeyPackage{}}
+}
+
+func (e FrostErrorInvalidKeyPackage) destroy() {
 }
 
 func (err FrostErrorInvalidKeyPackage) Error() string {
@@ -3421,9 +3811,10 @@ type FrostErrorInvalidSecretKey struct {
 }
 
 func NewFrostErrorInvalidSecretKey() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidSecretKey{},
-	}
+	return &FrostError{err: &FrostErrorInvalidSecretKey{}}
+}
+
+func (e FrostErrorInvalidSecretKey) destroy() {
 }
 
 func (err FrostErrorInvalidSecretKey) Error() string {
@@ -3438,9 +3829,10 @@ type FrostErrorInvalidConfiguration struct {
 }
 
 func NewFrostErrorInvalidConfiguration() *FrostError {
-	return &FrostError{
-		err: &FrostErrorInvalidConfiguration{},
-	}
+	return &FrostError{err: &FrostErrorInvalidConfiguration{}}
+}
+
+func (e FrostErrorInvalidConfiguration) destroy() {
 }
 
 func (err FrostErrorInvalidConfiguration) Error() string {
@@ -3455,9 +3847,10 @@ type FrostErrorUnexpectedError struct {
 }
 
 func NewFrostErrorUnexpectedError() *FrostError {
-	return &FrostError{
-		err: &FrostErrorUnexpectedError{},
-	}
+	return &FrostError{err: &FrostErrorUnexpectedError{}}
+}
+
+func (e FrostErrorUnexpectedError) destroy() {
 }
 
 func (err FrostErrorUnexpectedError) Error() string {
@@ -3468,19 +3861,19 @@ func (self FrostErrorUnexpectedError) Is(target error) bool {
 	return target == ErrFrostErrorUnexpectedError
 }
 
-type FfiConverterTypeFrostError struct{}
+type FfiConverterFrostError struct{}
 
-var FfiConverterTypeFrostErrorINSTANCE = FfiConverterTypeFrostError{}
+var FfiConverterFrostErrorINSTANCE = FfiConverterFrostError{}
 
-func (c FfiConverterTypeFrostError) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterFrostError) Lift(eb RustBufferI) *FrostError {
+	return LiftFromRustBuffer[*FrostError](c, eb)
 }
 
-func (c FfiConverterTypeFrostError) Lower(value *FrostError) RustBuffer {
+func (c FfiConverterFrostError) Lower(value *FrostError) C.RustBuffer {
 	return LowerIntoRustBuffer[*FrostError](c, value)
 }
 
-func (c FfiConverterTypeFrostError) Read(reader io.Reader) error {
+func (c FfiConverterFrostError) Read(reader io.Reader) *FrostError {
 	errorID := readUint32(reader)
 
 	switch errorID {
@@ -3520,10 +3913,12 @@ func (c FfiConverterTypeFrostError) Read(reader io.Reader) error {
 		return &FrostError{&FrostErrorIncorrectNumberOfCommitments{}}
 	case 18:
 		return &FrostError{&FrostErrorInvalidSignatureShare{
-			Culprit: FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+			Culprit: FfiConverterParticipantIdentifierINSTANCE.Read(reader),
 		}}
 	case 19:
-		return &FrostError{&FrostErrorInvalidSecretShare{}}
+		return &FrostError{&FrostErrorInvalidSecretShare{
+			Culprit: FfiConverterOptionalParticipantIdentifierINSTANCE.Read(reader),
+		}}
 	case 20:
 		return &FrostError{&FrostErrorPackageNotFound{}}
 	case 21:
@@ -3534,7 +3929,7 @@ func (c FfiConverterTypeFrostError) Read(reader io.Reader) error {
 		return &FrostError{&FrostErrorDkgNotSupported{}}
 	case 24:
 		return &FrostError{&FrostErrorInvalidProofOfKnowledge{
-			Culprit: FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader),
+			Culprit: FfiConverterParticipantIdentifierINSTANCE.Read(reader),
 		}}
 	case 25:
 		return &FrostError{&FrostErrorFieldError{
@@ -3571,11 +3966,11 @@ func (c FfiConverterTypeFrostError) Read(reader io.Reader) error {
 	case 39:
 		return &FrostError{&FrostErrorUnexpectedError{}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeFrostError.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterFrostError.Read()", errorID))
 	}
 }
 
-func (c FfiConverterTypeFrostError) Write(writer io.Writer, value *FrostError) {
+func (c FfiConverterFrostError) Write(writer io.Writer, value *FrostError) {
 	switch variantValue := value.err.(type) {
 	case *FrostErrorInvalidMinSigners:
 		writeInt32(writer, 1)
@@ -3613,9 +4008,10 @@ func (c FfiConverterTypeFrostError) Write(writer io.Writer, value *FrostError) {
 		writeInt32(writer, 17)
 	case *FrostErrorInvalidSignatureShare:
 		writeInt32(writer, 18)
-		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, variantValue.Culprit)
+		FfiConverterParticipantIdentifierINSTANCE.Write(writer, variantValue.Culprit)
 	case *FrostErrorInvalidSecretShare:
 		writeInt32(writer, 19)
+		FfiConverterOptionalParticipantIdentifierINSTANCE.Write(writer, variantValue.Culprit)
 	case *FrostErrorPackageNotFound:
 		writeInt32(writer, 20)
 	case *FrostErrorIncorrectNumberOfPackages:
@@ -3626,7 +4022,7 @@ func (c FfiConverterTypeFrostError) Write(writer io.Writer, value *FrostError) {
 		writeInt32(writer, 23)
 	case *FrostErrorInvalidProofOfKnowledge:
 		writeInt32(writer, 24)
-		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, variantValue.Culprit)
+		FfiConverterParticipantIdentifierINSTANCE.Write(writer, variantValue.Culprit)
 	case *FrostErrorFieldError:
 		writeInt32(writer, 25)
 		FfiConverterStringINSTANCE.Write(writer, variantValue.Message)
@@ -3661,12 +4057,110 @@ func (c FfiConverterTypeFrostError) Write(writer io.Writer, value *FrostError) {
 		writeInt32(writer, 39)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeFrostError.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterFrostError.Write", value))
+	}
+}
+
+type FfiDestroyerFrostError struct{}
+
+func (_ FfiDestroyerFrostError) Destroy(value *FrostError) {
+	switch variantValue := value.err.(type) {
+	case FrostErrorInvalidMinSigners:
+		variantValue.destroy()
+	case FrostErrorInvalidMaxSigners:
+		variantValue.destroy()
+	case FrostErrorInvalidCoefficients:
+		variantValue.destroy()
+	case FrostErrorMalformedIdentifier:
+		variantValue.destroy()
+	case FrostErrorDuplicatedIdentifier:
+		variantValue.destroy()
+	case FrostErrorUnknownIdentifier:
+		variantValue.destroy()
+	case FrostErrorIncorrectNumberOfIdentifiers:
+		variantValue.destroy()
+	case FrostErrorMalformedSigningKey:
+		variantValue.destroy()
+	case FrostErrorMalformedVerifyingKey:
+		variantValue.destroy()
+	case FrostErrorMalformedSignature:
+		variantValue.destroy()
+	case FrostErrorInvalidSignature:
+		variantValue.destroy()
+	case FrostErrorDuplicatedShares:
+		variantValue.destroy()
+	case FrostErrorIncorrectNumberOfShares:
+		variantValue.destroy()
+	case FrostErrorIdentityCommitment:
+		variantValue.destroy()
+	case FrostErrorMissingCommitment:
+		variantValue.destroy()
+	case FrostErrorIncorrectCommitment:
+		variantValue.destroy()
+	case FrostErrorIncorrectNumberOfCommitments:
+		variantValue.destroy()
+	case FrostErrorInvalidSignatureShare:
+		variantValue.destroy()
+	case FrostErrorInvalidSecretShare:
+		variantValue.destroy()
+	case FrostErrorPackageNotFound:
+		variantValue.destroy()
+	case FrostErrorIncorrectNumberOfPackages:
+		variantValue.destroy()
+	case FrostErrorIncorrectPackage:
+		variantValue.destroy()
+	case FrostErrorDkgNotSupported:
+		variantValue.destroy()
+	case FrostErrorInvalidProofOfKnowledge:
+		variantValue.destroy()
+	case FrostErrorFieldError:
+		variantValue.destroy()
+	case FrostErrorGroupError:
+		variantValue.destroy()
+	case FrostErrorInvalidCoefficient:
+		variantValue.destroy()
+	case FrostErrorIdentifierDerivationNotSupported:
+		variantValue.destroy()
+	case FrostErrorSerializationError:
+		variantValue.destroy()
+	case FrostErrorDeserializationError:
+		variantValue.destroy()
+	case FrostErrorDkgPart2IncorrectNumberOfCommitments:
+		variantValue.destroy()
+	case FrostErrorDkgPart2IncorrectNumberOfPackages:
+		variantValue.destroy()
+	case FrostErrorDkgPart3IncorrectRound1Packages:
+		variantValue.destroy()
+	case FrostErrorDkgPart3IncorrectNumberOfPackages:
+		variantValue.destroy()
+	case FrostErrorDkgPart3PackageSendersMismatch:
+		variantValue.destroy()
+	case FrostErrorInvalidKeyPackage:
+		variantValue.destroy()
+	case FrostErrorInvalidSecretKey:
+		variantValue.destroy()
+	case FrostErrorInvalidConfiguration:
+		variantValue.destroy()
+	case FrostErrorUnexpectedError:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerFrostError.Destroy", value))
 	}
 }
 
 type FrostSignatureVerificationError struct {
 	err error
+}
+
+// Convience method to turn *FrostSignatureVerificationError into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *FrostSignatureVerificationError) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err FrostSignatureVerificationError) Error() string {
@@ -3686,9 +4180,10 @@ type FrostSignatureVerificationErrorInvalidPublicKeyPackage struct {
 }
 
 func NewFrostSignatureVerificationErrorInvalidPublicKeyPackage() *FrostSignatureVerificationError {
-	return &FrostSignatureVerificationError{
-		err: &FrostSignatureVerificationErrorInvalidPublicKeyPackage{},
-	}
+	return &FrostSignatureVerificationError{err: &FrostSignatureVerificationErrorInvalidPublicKeyPackage{}}
+}
+
+func (e FrostSignatureVerificationErrorInvalidPublicKeyPackage) destroy() {
 }
 
 func (err FrostSignatureVerificationErrorInvalidPublicKeyPackage) Error() string {
@@ -3706,11 +4201,12 @@ type FrostSignatureVerificationErrorValidationFailed struct {
 func NewFrostSignatureVerificationErrorValidationFailed(
 	reason string,
 ) *FrostSignatureVerificationError {
-	return &FrostSignatureVerificationError{
-		err: &FrostSignatureVerificationErrorValidationFailed{
-			Reason: reason,
-		},
-	}
+	return &FrostSignatureVerificationError{err: &FrostSignatureVerificationErrorValidationFailed{
+		Reason: reason}}
+}
+
+func (e FrostSignatureVerificationErrorValidationFailed) destroy() {
+	FfiDestroyerString{}.Destroy(e.Reason)
 }
 
 func (err FrostSignatureVerificationErrorValidationFailed) Error() string {
@@ -3726,19 +4222,19 @@ func (self FrostSignatureVerificationErrorValidationFailed) Is(target error) boo
 	return target == ErrFrostSignatureVerificationErrorValidationFailed
 }
 
-type FfiConverterTypeFrostSignatureVerificationError struct{}
+type FfiConverterFrostSignatureVerificationError struct{}
 
-var FfiConverterTypeFrostSignatureVerificationErrorINSTANCE = FfiConverterTypeFrostSignatureVerificationError{}
+var FfiConverterFrostSignatureVerificationErrorINSTANCE = FfiConverterFrostSignatureVerificationError{}
 
-func (c FfiConverterTypeFrostSignatureVerificationError) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterFrostSignatureVerificationError) Lift(eb RustBufferI) *FrostSignatureVerificationError {
+	return LiftFromRustBuffer[*FrostSignatureVerificationError](c, eb)
 }
 
-func (c FfiConverterTypeFrostSignatureVerificationError) Lower(value *FrostSignatureVerificationError) RustBuffer {
+func (c FfiConverterFrostSignatureVerificationError) Lower(value *FrostSignatureVerificationError) C.RustBuffer {
 	return LowerIntoRustBuffer[*FrostSignatureVerificationError](c, value)
 }
 
-func (c FfiConverterTypeFrostSignatureVerificationError) Read(reader io.Reader) error {
+func (c FfiConverterFrostSignatureVerificationError) Read(reader io.Reader) *FrostSignatureVerificationError {
 	errorID := readUint32(reader)
 
 	switch errorID {
@@ -3749,11 +4245,11 @@ func (c FfiConverterTypeFrostSignatureVerificationError) Read(reader io.Reader) 
 			Reason: FfiConverterStringINSTANCE.Read(reader),
 		}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeFrostSignatureVerificationError.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterFrostSignatureVerificationError.Read()", errorID))
 	}
 }
 
-func (c FfiConverterTypeFrostSignatureVerificationError) Write(writer io.Writer, value *FrostSignatureVerificationError) {
+func (c FfiConverterFrostSignatureVerificationError) Write(writer io.Writer, value *FrostSignatureVerificationError) {
 	switch variantValue := value.err.(type) {
 	case *FrostSignatureVerificationErrorInvalidPublicKeyPackage:
 		writeInt32(writer, 1)
@@ -3762,12 +4258,36 @@ func (c FfiConverterTypeFrostSignatureVerificationError) Write(writer io.Writer,
 		FfiConverterStringINSTANCE.Write(writer, variantValue.Reason)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeFrostSignatureVerificationError.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterFrostSignatureVerificationError.Write", value))
+	}
+}
+
+type FfiDestroyerFrostSignatureVerificationError struct{}
+
+func (_ FfiDestroyerFrostSignatureVerificationError) Destroy(value *FrostSignatureVerificationError) {
+	switch variantValue := value.err.(type) {
+	case FrostSignatureVerificationErrorInvalidPublicKeyPackage:
+		variantValue.destroy()
+	case FrostSignatureVerificationErrorValidationFailed:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerFrostSignatureVerificationError.Destroy", value))
 	}
 }
 
 type OrchardKeyError struct {
 	err error
+}
+
+// Convience method to turn *OrchardKeyError into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *OrchardKeyError) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err OrchardKeyError) Error() string {
@@ -3792,11 +4312,12 @@ type OrchardKeyErrorKeyDerivationError struct {
 func NewOrchardKeyErrorKeyDerivationError(
 	message string,
 ) *OrchardKeyError {
-	return &OrchardKeyError{
-		err: &OrchardKeyErrorKeyDerivationError{
-			Message: message,
-		},
-	}
+	return &OrchardKeyError{err: &OrchardKeyErrorKeyDerivationError{
+		Message: message}}
+}
+
+func (e OrchardKeyErrorKeyDerivationError) destroy() {
+	FfiDestroyerString{}.Destroy(e.Message)
 }
 
 func (err OrchardKeyErrorKeyDerivationError) Error() string {
@@ -3816,9 +4337,10 @@ type OrchardKeyErrorSerializationError struct {
 }
 
 func NewOrchardKeyErrorSerializationError() *OrchardKeyError {
-	return &OrchardKeyError{
-		err: &OrchardKeyErrorSerializationError{},
-	}
+	return &OrchardKeyError{err: &OrchardKeyErrorSerializationError{}}
+}
+
+func (e OrchardKeyErrorSerializationError) destroy() {
 }
 
 func (err OrchardKeyErrorSerializationError) Error() string {
@@ -3833,9 +4355,10 @@ type OrchardKeyErrorDeserializationError struct {
 }
 
 func NewOrchardKeyErrorDeserializationError() *OrchardKeyError {
-	return &OrchardKeyError{
-		err: &OrchardKeyErrorDeserializationError{},
-	}
+	return &OrchardKeyError{err: &OrchardKeyErrorDeserializationError{}}
+}
+
+func (e OrchardKeyErrorDeserializationError) destroy() {
 }
 
 func (err OrchardKeyErrorDeserializationError) Error() string {
@@ -3853,11 +4376,12 @@ type OrchardKeyErrorOtherError struct {
 func NewOrchardKeyErrorOtherError(
 	errorMessage string,
 ) *OrchardKeyError {
-	return &OrchardKeyError{
-		err: &OrchardKeyErrorOtherError{
-			ErrorMessage: errorMessage,
-		},
-	}
+	return &OrchardKeyError{err: &OrchardKeyErrorOtherError{
+		ErrorMessage: errorMessage}}
+}
+
+func (e OrchardKeyErrorOtherError) destroy() {
+	FfiDestroyerString{}.Destroy(e.ErrorMessage)
 }
 
 func (err OrchardKeyErrorOtherError) Error() string {
@@ -3873,19 +4397,19 @@ func (self OrchardKeyErrorOtherError) Is(target error) bool {
 	return target == ErrOrchardKeyErrorOtherError
 }
 
-type FfiConverterTypeOrchardKeyError struct{}
+type FfiConverterOrchardKeyError struct{}
 
-var FfiConverterTypeOrchardKeyErrorINSTANCE = FfiConverterTypeOrchardKeyError{}
+var FfiConverterOrchardKeyErrorINSTANCE = FfiConverterOrchardKeyError{}
 
-func (c FfiConverterTypeOrchardKeyError) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterOrchardKeyError) Lift(eb RustBufferI) *OrchardKeyError {
+	return LiftFromRustBuffer[*OrchardKeyError](c, eb)
 }
 
-func (c FfiConverterTypeOrchardKeyError) Lower(value *OrchardKeyError) RustBuffer {
+func (c FfiConverterOrchardKeyError) Lower(value *OrchardKeyError) C.RustBuffer {
 	return LowerIntoRustBuffer[*OrchardKeyError](c, value)
 }
 
-func (c FfiConverterTypeOrchardKeyError) Read(reader io.Reader) error {
+func (c FfiConverterOrchardKeyError) Read(reader io.Reader) *OrchardKeyError {
 	errorID := readUint32(reader)
 
 	switch errorID {
@@ -3902,11 +4426,11 @@ func (c FfiConverterTypeOrchardKeyError) Read(reader io.Reader) error {
 			ErrorMessage: FfiConverterStringINSTANCE.Read(reader),
 		}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeOrchardKeyError.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterOrchardKeyError.Read()", errorID))
 	}
 }
 
-func (c FfiConverterTypeOrchardKeyError) Write(writer io.Writer, value *OrchardKeyError) {
+func (c FfiConverterOrchardKeyError) Write(writer io.Writer, value *OrchardKeyError) {
 	switch variantValue := value.err.(type) {
 	case *OrchardKeyErrorKeyDerivationError:
 		writeInt32(writer, 1)
@@ -3920,12 +4444,40 @@ func (c FfiConverterTypeOrchardKeyError) Write(writer io.Writer, value *OrchardK
 		FfiConverterStringINSTANCE.Write(writer, variantValue.ErrorMessage)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeOrchardKeyError.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterOrchardKeyError.Write", value))
+	}
+}
+
+type FfiDestroyerOrchardKeyError struct{}
+
+func (_ FfiDestroyerOrchardKeyError) Destroy(value *OrchardKeyError) {
+	switch variantValue := value.err.(type) {
+	case OrchardKeyErrorKeyDerivationError:
+		variantValue.destroy()
+	case OrchardKeyErrorSerializationError:
+		variantValue.destroy()
+	case OrchardKeyErrorDeserializationError:
+		variantValue.destroy()
+	case OrchardKeyErrorOtherError:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerOrchardKeyError.Destroy", value))
 	}
 }
 
 type Round1Error struct {
 	err error
+}
+
+// Convience method to turn *Round1Error into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *Round1Error) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err Round1Error) Error() string {
@@ -3946,9 +4498,10 @@ type Round1ErrorInvalidKeyPackage struct {
 }
 
 func NewRound1ErrorInvalidKeyPackage() *Round1Error {
-	return &Round1Error{
-		err: &Round1ErrorInvalidKeyPackage{},
-	}
+	return &Round1Error{err: &Round1ErrorInvalidKeyPackage{}}
+}
+
+func (e Round1ErrorInvalidKeyPackage) destroy() {
 }
 
 func (err Round1ErrorInvalidKeyPackage) Error() string {
@@ -3963,9 +4516,10 @@ type Round1ErrorNonceSerializationError struct {
 }
 
 func NewRound1ErrorNonceSerializationError() *Round1Error {
-	return &Round1Error{
-		err: &Round1ErrorNonceSerializationError{},
-	}
+	return &Round1Error{err: &Round1ErrorNonceSerializationError{}}
+}
+
+func (e Round1ErrorNonceSerializationError) destroy() {
 }
 
 func (err Round1ErrorNonceSerializationError) Error() string {
@@ -3980,9 +4534,10 @@ type Round1ErrorCommitmentSerializationError struct {
 }
 
 func NewRound1ErrorCommitmentSerializationError() *Round1Error {
-	return &Round1Error{
-		err: &Round1ErrorCommitmentSerializationError{},
-	}
+	return &Round1Error{err: &Round1ErrorCommitmentSerializationError{}}
+}
+
+func (e Round1ErrorCommitmentSerializationError) destroy() {
 }
 
 func (err Round1ErrorCommitmentSerializationError) Error() string {
@@ -3993,19 +4548,19 @@ func (self Round1ErrorCommitmentSerializationError) Is(target error) bool {
 	return target == ErrRound1ErrorCommitmentSerializationError
 }
 
-type FfiConverterTypeRound1Error struct{}
+type FfiConverterRound1Error struct{}
 
-var FfiConverterTypeRound1ErrorINSTANCE = FfiConverterTypeRound1Error{}
+var FfiConverterRound1ErrorINSTANCE = FfiConverterRound1Error{}
 
-func (c FfiConverterTypeRound1Error) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterRound1Error) Lift(eb RustBufferI) *Round1Error {
+	return LiftFromRustBuffer[*Round1Error](c, eb)
 }
 
-func (c FfiConverterTypeRound1Error) Lower(value *Round1Error) RustBuffer {
+func (c FfiConverterRound1Error) Lower(value *Round1Error) C.RustBuffer {
 	return LowerIntoRustBuffer[*Round1Error](c, value)
 }
 
-func (c FfiConverterTypeRound1Error) Read(reader io.Reader) error {
+func (c FfiConverterRound1Error) Read(reader io.Reader) *Round1Error {
 	errorID := readUint32(reader)
 
 	switch errorID {
@@ -4016,11 +4571,11 @@ func (c FfiConverterTypeRound1Error) Read(reader io.Reader) error {
 	case 3:
 		return &Round1Error{&Round1ErrorCommitmentSerializationError{}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeRound1Error.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterRound1Error.Read()", errorID))
 	}
 }
 
-func (c FfiConverterTypeRound1Error) Write(writer io.Writer, value *Round1Error) {
+func (c FfiConverterRound1Error) Write(writer io.Writer, value *Round1Error) {
 	switch variantValue := value.err.(type) {
 	case *Round1ErrorInvalidKeyPackage:
 		writeInt32(writer, 1)
@@ -4030,12 +4585,38 @@ func (c FfiConverterTypeRound1Error) Write(writer io.Writer, value *Round1Error)
 		writeInt32(writer, 3)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeRound1Error.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterRound1Error.Write", value))
+	}
+}
+
+type FfiDestroyerRound1Error struct{}
+
+func (_ FfiDestroyerRound1Error) Destroy(value *Round1Error) {
+	switch variantValue := value.err.(type) {
+	case Round1ErrorInvalidKeyPackage:
+		variantValue.destroy()
+	case Round1ErrorNonceSerializationError:
+		variantValue.destroy()
+	case Round1ErrorCommitmentSerializationError:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerRound1Error.Destroy", value))
 	}
 }
 
 type Round2Error struct {
 	err error
+}
+
+// Convience method to turn *Round2Error into error
+// Avoiding treating nil pointer as non nil error interface
+func (err *Round2Error) AsError() error {
+	if err == nil {
+		return nil
+	} else {
+		return err
+	}
 }
 
 func (err Round2Error) Error() string {
@@ -4059,9 +4640,10 @@ type Round2ErrorInvalidKeyPackage struct {
 }
 
 func NewRound2ErrorInvalidKeyPackage() *Round2Error {
-	return &Round2Error{
-		err: &Round2ErrorInvalidKeyPackage{},
-	}
+	return &Round2Error{err: &Round2ErrorInvalidKeyPackage{}}
+}
+
+func (e Round2ErrorInvalidKeyPackage) destroy() {
 }
 
 func (err Round2ErrorInvalidKeyPackage) Error() string {
@@ -4076,9 +4658,10 @@ type Round2ErrorNonceSerializationError struct {
 }
 
 func NewRound2ErrorNonceSerializationError() *Round2Error {
-	return &Round2Error{
-		err: &Round2ErrorNonceSerializationError{},
-	}
+	return &Round2Error{err: &Round2ErrorNonceSerializationError{}}
+}
+
+func (e Round2ErrorNonceSerializationError) destroy() {
 }
 
 func (err Round2ErrorNonceSerializationError) Error() string {
@@ -4093,9 +4676,10 @@ type Round2ErrorCommitmentSerializationError struct {
 }
 
 func NewRound2ErrorCommitmentSerializationError() *Round2Error {
-	return &Round2Error{
-		err: &Round2ErrorCommitmentSerializationError{},
-	}
+	return &Round2Error{err: &Round2ErrorCommitmentSerializationError{}}
+}
+
+func (e Round2ErrorCommitmentSerializationError) destroy() {
 }
 
 func (err Round2ErrorCommitmentSerializationError) Error() string {
@@ -4110,9 +4694,10 @@ type Round2ErrorSigningPackageDeserializationError struct {
 }
 
 func NewRound2ErrorSigningPackageDeserializationError() *Round2Error {
-	return &Round2Error{
-		err: &Round2ErrorSigningPackageDeserializationError{},
-	}
+	return &Round2Error{err: &Round2ErrorSigningPackageDeserializationError{}}
+}
+
+func (e Round2ErrorSigningPackageDeserializationError) destroy() {
 }
 
 func (err Round2ErrorSigningPackageDeserializationError) Error() string {
@@ -4130,11 +4715,12 @@ type Round2ErrorSigningFailed struct {
 func NewRound2ErrorSigningFailed(
 	message string,
 ) *Round2Error {
-	return &Round2Error{
-		err: &Round2ErrorSigningFailed{
-			Message: message,
-		},
-	}
+	return &Round2Error{err: &Round2ErrorSigningFailed{
+		Message: message}}
+}
+
+func (e Round2ErrorSigningFailed) destroy() {
+	FfiDestroyerString{}.Destroy(e.Message)
 }
 
 func (err Round2ErrorSigningFailed) Error() string {
@@ -4154,9 +4740,10 @@ type Round2ErrorInvalidRandomizer struct {
 }
 
 func NewRound2ErrorInvalidRandomizer() *Round2Error {
-	return &Round2Error{
-		err: &Round2ErrorInvalidRandomizer{},
-	}
+	return &Round2Error{err: &Round2ErrorInvalidRandomizer{}}
+}
+
+func (e Round2ErrorInvalidRandomizer) destroy() {
 }
 
 func (err Round2ErrorInvalidRandomizer) Error() string {
@@ -4167,19 +4754,19 @@ func (self Round2ErrorInvalidRandomizer) Is(target error) bool {
 	return target == ErrRound2ErrorInvalidRandomizer
 }
 
-type FfiConverterTypeRound2Error struct{}
+type FfiConverterRound2Error struct{}
 
-var FfiConverterTypeRound2ErrorINSTANCE = FfiConverterTypeRound2Error{}
+var FfiConverterRound2ErrorINSTANCE = FfiConverterRound2Error{}
 
-func (c FfiConverterTypeRound2Error) Lift(eb RustBufferI) error {
-	return LiftFromRustBuffer[error](c, eb)
+func (c FfiConverterRound2Error) Lift(eb RustBufferI) *Round2Error {
+	return LiftFromRustBuffer[*Round2Error](c, eb)
 }
 
-func (c FfiConverterTypeRound2Error) Lower(value *Round2Error) RustBuffer {
+func (c FfiConverterRound2Error) Lower(value *Round2Error) C.RustBuffer {
 	return LowerIntoRustBuffer[*Round2Error](c, value)
 }
 
-func (c FfiConverterTypeRound2Error) Read(reader io.Reader) error {
+func (c FfiConverterRound2Error) Read(reader io.Reader) *Round2Error {
 	errorID := readUint32(reader)
 
 	switch errorID {
@@ -4198,11 +4785,11 @@ func (c FfiConverterTypeRound2Error) Read(reader io.Reader) error {
 	case 6:
 		return &Round2Error{&Round2ErrorInvalidRandomizer{}}
 	default:
-		panic(fmt.Sprintf("Unknown error code %d in FfiConverterTypeRound2Error.Read()", errorID))
+		panic(fmt.Sprintf("Unknown error code %d in FfiConverterRound2Error.Read()", errorID))
 	}
 }
 
-func (c FfiConverterTypeRound2Error) Write(writer io.Writer, value *Round2Error) {
+func (c FfiConverterRound2Error) Write(writer io.Writer, value *Round2Error) {
 	switch variantValue := value.err.(type) {
 	case *Round2ErrorInvalidKeyPackage:
 		writeInt32(writer, 1)
@@ -4219,7 +4806,29 @@ func (c FfiConverterTypeRound2Error) Write(writer io.Writer, value *Round2Error)
 		writeInt32(writer, 6)
 	default:
 		_ = variantValue
-		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterTypeRound2Error.Write", value))
+		panic(fmt.Sprintf("invalid error value `%v` in FfiConverterRound2Error.Write", value))
+	}
+}
+
+type FfiDestroyerRound2Error struct{}
+
+func (_ FfiDestroyerRound2Error) Destroy(value *Round2Error) {
+	switch variantValue := value.err.(type) {
+	case Round2ErrorInvalidKeyPackage:
+		variantValue.destroy()
+	case Round2ErrorNonceSerializationError:
+		variantValue.destroy()
+	case Round2ErrorCommitmentSerializationError:
+		variantValue.destroy()
+	case Round2ErrorSigningPackageDeserializationError:
+		variantValue.destroy()
+	case Round2ErrorSigningFailed:
+		variantValue.destroy()
+	case Round2ErrorInvalidRandomizer:
+		variantValue.destroy()
+	default:
+		_ = variantValue
+		panic(fmt.Sprintf("invalid error value `%v` in FfiDestroyerRound2Error.Destroy", value))
 	}
 }
 
@@ -4230,699 +4839,762 @@ const (
 	ZcashNetworkTestnet ZcashNetwork = 2
 )
 
-type FfiConverterTypeZcashNetwork struct{}
+type FfiConverterZcashNetwork struct{}
 
-var FfiConverterTypeZcashNetworkINSTANCE = FfiConverterTypeZcashNetwork{}
+var FfiConverterZcashNetworkINSTANCE = FfiConverterZcashNetwork{}
 
-func (c FfiConverterTypeZcashNetwork) Lift(rb RustBufferI) ZcashNetwork {
+func (c FfiConverterZcashNetwork) Lift(rb RustBufferI) ZcashNetwork {
 	return LiftFromRustBuffer[ZcashNetwork](c, rb)
 }
 
-func (c FfiConverterTypeZcashNetwork) Lower(value ZcashNetwork) RustBuffer {
+func (c FfiConverterZcashNetwork) Lower(value ZcashNetwork) C.RustBuffer {
 	return LowerIntoRustBuffer[ZcashNetwork](c, value)
 }
-func (FfiConverterTypeZcashNetwork) Read(reader io.Reader) ZcashNetwork {
+func (FfiConverterZcashNetwork) Read(reader io.Reader) ZcashNetwork {
 	id := readInt32(reader)
 	return ZcashNetwork(id)
 }
 
-func (FfiConverterTypeZcashNetwork) Write(writer io.Writer, value ZcashNetwork) {
+func (FfiConverterZcashNetwork) Write(writer io.Writer, value ZcashNetwork) {
 	writeInt32(writer, int32(value))
 }
 
-type FfiDestroyerTypeZcashNetwork struct{}
+type FfiDestroyerZcashNetwork struct{}
 
-func (_ FfiDestroyerTypeZcashNetwork) Destroy(value ZcashNetwork) {
+func (_ FfiDestroyerZcashNetwork) Destroy(value ZcashNetwork) {
 }
 
-type FfiConverterOptionalTypeParticipantIdentifier struct{}
+type FfiConverterOptionalParticipantIdentifier struct{}
 
-var FfiConverterOptionalTypeParticipantIdentifierINSTANCE = FfiConverterOptionalTypeParticipantIdentifier{}
+var FfiConverterOptionalParticipantIdentifierINSTANCE = FfiConverterOptionalParticipantIdentifier{}
 
-func (c FfiConverterOptionalTypeParticipantIdentifier) Lift(rb RustBufferI) *ParticipantIdentifier {
+func (c FfiConverterOptionalParticipantIdentifier) Lift(rb RustBufferI) *ParticipantIdentifier {
 	return LiftFromRustBuffer[*ParticipantIdentifier](c, rb)
 }
 
-func (_ FfiConverterOptionalTypeParticipantIdentifier) Read(reader io.Reader) *ParticipantIdentifier {
+func (_ FfiConverterOptionalParticipantIdentifier) Read(reader io.Reader) *ParticipantIdentifier {
 	if readInt8(reader) == 0 {
 		return nil
 	}
-	temp := FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader)
+	temp := FfiConverterParticipantIdentifierINSTANCE.Read(reader)
 	return &temp
 }
 
-func (c FfiConverterOptionalTypeParticipantIdentifier) Lower(value *ParticipantIdentifier) RustBuffer {
+func (c FfiConverterOptionalParticipantIdentifier) Lower(value *ParticipantIdentifier) C.RustBuffer {
 	return LowerIntoRustBuffer[*ParticipantIdentifier](c, value)
 }
 
-func (_ FfiConverterOptionalTypeParticipantIdentifier) Write(writer io.Writer, value *ParticipantIdentifier) {
+func (_ FfiConverterOptionalParticipantIdentifier) Write(writer io.Writer, value *ParticipantIdentifier) {
 	if value == nil {
 		writeInt8(writer, 0)
 	} else {
 		writeInt8(writer, 1)
-		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, *value)
+		FfiConverterParticipantIdentifierINSTANCE.Write(writer, *value)
 	}
 }
 
-type FfiDestroyerOptionalTypeParticipantIdentifier struct{}
+type FfiDestroyerOptionalParticipantIdentifier struct{}
 
-func (_ FfiDestroyerOptionalTypeParticipantIdentifier) Destroy(value *ParticipantIdentifier) {
+func (_ FfiDestroyerOptionalParticipantIdentifier) Destroy(value *ParticipantIdentifier) {
 	if value != nil {
-		FfiDestroyerTypeParticipantIdentifier{}.Destroy(*value)
+		FfiDestroyerParticipantIdentifier{}.Destroy(*value)
 	}
 }
 
-type FfiConverterSequenceTypeFrostSignatureShare struct{}
+type FfiConverterSequenceFrostSignatureShare struct{}
 
-var FfiConverterSequenceTypeFrostSignatureShareINSTANCE = FfiConverterSequenceTypeFrostSignatureShare{}
+var FfiConverterSequenceFrostSignatureShareINSTANCE = FfiConverterSequenceFrostSignatureShare{}
 
-func (c FfiConverterSequenceTypeFrostSignatureShare) Lift(rb RustBufferI) []FrostSignatureShare {
+func (c FfiConverterSequenceFrostSignatureShare) Lift(rb RustBufferI) []FrostSignatureShare {
 	return LiftFromRustBuffer[[]FrostSignatureShare](c, rb)
 }
 
-func (c FfiConverterSequenceTypeFrostSignatureShare) Read(reader io.Reader) []FrostSignatureShare {
+func (c FfiConverterSequenceFrostSignatureShare) Read(reader io.Reader) []FrostSignatureShare {
 	length := readInt32(reader)
 	if length == 0 {
 		return nil
 	}
 	result := make([]FrostSignatureShare, 0, length)
 	for i := int32(0); i < length; i++ {
-		result = append(result, FfiConverterTypeFrostSignatureShareINSTANCE.Read(reader))
+		result = append(result, FfiConverterFrostSignatureShareINSTANCE.Read(reader))
 	}
 	return result
 }
 
-func (c FfiConverterSequenceTypeFrostSignatureShare) Lower(value []FrostSignatureShare) RustBuffer {
+func (c FfiConverterSequenceFrostSignatureShare) Lower(value []FrostSignatureShare) C.RustBuffer {
 	return LowerIntoRustBuffer[[]FrostSignatureShare](c, value)
 }
 
-func (c FfiConverterSequenceTypeFrostSignatureShare) Write(writer io.Writer, value []FrostSignatureShare) {
+func (c FfiConverterSequenceFrostSignatureShare) Write(writer io.Writer, value []FrostSignatureShare) {
 	if len(value) > math.MaxInt32 {
 		panic("[]FrostSignatureShare is too large to fit into Int32")
 	}
 
 	writeInt32(writer, int32(len(value)))
 	for _, item := range value {
-		FfiConverterTypeFrostSignatureShareINSTANCE.Write(writer, item)
+		FfiConverterFrostSignatureShareINSTANCE.Write(writer, item)
 	}
 }
 
-type FfiDestroyerSequenceTypeFrostSignatureShare struct{}
+type FfiDestroyerSequenceFrostSignatureShare struct{}
 
-func (FfiDestroyerSequenceTypeFrostSignatureShare) Destroy(sequence []FrostSignatureShare) {
+func (FfiDestroyerSequenceFrostSignatureShare) Destroy(sequence []FrostSignatureShare) {
 	for _, value := range sequence {
-		FfiDestroyerTypeFrostSignatureShare{}.Destroy(value)
+		FfiDestroyerFrostSignatureShare{}.Destroy(value)
 	}
 }
 
-type FfiConverterSequenceTypeFrostSigningCommitments struct{}
+type FfiConverterSequenceFrostSigningCommitments struct{}
 
-var FfiConverterSequenceTypeFrostSigningCommitmentsINSTANCE = FfiConverterSequenceTypeFrostSigningCommitments{}
+var FfiConverterSequenceFrostSigningCommitmentsINSTANCE = FfiConverterSequenceFrostSigningCommitments{}
 
-func (c FfiConverterSequenceTypeFrostSigningCommitments) Lift(rb RustBufferI) []FrostSigningCommitments {
+func (c FfiConverterSequenceFrostSigningCommitments) Lift(rb RustBufferI) []FrostSigningCommitments {
 	return LiftFromRustBuffer[[]FrostSigningCommitments](c, rb)
 }
 
-func (c FfiConverterSequenceTypeFrostSigningCommitments) Read(reader io.Reader) []FrostSigningCommitments {
+func (c FfiConverterSequenceFrostSigningCommitments) Read(reader io.Reader) []FrostSigningCommitments {
 	length := readInt32(reader)
 	if length == 0 {
 		return nil
 	}
 	result := make([]FrostSigningCommitments, 0, length)
 	for i := int32(0); i < length; i++ {
-		result = append(result, FfiConverterTypeFrostSigningCommitmentsINSTANCE.Read(reader))
+		result = append(result, FfiConverterFrostSigningCommitmentsINSTANCE.Read(reader))
 	}
 	return result
 }
 
-func (c FfiConverterSequenceTypeFrostSigningCommitments) Lower(value []FrostSigningCommitments) RustBuffer {
+func (c FfiConverterSequenceFrostSigningCommitments) Lower(value []FrostSigningCommitments) C.RustBuffer {
 	return LowerIntoRustBuffer[[]FrostSigningCommitments](c, value)
 }
 
-func (c FfiConverterSequenceTypeFrostSigningCommitments) Write(writer io.Writer, value []FrostSigningCommitments) {
+func (c FfiConverterSequenceFrostSigningCommitments) Write(writer io.Writer, value []FrostSigningCommitments) {
 	if len(value) > math.MaxInt32 {
 		panic("[]FrostSigningCommitments is too large to fit into Int32")
 	}
 
 	writeInt32(writer, int32(len(value)))
 	for _, item := range value {
-		FfiConverterTypeFrostSigningCommitmentsINSTANCE.Write(writer, item)
+		FfiConverterFrostSigningCommitmentsINSTANCE.Write(writer, item)
 	}
 }
 
-type FfiDestroyerSequenceTypeFrostSigningCommitments struct{}
+type FfiDestroyerSequenceFrostSigningCommitments struct{}
 
-func (FfiDestroyerSequenceTypeFrostSigningCommitments) Destroy(sequence []FrostSigningCommitments) {
+func (FfiDestroyerSequenceFrostSigningCommitments) Destroy(sequence []FrostSigningCommitments) {
 	for _, value := range sequence {
-		FfiDestroyerTypeFrostSigningCommitments{}.Destroy(value)
+		FfiDestroyerFrostSigningCommitments{}.Destroy(value)
 	}
 }
 
-type FfiConverterSequenceTypeParticipantIdentifier struct{}
+type FfiConverterSequenceParticipantIdentifier struct{}
 
-var FfiConverterSequenceTypeParticipantIdentifierINSTANCE = FfiConverterSequenceTypeParticipantIdentifier{}
+var FfiConverterSequenceParticipantIdentifierINSTANCE = FfiConverterSequenceParticipantIdentifier{}
 
-func (c FfiConverterSequenceTypeParticipantIdentifier) Lift(rb RustBufferI) []ParticipantIdentifier {
+func (c FfiConverterSequenceParticipantIdentifier) Lift(rb RustBufferI) []ParticipantIdentifier {
 	return LiftFromRustBuffer[[]ParticipantIdentifier](c, rb)
 }
 
-func (c FfiConverterSequenceTypeParticipantIdentifier) Read(reader io.Reader) []ParticipantIdentifier {
+func (c FfiConverterSequenceParticipantIdentifier) Read(reader io.Reader) []ParticipantIdentifier {
 	length := readInt32(reader)
 	if length == 0 {
 		return nil
 	}
 	result := make([]ParticipantIdentifier, 0, length)
 	for i := int32(0); i < length; i++ {
-		result = append(result, FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader))
+		result = append(result, FfiConverterParticipantIdentifierINSTANCE.Read(reader))
 	}
 	return result
 }
 
-func (c FfiConverterSequenceTypeParticipantIdentifier) Lower(value []ParticipantIdentifier) RustBuffer {
+func (c FfiConverterSequenceParticipantIdentifier) Lower(value []ParticipantIdentifier) C.RustBuffer {
 	return LowerIntoRustBuffer[[]ParticipantIdentifier](c, value)
 }
 
-func (c FfiConverterSequenceTypeParticipantIdentifier) Write(writer io.Writer, value []ParticipantIdentifier) {
+func (c FfiConverterSequenceParticipantIdentifier) Write(writer io.Writer, value []ParticipantIdentifier) {
 	if len(value) > math.MaxInt32 {
 		panic("[]ParticipantIdentifier is too large to fit into Int32")
 	}
 
 	writeInt32(writer, int32(len(value)))
 	for _, item := range value {
-		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, item)
+		FfiConverterParticipantIdentifierINSTANCE.Write(writer, item)
 	}
 }
 
-type FfiDestroyerSequenceTypeParticipantIdentifier struct{}
+type FfiDestroyerSequenceParticipantIdentifier struct{}
 
-func (FfiDestroyerSequenceTypeParticipantIdentifier) Destroy(sequence []ParticipantIdentifier) {
+func (FfiDestroyerSequenceParticipantIdentifier) Destroy(sequence []ParticipantIdentifier) {
 	for _, value := range sequence {
-		FfiDestroyerTypeParticipantIdentifier{}.Destroy(value)
+		FfiDestroyerParticipantIdentifier{}.Destroy(value)
 	}
 }
 
-type FfiConverterMapTypeParticipantIdentifierString struct{}
+type FfiConverterMapParticipantIdentifierString struct{}
 
-var FfiConverterMapTypeParticipantIdentifierStringINSTANCE = FfiConverterMapTypeParticipantIdentifierString{}
+var FfiConverterMapParticipantIdentifierStringINSTANCE = FfiConverterMapParticipantIdentifierString{}
 
-func (c FfiConverterMapTypeParticipantIdentifierString) Lift(rb RustBufferI) map[ParticipantIdentifier]string {
+func (c FfiConverterMapParticipantIdentifierString) Lift(rb RustBufferI) map[ParticipantIdentifier]string {
 	return LiftFromRustBuffer[map[ParticipantIdentifier]string](c, rb)
 }
 
-func (_ FfiConverterMapTypeParticipantIdentifierString) Read(reader io.Reader) map[ParticipantIdentifier]string {
+func (_ FfiConverterMapParticipantIdentifierString) Read(reader io.Reader) map[ParticipantIdentifier]string {
 	result := make(map[ParticipantIdentifier]string)
 	length := readInt32(reader)
 	for i := int32(0); i < length; i++ {
-		key := FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader)
+		key := FfiConverterParticipantIdentifierINSTANCE.Read(reader)
 		value := FfiConverterStringINSTANCE.Read(reader)
 		result[key] = value
 	}
 	return result
 }
 
-func (c FfiConverterMapTypeParticipantIdentifierString) Lower(value map[ParticipantIdentifier]string) RustBuffer {
+func (c FfiConverterMapParticipantIdentifierString) Lower(value map[ParticipantIdentifier]string) C.RustBuffer {
 	return LowerIntoRustBuffer[map[ParticipantIdentifier]string](c, value)
 }
 
-func (_ FfiConverterMapTypeParticipantIdentifierString) Write(writer io.Writer, mapValue map[ParticipantIdentifier]string) {
+func (_ FfiConverterMapParticipantIdentifierString) Write(writer io.Writer, mapValue map[ParticipantIdentifier]string) {
 	if len(mapValue) > math.MaxInt32 {
 		panic("map[ParticipantIdentifier]string is too large to fit into Int32")
 	}
 
 	writeInt32(writer, int32(len(mapValue)))
 	for key, value := range mapValue {
-		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, key)
+		FfiConverterParticipantIdentifierINSTANCE.Write(writer, key)
 		FfiConverterStringINSTANCE.Write(writer, value)
 	}
 }
 
-type FfiDestroyerMapTypeParticipantIdentifierString struct{}
+type FfiDestroyerMapParticipantIdentifierString struct{}
 
-func (_ FfiDestroyerMapTypeParticipantIdentifierString) Destroy(mapValue map[ParticipantIdentifier]string) {
+func (_ FfiDestroyerMapParticipantIdentifierString) Destroy(mapValue map[ParticipantIdentifier]string) {
 	for key, value := range mapValue {
-		FfiDestroyerTypeParticipantIdentifier{}.Destroy(key)
+		FfiDestroyerParticipantIdentifier{}.Destroy(key)
 		FfiDestroyerString{}.Destroy(value)
 	}
 }
 
-type FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package struct{}
+type FfiConverterMapParticipantIdentifierDkgRound1Package struct{}
 
-var FfiConverterMapTypeParticipantIdentifierTypeDKGRound1PackageINSTANCE = FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package{}
+var FfiConverterMapParticipantIdentifierDkgRound1PackageINSTANCE = FfiConverterMapParticipantIdentifierDkgRound1Package{}
 
-func (c FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package) Lift(rb RustBufferI) map[ParticipantIdentifier]DkgRound1Package {
+func (c FfiConverterMapParticipantIdentifierDkgRound1Package) Lift(rb RustBufferI) map[ParticipantIdentifier]DkgRound1Package {
 	return LiftFromRustBuffer[map[ParticipantIdentifier]DkgRound1Package](c, rb)
 }
 
-func (_ FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package) Read(reader io.Reader) map[ParticipantIdentifier]DkgRound1Package {
+func (_ FfiConverterMapParticipantIdentifierDkgRound1Package) Read(reader io.Reader) map[ParticipantIdentifier]DkgRound1Package {
 	result := make(map[ParticipantIdentifier]DkgRound1Package)
 	length := readInt32(reader)
 	for i := int32(0); i < length; i++ {
-		key := FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader)
-		value := FfiConverterTypeDKGRound1PackageINSTANCE.Read(reader)
+		key := FfiConverterParticipantIdentifierINSTANCE.Read(reader)
+		value := FfiConverterDkgRound1PackageINSTANCE.Read(reader)
 		result[key] = value
 	}
 	return result
 }
 
-func (c FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package) Lower(value map[ParticipantIdentifier]DkgRound1Package) RustBuffer {
+func (c FfiConverterMapParticipantIdentifierDkgRound1Package) Lower(value map[ParticipantIdentifier]DkgRound1Package) C.RustBuffer {
 	return LowerIntoRustBuffer[map[ParticipantIdentifier]DkgRound1Package](c, value)
 }
 
-func (_ FfiConverterMapTypeParticipantIdentifierTypeDKGRound1Package) Write(writer io.Writer, mapValue map[ParticipantIdentifier]DkgRound1Package) {
+func (_ FfiConverterMapParticipantIdentifierDkgRound1Package) Write(writer io.Writer, mapValue map[ParticipantIdentifier]DkgRound1Package) {
 	if len(mapValue) > math.MaxInt32 {
 		panic("map[ParticipantIdentifier]DkgRound1Package is too large to fit into Int32")
 	}
 
 	writeInt32(writer, int32(len(mapValue)))
 	for key, value := range mapValue {
-		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, key)
-		FfiConverterTypeDKGRound1PackageINSTANCE.Write(writer, value)
+		FfiConverterParticipantIdentifierINSTANCE.Write(writer, key)
+		FfiConverterDkgRound1PackageINSTANCE.Write(writer, value)
 	}
 }
 
-type FfiDestroyerMapTypeParticipantIdentifierTypeDkgRound1Package struct{}
+type FfiDestroyerMapParticipantIdentifierDkgRound1Package struct{}
 
-func (_ FfiDestroyerMapTypeParticipantIdentifierTypeDkgRound1Package) Destroy(mapValue map[ParticipantIdentifier]DkgRound1Package) {
+func (_ FfiDestroyerMapParticipantIdentifierDkgRound1Package) Destroy(mapValue map[ParticipantIdentifier]DkgRound1Package) {
 	for key, value := range mapValue {
-		FfiDestroyerTypeParticipantIdentifier{}.Destroy(key)
-		FfiDestroyerTypeDkgRound1Package{}.Destroy(value)
+		FfiDestroyerParticipantIdentifier{}.Destroy(key)
+		FfiDestroyerDkgRound1Package{}.Destroy(value)
 	}
 }
 
-type FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package struct{}
+type FfiConverterMapParticipantIdentifierDkgRound2Package struct{}
 
-var FfiConverterMapTypeParticipantIdentifierTypeDKGRound2PackageINSTANCE = FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package{}
+var FfiConverterMapParticipantIdentifierDkgRound2PackageINSTANCE = FfiConverterMapParticipantIdentifierDkgRound2Package{}
 
-func (c FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package) Lift(rb RustBufferI) map[ParticipantIdentifier]DkgRound2Package {
+func (c FfiConverterMapParticipantIdentifierDkgRound2Package) Lift(rb RustBufferI) map[ParticipantIdentifier]DkgRound2Package {
 	return LiftFromRustBuffer[map[ParticipantIdentifier]DkgRound2Package](c, rb)
 }
 
-func (_ FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package) Read(reader io.Reader) map[ParticipantIdentifier]DkgRound2Package {
+func (_ FfiConverterMapParticipantIdentifierDkgRound2Package) Read(reader io.Reader) map[ParticipantIdentifier]DkgRound2Package {
 	result := make(map[ParticipantIdentifier]DkgRound2Package)
 	length := readInt32(reader)
 	for i := int32(0); i < length; i++ {
-		key := FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader)
-		value := FfiConverterTypeDKGRound2PackageINSTANCE.Read(reader)
+		key := FfiConverterParticipantIdentifierINSTANCE.Read(reader)
+		value := FfiConverterDkgRound2PackageINSTANCE.Read(reader)
 		result[key] = value
 	}
 	return result
 }
 
-func (c FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package) Lower(value map[ParticipantIdentifier]DkgRound2Package) RustBuffer {
+func (c FfiConverterMapParticipantIdentifierDkgRound2Package) Lower(value map[ParticipantIdentifier]DkgRound2Package) C.RustBuffer {
 	return LowerIntoRustBuffer[map[ParticipantIdentifier]DkgRound2Package](c, value)
 }
 
-func (_ FfiConverterMapTypeParticipantIdentifierTypeDKGRound2Package) Write(writer io.Writer, mapValue map[ParticipantIdentifier]DkgRound2Package) {
+func (_ FfiConverterMapParticipantIdentifierDkgRound2Package) Write(writer io.Writer, mapValue map[ParticipantIdentifier]DkgRound2Package) {
 	if len(mapValue) > math.MaxInt32 {
 		panic("map[ParticipantIdentifier]DkgRound2Package is too large to fit into Int32")
 	}
 
 	writeInt32(writer, int32(len(mapValue)))
 	for key, value := range mapValue {
-		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, key)
-		FfiConverterTypeDKGRound2PackageINSTANCE.Write(writer, value)
+		FfiConverterParticipantIdentifierINSTANCE.Write(writer, key)
+		FfiConverterDkgRound2PackageINSTANCE.Write(writer, value)
 	}
 }
 
-type FfiDestroyerMapTypeParticipantIdentifierTypeDkgRound2Package struct{}
+type FfiDestroyerMapParticipantIdentifierDkgRound2Package struct{}
 
-func (_ FfiDestroyerMapTypeParticipantIdentifierTypeDkgRound2Package) Destroy(mapValue map[ParticipantIdentifier]DkgRound2Package) {
+func (_ FfiDestroyerMapParticipantIdentifierDkgRound2Package) Destroy(mapValue map[ParticipantIdentifier]DkgRound2Package) {
 	for key, value := range mapValue {
-		FfiDestroyerTypeParticipantIdentifier{}.Destroy(key)
-		FfiDestroyerTypeDkgRound2Package{}.Destroy(value)
+		FfiDestroyerParticipantIdentifier{}.Destroy(key)
+		FfiDestroyerDkgRound2Package{}.Destroy(value)
 	}
 }
 
-type FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShare struct{}
+type FfiConverterMapParticipantIdentifierFrostSecretKeyShare struct{}
 
-var FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShareINSTANCE = FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShare{}
+var FfiConverterMapParticipantIdentifierFrostSecretKeyShareINSTANCE = FfiConverterMapParticipantIdentifierFrostSecretKeyShare{}
 
-func (c FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShare) Lift(rb RustBufferI) map[ParticipantIdentifier]FrostSecretKeyShare {
+func (c FfiConverterMapParticipantIdentifierFrostSecretKeyShare) Lift(rb RustBufferI) map[ParticipantIdentifier]FrostSecretKeyShare {
 	return LiftFromRustBuffer[map[ParticipantIdentifier]FrostSecretKeyShare](c, rb)
 }
 
-func (_ FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShare) Read(reader io.Reader) map[ParticipantIdentifier]FrostSecretKeyShare {
+func (_ FfiConverterMapParticipantIdentifierFrostSecretKeyShare) Read(reader io.Reader) map[ParticipantIdentifier]FrostSecretKeyShare {
 	result := make(map[ParticipantIdentifier]FrostSecretKeyShare)
 	length := readInt32(reader)
 	for i := int32(0); i < length; i++ {
-		key := FfiConverterTypeParticipantIdentifierINSTANCE.Read(reader)
-		value := FfiConverterTypeFrostSecretKeyShareINSTANCE.Read(reader)
+		key := FfiConverterParticipantIdentifierINSTANCE.Read(reader)
+		value := FfiConverterFrostSecretKeyShareINSTANCE.Read(reader)
 		result[key] = value
 	}
 	return result
 }
 
-func (c FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShare) Lower(value map[ParticipantIdentifier]FrostSecretKeyShare) RustBuffer {
+func (c FfiConverterMapParticipantIdentifierFrostSecretKeyShare) Lower(value map[ParticipantIdentifier]FrostSecretKeyShare) C.RustBuffer {
 	return LowerIntoRustBuffer[map[ParticipantIdentifier]FrostSecretKeyShare](c, value)
 }
 
-func (_ FfiConverterMapTypeParticipantIdentifierTypeFrostSecretKeyShare) Write(writer io.Writer, mapValue map[ParticipantIdentifier]FrostSecretKeyShare) {
+func (_ FfiConverterMapParticipantIdentifierFrostSecretKeyShare) Write(writer io.Writer, mapValue map[ParticipantIdentifier]FrostSecretKeyShare) {
 	if len(mapValue) > math.MaxInt32 {
 		panic("map[ParticipantIdentifier]FrostSecretKeyShare is too large to fit into Int32")
 	}
 
 	writeInt32(writer, int32(len(mapValue)))
 	for key, value := range mapValue {
-		FfiConverterTypeParticipantIdentifierINSTANCE.Write(writer, key)
-		FfiConverterTypeFrostSecretKeyShareINSTANCE.Write(writer, value)
+		FfiConverterParticipantIdentifierINSTANCE.Write(writer, key)
+		FfiConverterFrostSecretKeyShareINSTANCE.Write(writer, value)
 	}
 }
 
-type FfiDestroyerMapTypeParticipantIdentifierTypeFrostSecretKeyShare struct{}
+type FfiDestroyerMapParticipantIdentifierFrostSecretKeyShare struct{}
 
-func (_ FfiDestroyerMapTypeParticipantIdentifierTypeFrostSecretKeyShare) Destroy(mapValue map[ParticipantIdentifier]FrostSecretKeyShare) {
+func (_ FfiDestroyerMapParticipantIdentifierFrostSecretKeyShare) Destroy(mapValue map[ParticipantIdentifier]FrostSecretKeyShare) {
 	for key, value := range mapValue {
-		FfiDestroyerTypeParticipantIdentifier{}.Destroy(key)
-		FfiDestroyerTypeFrostSecretKeyShare{}.Destroy(value)
+		FfiDestroyerParticipantIdentifier{}.Destroy(key)
+		FfiDestroyerFrostSecretKeyShare{}.Destroy(value)
 	}
 }
 
 func Aggregate(signingPackage FrostSigningPackage, signatureShares []FrostSignatureShare, pubkeyPackage FrostPublicKeyPackage, randomizer FrostRandomizer) (FrostSignature, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCoordinationError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_aggregate(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterSequenceTypeFrostSignatureShareINSTANCE.Lower(signatureShares), FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(pubkeyPackage), FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[CoordinationError](FfiConverterCoordinationError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_aggregate(FfiConverterFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterSequenceFrostSignatureShareINSTANCE.Lower(signatureShares), FfiConverterFrostPublicKeyPackageINSTANCE.Lower(pubkeyPackage), FfiConverterFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostSignature
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostSignatureINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostSignatureINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
+// returns Raw Signing commitnments using serde_json
+// WARNING: The identifier you have in the `FrostSigningCommitments`
+// is not an original field of `SigningCommitments`, we've included
+// them as a nice-to-have.
 func CommitmentToJson(commitment FrostSigningCommitments) (string, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_commitment_to_json(FfiConverterTypeFrostSigningCommitmentsINSTANCE.Lower(commitment), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_commitment_to_json(FfiConverterFrostSigningCommitmentsINSTANCE.Lower(commitment), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func FromHexString(hexString string) (FrostRandomizer, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_from_hex_string(FfiConverterStringINSTANCE.Lower(hexString), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_from_hex_string(FfiConverterStringINSTANCE.Lower(hexString), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostRandomizer
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostRandomizerINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostRandomizerINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func GenerateNoncesAndCommitments(keyPackage FrostKeyPackage) (FirstRoundCommitment, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeRound1Error{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(FfiConverterTypeFrostKeyPackageINSTANCE.Lower(keyPackage), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[Round1Error](FfiConverterRound1Error{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_generate_nonces_and_commitments(FfiConverterFrostKeyPackageINSTANCE.Lower(keyPackage), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FirstRoundCommitment
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFirstRoundCommitmentINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFirstRoundCommitmentINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func IdentifierFromJsonString(string string) *ParticipantIdentifier {
-	return FfiConverterOptionalTypeParticipantIdentifierINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_identifier_from_json_string(FfiConverterStringINSTANCE.Lower(string), _uniffiStatus)
+	return FfiConverterOptionalParticipantIdentifierINSTANCE.Lift(rustCall(func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_identifier_from_json_string(FfiConverterStringINSTANCE.Lower(string), _uniffiStatus),
+		}
 	}))
 }
 
 func IdentifierFromString(string string) (ParticipantIdentifier, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_identifier_from_string(FfiConverterStringINSTANCE.Lower(string), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_identifier_from_string(FfiConverterStringINSTANCE.Lower(string), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue ParticipantIdentifier
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeParticipantIdentifierINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterParticipantIdentifierINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func IdentifierFromUint16(unsignedUint uint16) (ParticipantIdentifier, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_identifier_from_uint16(FfiConverterUint16INSTANCE.Lower(unsignedUint), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_identifier_from_uint16(FfiConverterUint16INSTANCE.Lower(unsignedUint), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue ParticipantIdentifier
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeParticipantIdentifierINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterParticipantIdentifierINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func JsonToCommitment(commitmentJson string, identifier ParticipantIdentifier) (FrostSigningCommitments, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_commitment(FfiConverterStringINSTANCE.Lower(commitmentJson), FfiConverterTypeParticipantIdentifierINSTANCE.Lower(identifier), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_json_to_commitment(FfiConverterStringINSTANCE.Lower(commitmentJson), FfiConverterParticipantIdentifierINSTANCE.Lower(identifier), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostSigningCommitments
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostSigningCommitmentsINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostSigningCommitmentsINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func JsonToKeyPackage(keyPackageJson string) (FrostKeyPackage, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_key_package(FfiConverterStringINSTANCE.Lower(keyPackageJson), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_json_to_key_package(FfiConverterStringINSTANCE.Lower(keyPackageJson), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostKeyPackage
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostKeyPackageINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostKeyPackageINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func JsonToPublicKeyPackage(publicKeyPackageJson string) (FrostPublicKeyPackage, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_public_key_package(FfiConverterStringINSTANCE.Lower(publicKeyPackageJson), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_json_to_public_key_package(FfiConverterStringINSTANCE.Lower(publicKeyPackageJson), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostPublicKeyPackage
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostPublicKeyPackageINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func JsonToRandomizer(randomizerJson string) (FrostRandomizer, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_randomizer(FfiConverterStringINSTANCE.Lower(randomizerJson), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_json_to_randomizer(FfiConverterStringINSTANCE.Lower(randomizerJson), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostRandomizer
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostRandomizerINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostRandomizerINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func JsonToSignatureShare(signatureShareJson string, identifier ParticipantIdentifier) (FrostSignatureShare, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_json_to_signature_share(FfiConverterStringINSTANCE.Lower(signatureShareJson), FfiConverterTypeParticipantIdentifierINSTANCE.Lower(identifier), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_json_to_signature_share(FfiConverterStringINSTANCE.Lower(signatureShareJson), FfiConverterParticipantIdentifierINSTANCE.Lower(identifier), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostSignatureShare
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostSignatureShareINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostSignatureShareINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func KeyPackageToJson(keyPackage FrostKeyPackage) (string, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_key_package_to_json(FfiConverterTypeFrostKeyPackageINSTANCE.Lower(keyPackage), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_key_package_to_json(FfiConverterFrostKeyPackageINSTANCE.Lower(keyPackage), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func NewSigningPackage(message Message, commitments []FrostSigningCommitments) (FrostSigningPackage, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeCoordinationError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_new_signing_package(FfiConverterTypeMessageINSTANCE.Lower(message), FfiConverterSequenceTypeFrostSigningCommitmentsINSTANCE.Lower(commitments), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[CoordinationError](FfiConverterCoordinationError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_new_signing_package(FfiConverterMessageINSTANCE.Lower(message), FfiConverterSequenceFrostSigningCommitmentsINSTANCE.Lower(commitments), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostSigningPackage
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostSigningPackageINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostSigningPackageINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func Part1(participantIdentifier ParticipantIdentifier, maxSigners uint16, minSigners uint16) (*DkgPart1Result, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_frost_uniffi_sdk_fn_func_part_1(FfiConverterTypeParticipantIdentifierINSTANCE.Lower(participantIdentifier), FfiConverterUint16INSTANCE.Lower(maxSigners), FfiConverterUint16INSTANCE.Lower(minSigners), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_func_part_1(FfiConverterParticipantIdentifierINSTANCE.Lower(participantIdentifier), FfiConverterUint16INSTANCE.Lower(maxSigners), FfiConverterUint16INSTANCE.Lower(minSigners), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *DkgPart1Result
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterDKGPart1ResultINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterDkgPart1ResultINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
+// DKG Part 2
+// receives a SecretPackage from round one generated by the same
+// participant and kept in-memory (and secretly) until now.
+// It also receives the round 1 packages corresponding to all the
+// other participants **except** itself.
+//
+// Example: if P1, P2 and P3 are doing DKG, then when P1 runs part_2
+// this will receive a secret generated by P1 in part_1 and the
+// round 1 packages from P2 and P3. Everyone else has to do the same.
+//
+// For part_3 the P1 will send the round 2 packages generated here to
+// the other participants P2 and P3 and should receive packages from
+// P2 and P3.
 func Part2(secretPackage *DkgRound1SecretPackage, round1Packages map[ParticipantIdentifier]DkgRound1Package) (*DkgPart2Result, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_frost_uniffi_sdk_fn_func_part_2(FfiConverterDKGRound1SecretPackageINSTANCE.Lower(secretPackage), FfiConverterMapTypeParticipantIdentifierTypeDKGRound1PackageINSTANCE.Lower(round1Packages), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_func_part_2(FfiConverterDkgRound1SecretPackageINSTANCE.Lower(secretPackage), FfiConverterMapParticipantIdentifierDkgRound1PackageINSTANCE.Lower(round1Packages), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *DkgPart2Result
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterDKGPart2ResultINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterDkgPart2ResultINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func Part3(secretPackage *DkgRound2SecretPackage, round1Packages map[ParticipantIdentifier]DkgRound1Package, round2Packages map[ParticipantIdentifier]DkgRound2Package) (DkgPart3Result, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_part_3(FfiConverterDKGRound2SecretPackageINSTANCE.Lower(secretPackage), FfiConverterMapTypeParticipantIdentifierTypeDKGRound1PackageINSTANCE.Lower(round1Packages), FfiConverterMapTypeParticipantIdentifierTypeDKGRound2PackageINSTANCE.Lower(round2Packages), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_part_3(FfiConverterDkgRound2SecretPackageINSTANCE.Lower(secretPackage), FfiConverterMapParticipantIdentifierDkgRound1PackageINSTANCE.Lower(round1Packages), FfiConverterMapParticipantIdentifierDkgRound2PackageINSTANCE.Lower(round2Packages), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue DkgPart3Result
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeDKGPart3ResultINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterDkgPart3ResultINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func PublicKeyPackageToJson(publicKeyPackage FrostPublicKeyPackage) (string, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_public_key_package_to_json(FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(publicKeyPackage), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_public_key_package_to_json(FfiConverterFrostPublicKeyPackageINSTANCE.Lower(publicKeyPackage), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func RandomizedParamsFromPublicKeyAndSigningPackage(publicKey FrostPublicKeyPackage, signingPackage FrostSigningPackage) (*FrostRandomizedParams, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
-		return C.uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(publicKey), FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) unsafe.Pointer {
+		return C.uniffi_frost_uniffi_sdk_fn_func_randomized_params_from_public_key_and_signing_package(FfiConverterFrostPublicKeyPackageINSTANCE.Lower(publicKey), FfiConverterFrostSigningPackageINSTANCE.Lower(signingPackage), _uniffiStatus)
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue *FrostRandomizedParams
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterFrostRandomizedParamsINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostRandomizedParamsINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func RandomizerFromParams(randomizedParams *FrostRandomizedParams) (FrostRandomizer, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(FfiConverterFrostRandomizedParamsINSTANCE.Lower(randomizedParams), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_randomizer_from_params(FfiConverterFrostRandomizedParamsINSTANCE.Lower(randomizedParams), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostRandomizer
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostRandomizerINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostRandomizerINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func RandomizerToJson(randomizer FrostRandomizer) (string, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_randomizer_to_json(FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_randomizer_to_json(FfiConverterFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func Sign(signingPackage FrostSigningPackage, nonces FrostSigningNonces, keyPackage FrostKeyPackage, randomizer FrostRandomizer) (FrostSignatureShare, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeRound2Error{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_sign(FfiConverterTypeFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterTypeFrostSigningNoncesINSTANCE.Lower(nonces), FfiConverterTypeFrostKeyPackageINSTANCE.Lower(keyPackage), FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[Round2Error](FfiConverterRound2Error{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_sign(FfiConverterFrostSigningPackageINSTANCE.Lower(signingPackage), FfiConverterFrostSigningNoncesINSTANCE.Lower(nonces), FfiConverterFrostKeyPackageINSTANCE.Lower(keyPackage), FfiConverterFrostRandomizerINSTANCE.Lower(randomizer), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostSignatureShare
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostSignatureShareINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostSignatureShareINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func SignatureSharePackageToJson(signatureShare FrostSignatureShare) (string, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_signature_share_package_to_json(FfiConverterTypeFrostSignatureShareINSTANCE.Lower(signatureShare), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_signature_share_package_to_json(FfiConverterFrostSignatureShareINSTANCE.Lower(signatureShare), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue string
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterStringINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterStringINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func TrustedDealerKeygenFrom(configuration Configuration) (TrustedKeyGeneration, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_from(FfiConverterTypeConfigurationINSTANCE.Lower(configuration), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_from(FfiConverterConfigurationINSTANCE.Lower(configuration), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue TrustedKeyGeneration
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeTrustedKeyGenerationINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterTrustedKeyGenerationINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func TrustedDealerKeygenWithIdentifiers(configuration Configuration, participants ParticipantList) (TrustedKeyGeneration, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_with_identifiers(FfiConverterTypeConfigurationINSTANCE.Lower(configuration), FfiConverterTypeParticipantListINSTANCE.Lower(participants), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_trusted_dealer_keygen_with_identifiers(FfiConverterConfigurationINSTANCE.Lower(configuration), FfiConverterParticipantListINSTANCE.Lower(participants), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue TrustedKeyGeneration
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeTrustedKeyGenerationINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterTrustedKeyGenerationINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func ValidateConfig(config Configuration) error {
-	_, _uniffiErr := rustCallWithError(FfiConverterTypeConfigurationError{}, func(_uniffiStatus *C.RustCallStatus) bool {
-		C.uniffi_frost_uniffi_sdk_fn_func_validate_config(FfiConverterTypeConfigurationINSTANCE.Lower(config), _uniffiStatus)
+	_, _uniffiErr := rustCallWithError[ConfigurationError](FfiConverterConfigurationError{}, func(_uniffiStatus *C.RustCallStatus) bool {
+		C.uniffi_frost_uniffi_sdk_fn_func_validate_config(FfiConverterConfigurationINSTANCE.Lower(config), _uniffiStatus)
 		return false
 	})
-	return _uniffiErr
+	return _uniffiErr.AsError()
 }
 
 func VerifyAndGetKeyPackageFrom(secretShare FrostSecretKeyShare) (FrostKeyPackage, error) {
-	_uniffiRV, _uniffiErr := rustCallWithError(FfiConverterTypeFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
-		return C.uniffi_frost_uniffi_sdk_fn_func_verify_and_get_key_package_from(FfiConverterTypeFrostSecretKeyShareINSTANCE.Lower(secretShare), _uniffiStatus)
+	_uniffiRV, _uniffiErr := rustCallWithError[FrostError](FfiConverterFrostError{}, func(_uniffiStatus *C.RustCallStatus) RustBufferI {
+		return GoRustBuffer{
+			inner: C.uniffi_frost_uniffi_sdk_fn_func_verify_and_get_key_package_from(FfiConverterFrostSecretKeyShareINSTANCE.Lower(secretShare), _uniffiStatus),
+		}
 	})
 	if _uniffiErr != nil {
 		var _uniffiDefaultValue FrostKeyPackage
 		return _uniffiDefaultValue, _uniffiErr
 	} else {
-		return FfiConverterTypeFrostKeyPackageINSTANCE.Lift(_uniffiRV), _uniffiErr
+		return FfiConverterFrostKeyPackageINSTANCE.Lift(_uniffiRV), nil
 	}
 }
 
 func VerifyRandomizedSignature(randomizer FrostRandomizer, message Message, signature FrostSignature, pubkey FrostPublicKeyPackage) error {
-	_, _uniffiErr := rustCallWithError(FfiConverterTypeFrostSignatureVerificationError{}, func(_uniffiStatus *C.RustCallStatus) bool {
-		C.uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(FfiConverterTypeFrostRandomizerINSTANCE.Lower(randomizer), FfiConverterTypeMessageINSTANCE.Lower(message), FfiConverterTypeFrostSignatureINSTANCE.Lower(signature), FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(pubkey), _uniffiStatus)
+	_, _uniffiErr := rustCallWithError[FrostSignatureVerificationError](FfiConverterFrostSignatureVerificationError{}, func(_uniffiStatus *C.RustCallStatus) bool {
+		C.uniffi_frost_uniffi_sdk_fn_func_verify_randomized_signature(FfiConverterFrostRandomizerINSTANCE.Lower(randomizer), FfiConverterMessageINSTANCE.Lower(message), FfiConverterFrostSignatureINSTANCE.Lower(signature), FfiConverterFrostPublicKeyPackageINSTANCE.Lower(pubkey), _uniffiStatus)
 		return false
 	})
-	return _uniffiErr
+	return _uniffiErr.AsError()
 }
 
 func VerifySignature(message Message, signature FrostSignature, pubkey FrostPublicKeyPackage) error {
-	_, _uniffiErr := rustCallWithError(FfiConverterTypeFrostSignatureVerificationError{}, func(_uniffiStatus *C.RustCallStatus) bool {
-		C.uniffi_frost_uniffi_sdk_fn_func_verify_signature(FfiConverterTypeMessageINSTANCE.Lower(message), FfiConverterTypeFrostSignatureINSTANCE.Lower(signature), FfiConverterTypeFrostPublicKeyPackageINSTANCE.Lower(pubkey), _uniffiStatus)
+	_, _uniffiErr := rustCallWithError[FrostSignatureVerificationError](FfiConverterFrostSignatureVerificationError{}, func(_uniffiStatus *C.RustCallStatus) bool {
+		C.uniffi_frost_uniffi_sdk_fn_func_verify_signature(FfiConverterMessageINSTANCE.Lower(message), FfiConverterFrostSignatureINSTANCE.Lower(signature), FfiConverterFrostPublicKeyPackageINSTANCE.Lower(pubkey), _uniffiStatus)
 		return false
 	})
-	return _uniffiErr
+	return _uniffiErr.AsError()
 }

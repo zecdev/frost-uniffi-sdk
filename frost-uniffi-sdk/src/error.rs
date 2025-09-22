@@ -27,7 +27,14 @@ impl FrostError {
                     Err(_) => Self::MalformedIdentifier,
                 }
             }
-            Error::InvalidSecretShare => Self::InvalidSecretShare,
+            Error::InvalidSecretShare { culprit } => {
+                culprit.map_or(Self::InvalidSecretShare { culprit: None }, |p| {
+                    match ParticipantIdentifier::from_identifier(p) {
+                        Ok(p) => Self::InvalidSecretShare { culprit: Some(p) },
+                        Err(_) => Self::MalformedIdentifier,
+                    }
+                })
+            }
             Error::PackageNotFound => Self::PackageNotFound,
             Error::IncorrectNumberOfPackages => Self::IncorrectNumberOfPackages,
             Error::IncorrectPackage => Self::IncorrectPackage,
